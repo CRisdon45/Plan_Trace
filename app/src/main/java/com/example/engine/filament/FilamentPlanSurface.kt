@@ -122,10 +122,6 @@ class FilamentPlanSurface(context: Context) : TextureView(context) {
         isFocusable = true
         uiHelper.isOpaque = true
 
-        // Always clear to the intended paper-toned scene background. This makes the viewport
-        // deterministic even when a project has no vector geometry yet, and gives CI a useful
-        // signal that swap-chain presentation is actually working instead of silently showing
-        // Android's default black buffer.
         renderer.clearOptions = renderer.clearOptions.apply {
             clear = true
             discard = true
@@ -169,8 +165,6 @@ class FilamentPlanSurface(context: Context) : TextureView(context) {
         filamentView.scene = scene
         filamentView.camera = camera
         filamentView.blendMode = View.BlendMode.OPAQUE
-        // The current preview uses deliberately flat materials. Avoiding the post-process path
-        // makes the first Android proof simpler and more robust on software/emulator GPUs.
         filamentView.isPostProcessingEnabled = false
         scene.skybox = Skybox.Builder()
             .color(0.965f, 0.955f, 0.925f, 1f)
@@ -277,10 +271,13 @@ class FilamentPlanSurface(context: Context) : TextureView(context) {
         val planExtent = max(maxX - minX, maxY - minY).coerceAtLeast(1f)
         val worldScale = 6.0f / planExtent
 
+        // Plan coordinates use +Y downward, while the Filament scene uses +Y upward and a
+        // right-handed X/Y/Z basis. Negating plan Y as it becomes world Z preserves handedness,
+        // so the generated face winding remains outward and normal back-face culling works.
         fun world(point: Point3D): Point3D = Point3D(
             (point.x - centerX) * worldScale,
             point.z * worldScale,
-            (point.y - centerY) * worldScale
+            -(point.y - centerY) * worldScale
         )
 
         val solids = faces.filterNot { it.isWater }
@@ -376,7 +373,7 @@ class FilamentPlanSurface(context: Context) : TextureView(context) {
                 indices.size
             )
             .material(0, materialInstance)
-            .culling(false)
+            .culling(true)
             .castShadows(false)
             .receiveShadows(false)
             .build(engine, entity)
@@ -392,10 +389,6 @@ class FilamentPlanSurface(context: Context) : TextureView(context) {
                 .platform(MaterialBuilder.Platform.MOBILE)
                 .name("Plan Trace flat preview")
                 .shading(MaterialBuilder.Shading.UNLIT)
-                // The temporary face adapter currently emits inward winding for several
-                // primitive types. Keep this proof double-sided so we can validate the entire
-                // Android/Filament pipeline, then correct winding in the semantic mesh builder.
-                .doubleSided(true)
                 .uniformParameter(MaterialBuilder.UniformType.FLOAT3, "baseColor")
                 .material(
                     """

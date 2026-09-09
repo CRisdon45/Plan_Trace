@@ -31,6 +31,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.3.1'
+          cache-read-only: false
 
       - name: Install Android SDK
         shell: bash
@@ -39,7 +40,13 @@ jobs:
           sdkmanager 'platform-tools' 'platforms;android-36' 'build-tools;36.0.0'
           sdkmanager 'platforms;android-36.1' || true
 
-      - name: Prepare debug signing identity
+      - name: Restore stable development signing identity
+        uses: actions/cache/restore@v4
+        with:
+          path: debug.keystore
+          key: plan-trace-development-signing-v1
+
+      - name: Prepare development signing identity
         shell: bash
         run: |
           if [ ! -f debug.keystore ]; then
@@ -51,7 +58,7 @@ jobs:
               -keyalg RSA \
               -keysize 2048 \
               -validity 10000 \
-              -dname 'CN=Plan Trace Emulator Test,O=Development,C=US'
+              -dname 'CN=Plan Trace Development,O=Development,C=US'
           fi
 
       - name: Compile app and instrumentation APKs
@@ -76,30 +83,22 @@ jobs:
           emulator-options: >-
             -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
             -camera-back none -camera-front none
-          script: |
-            mkdir -p smoke-artifacts
-            adb logcat -c
+          script: sh .github/scripts/run_emulator_smoke.sh
 
-            # android-emulator-runner executes this block with /bin/sh. Keep it strictly POSIX
-            # so a failed renderer assertion still leaves us with the screenshot and diagnostics.
-            set +e
-            gradle :app:connectedDebugAndroidTest --stacktrace --console=plain > smoke-artifacts/instrumentation.log 2>&1
-            TEST_EXIT=$?
-            set -e
-            cat smoke-artifacts/instrumentation.log
+      - name: Preserve stable development signing identity
+        if: success()
+        uses: actions/cache/save@v4
+        with:
+          path: debug.keystore
+          key: plan-trace-development-signing-v1
 
-            adb exec-out screencap -p > smoke-artifacts/after-instrumentation.png || true
-            adb logcat -d -v threadtime > smoke-artifacts/logcat-after-instrumentation.txt || true
-            adb logcat -d -v threadtime -s PlanTraceFilament:I '*:S' > smoke-artifacts/filament-after-instrumentation.txt || true
-            adb shell dumpsys gfxinfo com.example > smoke-artifacts/gfxinfo-after-instrumentation.txt 2>&1 || true
-            adb shell dumpsys SurfaceFlinger > smoke-artifacts/surfaceflinger-after-instrumentation.txt 2>&1 || true
-
-            if [ "$TEST_EXIT" -ne 0 ]; then
-              exit "$TEST_EXIT"
-            fi
-
-            adb install -r app/build/outputs/apk/debug/app-debug.apk
-            python3 .github/scripts/emulator_smoke.py
+      - name: Upload tested Filament APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: plan-trace-filament-preview
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
 
       - name: Upload emulator evidence
         if: always()

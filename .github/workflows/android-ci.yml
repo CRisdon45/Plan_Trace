@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - feature/tablet-input-filament-foundation
-      - feature/filament-perspective-preview
   workflow_dispatch:
 
 permissions:
@@ -75,6 +74,6 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: plan-trace-filament-preview
+          name: plan-trace-tablet-preview
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 14
