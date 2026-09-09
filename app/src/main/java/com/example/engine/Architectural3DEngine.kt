@@ -5,7 +5,6 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import androidx.compose.ui.geometry.Offset
-import com.example.model.DimensionMarkup
 import com.example.model.DrawingLayer
 import com.example.model.EllipseElement
 import com.example.model.FreehandPath
@@ -14,9 +13,7 @@ import com.example.model.Point2D
 import com.example.model.PolylineElement
 import com.example.model.RectangleElement
 import com.example.model.TraceProject
-import com.example.model.VectorElement
 import kotlin.math.PI
-import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
@@ -41,12 +38,9 @@ enum class Render3DMode {
 
 object Architectural3DEngine {
 
-    // Default directional sunlight vector (pointing down and towards camera)
     private val LIGHT_DIR = normalize(Point3D(0.5f, -0.6f, 0.7f))
 
-    /**
-     * Determines extrusion height and elevation for a layer based on its name/preset.
-     */
+    /** Legacy preview only. Layer-name inference is deliberately not authoritative project data. */
     fun getLayer3DSettings(layer: DrawingLayer, heightMultiplier: Float): Pair<Float, Float> {
         val lowerName = layer.name.lowercase()
         val baseElev: Float
@@ -81,13 +75,7 @@ object Architectural3DEngine {
         return Pair(baseElev, extrudeHeight)
     }
 
-    /**
-     * Generates 3D polygonal faces from all 2D vector elements in the project.
-     */
-    fun build3DFaces(
-        project: TraceProject,
-        heightMultiplier: Float = 1.0f
-    ): List<Face3D> {
+    fun build3DFaces(project: TraceProject, heightMultiplier: Float = 1.0f): List<Face3D> {
         val faces = mutableListOf<Face3D>()
         val layerMap = project.layers.associateBy { it.id }
 
@@ -108,25 +96,21 @@ object Architectural3DEngine {
                     val z0 = baseElev
                     val z1 = baseElev + extrudeHeight
 
-                    val p1_bot = Point3D(x1, y1, z0)
-                    val p2_bot = Point3D(x2, y1, z0)
-                    val p3_bot = Point3D(x2, y2, z0)
-                    val p4_bot = Point3D(x1, y2, z0)
+                    val p1Bot = Point3D(x1, y1, z0)
+                    val p2Bot = Point3D(x2, y1, z0)
+                    val p3Bot = Point3D(x2, y2, z0)
+                    val p4Bot = Point3D(x1, y2, z0)
+                    val p1Top = Point3D(x1, y1, z1)
+                    val p2Top = Point3D(x2, y1, z1)
+                    val p3Top = Point3D(x2, y2, z1)
+                    val p4Top = Point3D(x1, y2, z1)
 
-                    val p1_top = Point3D(x1, y1, z1)
-                    val p2_top = Point3D(x2, y1, z1)
-                    val p3_top = Point3D(x2, y2, z1)
-                    val p4_top = Point3D(x1, y2, z1)
-
-                    // Top Face
-                    faces.add(Face3D(listOf(p1_top, p2_top, p3_top, p4_top), rawColor, Point3D(0f, 0f, 1f), isWater, isTopFace = true))
-
-                    // 4 Side Walls
+                    faces.add(Face3D(listOf(p1Top, p2Top, p3Top, p4Top), rawColor, Point3D(0f, 0f, 1f), isWater, true))
                     if (extrudeHeight > 1f) {
-                        faces.add(Face3D(listOf(p1_bot, p2_bot, p2_top, p1_top), rawColor, Point3D(0f, -1f, 0f)))
-                        faces.add(Face3D(listOf(p2_bot, p3_bot, p3_top, p2_top), rawColor, Point3D(1f, 0f, 0f)))
-                        faces.add(Face3D(listOf(p3_bot, p4_bot, p4_top, p3_top), rawColor, Point3D(0f, 1f, 0f)))
-                        faces.add(Face3D(listOf(p4_bot, p1_bot, p1_top, p4_top), rawColor, Point3D(-1f, 0f, 0f)))
+                        faces.add(Face3D(listOf(p1Bot, p2Bot, p2Top, p1Top), rawColor, Point3D(0f, -1f, 0f)))
+                        faces.add(Face3D(listOf(p2Bot, p3Bot, p3Top, p2Top), rawColor, Point3D(1f, 0f, 0f)))
+                        faces.add(Face3D(listOf(p3Bot, p4Bot, p4Top, p3Top), rawColor, Point3D(0f, 1f, 0f)))
+                        faces.add(Face3D(listOf(p4Bot, p1Bot, p1Top, p4Top), rawColor, Point3D(-1f, 0f, 0f)))
                     }
                 }
 
@@ -145,26 +129,21 @@ object Architectural3DEngine {
                         botVerts.add(Point3D(vx, vy, z0))
                     }
 
-                    // Top Cap
-                    faces.add(Face3D(topVerts, rawColor, Point3D(0f, 0f, 1f), isWater, isTopFace = true))
-
-                    // Side Cylindrical Quads
+                    faces.add(Face3D(topVerts, rawColor, Point3D(0f, 0f, 1f), isWater, true))
                     if (extrudeHeight > 1f) {
                         for (i in 0 until segments) {
                             val next = (i + 1) % segments
-                            val b1 = botVerts[i]
-                            val b2 = botVerts[next]
-                            val t2 = topVerts[next]
-                            val t1 = topVerts[i]
-                            val normAngle = (2.0 * PI * (i + 0.5f) / segments).toFloat()
-                            val normal = Point3D(cos(normAngle), sin(normAngle), 0f)
-                            faces.add(Face3D(listOf(b1, b2, t2, t1), rawColor, normal))
+                            val angle = (2.0 * PI * (i + 0.5f) / segments).toFloat()
+                            faces.add(Face3D(
+                                listOf(botVerts[i], botVerts[next], topVerts[next], topVerts[i]),
+                                rawColor,
+                                Point3D(cos(angle), sin(angle), 0f)
+                            ))
                         }
                     }
                 }
 
                 is LineElement -> {
-                    // Extrude line into a vertical 3D wall
                     val z0 = baseElev
                     val z1 = baseElev + extrudeHeight
                     val dx = el.end.x - el.start.x
@@ -179,15 +158,12 @@ object Architectural3DEngine {
                         val p2 = Point3D(el.end.x + nx, el.end.y + ny, z0)
                         val p3 = Point3D(el.end.x - nx, el.end.y - ny, z0)
                         val p4 = Point3D(el.start.x - nx, el.start.y - ny, z0)
-
                         val t1 = Point3D(p1.x, p1.y, z1)
                         val t2 = Point3D(p2.x, p2.y, z1)
                         val t3 = Point3D(p3.x, p3.y, z1)
                         val t4 = Point3D(p4.x, p4.y, z1)
 
-                        // Top face
                         faces.add(Face3D(listOf(t1, t2, t3, t4), rawColor, Point3D(0f, 0f, 1f), isTopFace = true))
-                        // Long sides
                         faces.add(Face3D(listOf(p1, p2, t2, t1), rawColor, Point3D(nx / (thickness / 2f), ny / (thickness / 2f), 0f)))
                         faces.add(Face3D(listOf(p3, p4, t4, t3), rawColor, Point3D(-nx / (thickness / 2f), -ny / (thickness / 2f), 0f)))
                     }
@@ -197,13 +173,13 @@ object Architectural3DEngine {
                     val z0 = baseElev
                     val z1 = baseElev + extrudeHeight
                     for (i in 0 until el.points.size - 1) {
-                        val pA = el.points[i]
-                        val pB = el.points[i + 1]
-                        val b1 = Point3D(pA.x, pA.y, z0)
-                        val b2 = Point3D(pB.x, pB.y, z0)
-                        val t2 = Point3D(pB.x, pB.y, z1)
-                        val t1 = Point3D(pA.x, pA.y, z1)
-                        faces.add(Face3D(listOf(b1, b2, t2, t1), rawColor, Point3D(0f, 0f, 1f)))
+                        val a = el.points[i]
+                        val b = el.points[i + 1]
+                        faces.add(Face3D(
+                            listOf(Point3D(a.x, a.y, z0), Point3D(b.x, b.y, z0), Point3D(b.x, b.y, z1), Point3D(a.x, a.y, z1)),
+                            rawColor,
+                            Point3D(0f, 0f, 1f)
+                        ))
                     }
                 }
 
@@ -211,13 +187,13 @@ object Architectural3DEngine {
                     val z0 = baseElev
                     val z1 = baseElev + extrudeHeight
                     for (i in 0 until el.points.size - 1) {
-                        val pA = el.points[i]
-                        val pB = el.points[i + 1]
-                        val b1 = Point3D(pA.x, pA.y, z0)
-                        val b2 = Point3D(pB.x, pB.y, z0)
-                        val t2 = Point3D(pB.x, pB.y, z1)
-                        val t1 = Point3D(pA.x, pA.y, z1)
-                        faces.add(Face3D(listOf(b1, b2, t2, t1), rawColor, Point3D(0f, 0f, 1f)))
+                        val a = el.points[i]
+                        val b = el.points[i + 1]
+                        faces.add(Face3D(
+                            listOf(Point3D(a.x, a.y, z0), Point3D(b.x, b.y, z0), Point3D(b.x, b.y, z1), Point3D(a.x, a.y, z1)),
+                            rawColor,
+                            Point3D(0f, 0f, 1f)
+                        ))
                     }
                 }
 
@@ -227,9 +203,6 @@ object Architectural3DEngine {
         return faces
     }
 
-    /**
-     * Projects and renders the 3D scene onto an Android Canvas.
-     */
     fun render3DScene(
         canvas: Canvas,
         faces: List<Face3D>,
@@ -244,70 +217,52 @@ object Architectural3DEngine {
     ) {
         val radYaw = Math.toRadians(yawDeg.toDouble()).toFloat()
         val radPitch = Math.toRadians(pitchDeg.toDouble()).toFloat()
-
         val cosY = cos(radYaw)
         val sinY = sin(radYaw)
         val cosP = cos(radPitch)
         val sinP = sin(radPitch)
 
-        val screenMidX = screenSize.width / 2f + panOffset.x
-        val screenMidY = screenSize.height / 2f + panOffset.y
+        // Offset stores x/y, not width/height. The caller passes viewport size as Offset(width, height).
+        val screenMidX = screenSize.x / 2f + panOffset.x
+        val screenMidY = screenSize.y / 2f + panOffset.y
 
         fun projectPoint(p: Point3D): Pair<Offset, Float> {
             val rx = p.x - viewCenter.x
             val ry = p.y - viewCenter.y
-            val rz = p.z
-
-            // Yaw around Z
             val x1 = rx * cosY - ry * sinY
             val y1 = rx * sinY + ry * cosY
-            val z1 = rz
-
-            // Pitch around X
-            val y2 = y1 * cosP - z1 * sinP
-            val z2 = y1 * sinP + z1 * cosP
-
-            val sx = screenMidX + x1 * zoom
-            val sy = screenMidY + y2 * zoom
-            return Pair(Offset(sx, sy), z2)
+            val y2 = y1 * cosP - p.z * sinP
+            val z2 = y1 * sinP + p.z * cosP
+            return Pair(Offset(screenMidX + x1 * zoom, screenMidY + y2 * zoom), z2)
         }
 
-        // 1. Draw Architectural Ground Grid in 3D
         if (showGrid) {
             val gridPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = 0x2294A3B8 // Subtle light blue-gray
+                color = 0x2294A3B8
                 strokeWidth = 1.2f
             }
-            val gridStep = 80f
-            val gridExtent = 600f
-
-            for (gx in -gridExtent.toInt()..gridExtent.toInt() step gridStep.toInt()) {
+            val gridStep = 80
+            val gridExtent = 600
+            for (gx in -gridExtent..gridExtent step gridStep) {
                 val p1 = projectPoint(Point3D(viewCenter.x + gx, viewCenter.y - gridExtent, 0f)).first
                 val p2 = projectPoint(Point3D(viewCenter.x + gx, viewCenter.y + gridExtent, 0f)).first
                 canvas.drawLine(p1.x, p1.y, p2.x, p2.y, gridPaint)
             }
-            for (gy in -gridExtent.toInt()..gridExtent.toInt() step gridStep.toInt()) {
+            for (gy in -gridExtent..gridExtent step gridStep) {
                 val p1 = projectPoint(Point3D(viewCenter.x - gridExtent, viewCenter.y + gy, 0f)).first
                 val p2 = projectPoint(Point3D(viewCenter.x + gridExtent, viewCenter.y + gy, 0f)).first
                 canvas.drawLine(p1.x, p1.y, p2.x, p2.y, gridPaint)
             }
         }
 
-        // 2. Project and sort faces back-to-front (Painter's Algorithm)
-        data class ProjectedFace(
-            val face: Face3D,
-            val screenPoints: List<Offset>,
-            val depth: Float
-        )
+        data class ProjectedFace(val face: Face3D, val screenPoints: List<Offset>, val depth: Float)
 
         val projectedList = faces.mapNotNull { face ->
             if (face.vertices.size < 3) return@mapNotNull null
             val projected = face.vertices.map { projectPoint(it) }
-            val avgDepth = projected.map { it.second }.average().toFloat()
-            ProjectedFace(face, projected.map { it.first }, avgDepth)
+            ProjectedFace(face, projected.map { it.first }, projected.map { it.second }.average().toFloat())
         }.sortedBy { it.depth }
 
-        // 3. Render Projected Faces
         val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
         val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
@@ -317,12 +272,9 @@ object Architectural3DEngine {
         for (item in projectedList) {
             val face = item.face
             val pts = item.screenPoints
-
             val path = Path().apply {
                 moveTo(pts[0].x, pts[0].y)
-                for (i in 1 until pts.size) {
-                    lineTo(pts[i].x, pts[i].y)
-                }
+                for (i in 1 until pts.size) lineTo(pts[i].x, pts[i].y)
                 close()
             }
 
@@ -331,7 +283,6 @@ object Architectural3DEngine {
                     strokePaint.color = 0xFF0F172A.toInt()
                     canvas.drawPath(path, strokePaint)
                 }
-
                 Render3DMode.ARCHITECTURAL_CLAY -> {
                     val dot = max(0.2f, dotProduct(face.normal, LIGHT_DIR))
                     val shade = (180 + dot * 70).toInt().coerceIn(0, 255)
@@ -340,20 +291,13 @@ object Architectural3DEngine {
                     canvas.drawPath(path, fillPaint)
                     canvas.drawPath(path, strokePaint)
                 }
-
                 Render3DMode.SOLID_SHADED -> {
                     val dot = max(0.25f, dotProduct(face.normal, LIGHT_DIR))
                     val base = face.baseColor
                     val r = (Color.red(base) * (0.45f + 0.55f * dot)).toInt().coerceIn(0, 255)
                     val g = (Color.green(base) * (0.45f + 0.55f * dot)).toInt().coerceIn(0, 255)
                     val b = (Color.blue(base) * (0.45f + 0.55f * dot)).toInt().coerceIn(0, 255)
-
-                    if (face.isWater) {
-                        fillPaint.color = Color.argb(190, 14, 165, 233) // Translucent cyan pool water
-                    } else {
-                        fillPaint.color = Color.rgb(r, g, b)
-                    }
-
+                    fillPaint.color = if (face.isWater) Color.argb(190, 14, 165, 233) else Color.rgb(r, g, b)
                     strokePaint.color = if (face.isWater) 0x660284C7 else 0x440F172A
                     canvas.drawPath(path, fillPaint)
                     canvas.drawPath(path, strokePaint)
