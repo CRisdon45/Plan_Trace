@@ -82,6 +82,7 @@ fun PlanTraceApp(viewModel: MainViewModel) {
     val stylusOnlyMode by viewModel.stylusOnlyMode.collectAsState()
     val selectedElementId by viewModel.selectedElementId.collectAsState()
     val showDimensions by viewModel.showDimensions.collectAsState()
+    val snapSettings by viewModel.snapSettings.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -163,6 +164,7 @@ fun PlanTraceApp(viewModel: MainViewModel) {
                 isCalibratingScale = isCalibratingScale,
                 selectedElementId = selectedElementId,
                 showDimensions = showDimensions,
+                snapSettings = snapSettings,
                 onElementCreated = { viewModel.addVectorElement(it) },
                 onElementUpdated = { viewModel.updateElement(it) },
                 onElementsDeleted = { viewModel.removeVectorElements(it) },
