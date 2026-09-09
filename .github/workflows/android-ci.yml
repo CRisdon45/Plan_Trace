@@ -1,0 +1,60 @@
+name: Android CI
+
+on:
+  push:
+    branches: [feature/tablet-input-filament-foundation]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+
+      - name: Install Android SDK
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager 'platform-tools' 'platforms;android-36' 'build-tools;36.0.0'
+          # API 36.1 is used by newer Android Gradle Plugin releases when available.
+          sdkmanager 'platforms;android-36.1' || true
+
+      - name: Create disposable debug signing key
+        shell: bash
+        run: |
+          keytool -genkeypair -v \
+            -keystore debug.keystore \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname 'CN=Plan Trace Development,O=Development,C=US'
+
+      - name: Compile and package debug APK
+        shell: bash
+        run: gradle :app:assembleDebug --stacktrace --console=plain
+
+      - name: Upload debug APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: plan-trace-tablet-preview
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
