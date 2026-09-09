@@ -78,6 +78,11 @@ dependencies {
   implementation(libs.kotlinx.coroutines.core)
   implementation(libs.moshi.kotlin)
 
+  // Isolated Android-native Perspective experiment. The 2D sketcher remains
+  // independent of this renderer and remains the project authority.
+  implementation("com.google.android.filament:filament-android:1.75.1")
+  implementation("com.google.android.filament:filamat-android:1.75.1")
+
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)
   testImplementation(libs.androidx.junit)
