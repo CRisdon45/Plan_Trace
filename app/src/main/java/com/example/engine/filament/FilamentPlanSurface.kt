@@ -373,7 +373,11 @@ class FilamentPlanSurface(context: Context) : TextureView(context) {
                 indices.size
             )
             .material(0, materialInstance)
-            .culling(true)
+            // This flag is Filament's object-level frustum culling, not material back-face
+            // culling. Keep it disabled while the native preview stabilizes so a conservative or
+            // backend-specific AABB decision cannot hide otherwise valid generated geometry.
+            // The single-sided material still performs normal back-face culling.
+            .culling(false)
             .castShadows(false)
             .receiveShadows(false)
             .build(engine, entity)
