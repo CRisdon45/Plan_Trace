@@ -4,7 +4,7 @@ import android.content.Context
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.Surface
-import android.view.SurfaceView
+import android.view.TextureView
 import com.example.engine.Architectural3DEngine
 import com.example.engine.Face3D
 import com.example.engine.Point3D
@@ -41,11 +41,15 @@ import kotlin.math.sin
 /**
  * Isolated native-Android Filament preview for Plan Trace.
  *
+ * TextureView is intentional here. Unlike SurfaceView, it participates in the same window
+ * composition as Compose, which avoids a separate native surface being hidden or captured as
+ * black when the Perspective view is hosted inside a full-screen Compose Dialog.
+ *
  * The TraceProject remains authoritative. This class consumes generated preview faces and owns
  * only GPU resources / camera state. Layer-name height inference still belongs to the legacy
  * preview adapter and is intentionally not written back into the project model.
  */
-class FilamentPlanSurface(context: Context) : SurfaceView(context) {
+class FilamentPlanSurface(context: Context) : TextureView(context) {
 
     companion object {
         init { Filament.init() }
@@ -101,7 +105,7 @@ class FilamentPlanSurface(context: Context) : SurfaceView(context) {
         })
 
     init {
-        setZOrderOnTop(false)
+        isOpaque = true
         isClickable = true
         isFocusable = true
 
@@ -243,7 +247,6 @@ class FilamentPlanSurface(context: Context) : SurfaceView(context) {
         solidMesh = createMesh(solids, solidMaterial, ::world)
         waterMesh = createMesh(water, waterMaterial, ::world)
 
-        // Keep initial framing stable while still adapting to very tall geometry later.
         val sceneHeight = maxZ * worldScale
         cameraRadius = max(cameraRadius, 6.8f + sceneHeight * 0.6f).coerceAtMost(18f)
         updateCamera()
