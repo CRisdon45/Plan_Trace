@@ -667,7 +667,7 @@ fun TraceCanvas(
                     val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                         color = AndroidColor.rgb(2, 132, 199)
                         style = Paint.Style.STROKE
-                        strokeWidth = 2f / zoomScale
+                        this.strokeWidth = 2f / zoomScale
                     }
                     canvas.drawCircle(result.snappedPoint.x, result.snappedPoint.y, 9f / zoomScale, paint)
                 }
