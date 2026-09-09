@@ -1,12 +1,9 @@
 package com.example
 
-import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.SystemClock
 import android.view.InputDevice
 import android.view.MotionEvent
-import android.view.View
-import android.view.ViewGroup
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsDisplayed
@@ -18,13 +15,11 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.example.engine.filament.FilamentPlanSurface
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.abs
 
 /**
@@ -48,8 +43,8 @@ class TabletInputInstrumentationTest {
             .onNodeWithContentDescription("S Pen Only (Palm Rejection Active)")
             .assertIsDisplayed()
 
-        // Undo history is intentionally session-local, so every newly launched test activity
-        // begins with no undo operation even when a previous test saved vector elements.
+        // Undo history is session-local, so a newly launched test activity begins with no undo
+        // operation even if another test saved vector elements in the project database.
         val undo = composeRule.onNodeWithContentDescription("Undo")
         undo.assertIsNotEnabled()
 
@@ -91,7 +86,7 @@ class TabletInputInstrumentationTest {
 
         // Produce a known closed vector primitive through the actual UI/input path. This means
         // the 3D assertion exercises: toolbar -> stylus routing -> project vector model ->
-        // Architectural3DEngine -> Filament mesh -> GPU-presented TextureView.
+        // Architectural3DEngine -> Filament mesh -> GPU-presented Android window.
         composeRule.onNodeWithTag("tool_rect").performClick()
         injectSinglePointerStroke(
             toolType = MotionEvent.TOOL_TYPE_STYLUS,
@@ -111,9 +106,7 @@ class TabletInputInstrumentationTest {
 
         composeRule.waitUntil(timeoutMillis = 12_000) {
             runCatching {
-                composeRule
-                    .onNodeWithText("Perspective · Filament preview")
-                    .fetchSemanticsNode()
+                composeRule.onNodeWithText("Perspective · Filament preview").fetchSemanticsNode()
                 true
             }.getOrDefault(false)
         }
@@ -122,35 +115,38 @@ class TabletInputInstrumentationTest {
         composeRule.onNodeWithText("Drag to orbit · Pinch to zoom").assertIsDisplayed()
 
         SystemClock.sleep(2200)
-        val surface = findFilamentSurface(composeRule.activity.window.decorView)
-        assertNotNull("Expected the Filament TextureView inside the Perspective dialog", surface)
 
-        val captured = AtomicReference<Bitmap?>()
-        InstrumentationRegistry.getInstrumentation().runOnMainSync {
-            captured.set(surface?.bitmap)
-        }
-        val bitmap = captured.get()
-        assertNotNull("Expected TextureView bitmap after Filament rendered", bitmap)
+        // A Compose Dialog owns a separate Android window, so inspecting only Activity.decorView
+        // can miss the renderer entirely. UiAutomation captures the real composited display and
+        // therefore verifies exactly what a tablet user would see.
+        val bitmap = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
+        assertNotNull("Expected a composited emulator screenshot", bitmap)
         bitmap!!
 
-        // Black was the original failure mode. The explicit paper-tone clear must always present.
+        // Black was the original failure mode. Sample the central viewport, well away from the
+        // Compose header/footer overlays.
         val center = bitmap.getPixel(bitmap.width / 2, bitmap.height / 2)
         val centerLuminance = (Color.red(center) + Color.green(center) + Color.blue(center)) / 3
         assertTrue(
-            "Perspective surface remained black: center=#${Integer.toHexString(center)} luminance=$centerLuminance",
+            "Perspective viewport remained black: center=#${Integer.toHexString(center)} luminance=$centerLuminance",
             centerLuminance > 40
         )
 
-        // Also require pixels that differ meaningfully from the paper background. That prevents a
-        // false pass where only the clear color works but traced vector geometry never reaches the GPU.
+        // Also require visible pixels that differ meaningfully from the intended paper-tone clear.
+        // This prevents a false pass where the swap chain clears correctly but traced vector
+        // geometry never makes it through the mesh/material/render pipeline.
         val background = intArrayOf(246, 244, 236)
         var geometrySamples = 0
-        val stepX = (bitmap.width / 60).coerceAtLeast(1)
-        val stepY = (bitmap.height / 40).coerceAtLeast(1)
-        var y = 0
-        while (y < bitmap.height) {
-            var x = 0
-            while (x < bitmap.width) {
+        val minX = (bitmap.width * 0.16f).toInt()
+        val maxX = (bitmap.width * 0.84f).toInt()
+        val minY = (bitmap.height * 0.24f).toInt()
+        val maxY = (bitmap.height * 0.76f).toInt()
+        val stepX = ((maxX - minX) / 60).coerceAtLeast(1)
+        val stepY = ((maxY - minY) / 40).coerceAtLeast(1)
+        var y = minY
+        while (y < maxY) {
+            var x = minX
+            while (x < maxX) {
                 val pixel = bitmap.getPixel(x, y)
                 val distance = abs(Color.red(pixel) - background[0]) +
                     abs(Color.green(pixel) - background[1]) +
@@ -161,7 +157,7 @@ class TabletInputInstrumentationTest {
             y += stepY
         }
         assertTrue(
-            "Filament presented the background but no visible generated geometry (samples=$geometrySamples)",
+            "Filament presented its background but no visible generated geometry (samples=$geometrySamples)",
             geometrySamples >= 8
         )
         bitmap.recycle()
@@ -176,17 +172,6 @@ class TabletInputInstrumentationTest {
                 .fetchSemanticsNodes(atLeastOneRootRequired = false)
                 .isNotEmpty()
         }
-    }
-
-    private fun findFilamentSurface(root: View): FilamentPlanSurface? {
-        if (root is FilamentPlanSurface) return root
-        if (root is ViewGroup) {
-            for (index in 0 until root.childCount) {
-                val match = findFilamentSurface(root.getChildAt(index))
-                if (match != null) return match
-            }
-        }
-        return null
     }
 
     private fun activitySize(): Pair<Float, Float> {
