@@ -392,12 +392,16 @@ class FilamentPlanSurface(context: Context) : TextureView(context) {
                 .platform(MaterialBuilder.Platform.MOBILE)
                 .name("Plan Trace flat preview")
                 .shading(MaterialBuilder.Shading.UNLIT)
+                // The temporary face adapter currently emits inward winding for several
+                // primitive types. Keep this proof double-sided so we can validate the entire
+                // Android/Filament pipeline, then correct winding in the semantic mesh builder.
+                .doubleSided(true)
                 .uniformParameter(MaterialBuilder.UniformType.FLOAT3, "baseColor")
                 .material(
                     """
                     void material(inout MaterialInputs material) {
                         prepareMaterial(material);
-                        material.baseColor.rgb = materialParams.baseColor;
+                        material.baseColor = vec4(materialParams.baseColor, 1.0);
                     }
                     """.trimIndent()
                 )
