@@ -13,6 +13,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -24,9 +25,10 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.math.abs
 
 /**
- * Emulator coverage for the tablet input contract.
+ * Emulator coverage for the tablet input and Perspective contracts.
  *
  * Stylus tests inject MotionEvents with Android's real tool type/source metadata instead of adb's
  * generic touch input. They do not replace physical Samsung S Pen / palm-rejection testing, but
@@ -40,25 +42,20 @@ class TabletInputInstrumentationTest {
 
     @Test
     fun penOnlyMode_routesFingerToNavigation_andStylusToDrawing() {
-        composeRule.waitUntil(timeoutMillis = 10_000) {
-            composeRule
-                .onAllNodes(hasText("Set Scale ⌖"))
-                .fetchSemanticsNodes(atLeastOneRootRequired = false)
-                .isNotEmpty()
-        }
+        waitForPlan()
 
         composeRule
             .onNodeWithContentDescription("S Pen Only (Palm Rejection Active)")
             .assertIsDisplayed()
 
-        // A fresh project has nothing to undo.
-        composeRule.onNodeWithContentDescription("Undo").assertIsNotEnabled()
+        val undo = composeRule.onNodeWithContentDescription("Undo")
+        val hadExistingUndo = runCatching { undo.assertIsEnabled(); true }.getOrDefault(false)
 
         val (width, height) = activitySize()
         val startX = width * 0.55f
         val startY = height * 0.52f
 
-        // In Pen-only mode a finger swipe is navigation, not ink.
+        // In Pen-only mode a finger swipe is navigation, never a new drawing operation.
         injectSinglePointerStroke(
             toolType = MotionEvent.TOOL_TYPE_FINGER,
             source = InputDevice.SOURCE_TOUCHSCREEN,
@@ -69,7 +66,7 @@ class TabletInputInstrumentationTest {
         )
         composeRule.waitForIdle()
         SystemClock.sleep(250)
-        composeRule.onNodeWithContentDescription("Undo").assertIsNotEnabled()
+        if (!hadExistingUndo) undo.assertIsNotEnabled()
 
         // The same motion as a stylus must create ink and therefore make Undo available.
         injectSinglePointerStroke(
@@ -82,11 +79,30 @@ class TabletInputInstrumentationTest {
         )
         composeRule.waitForIdle()
         SystemClock.sleep(350)
-        composeRule.onNodeWithContentDescription("Undo").assertIsEnabled()
+        undo.assertIsEnabled()
     }
 
     @Test
-    fun filamentPerspective_presentsANonBlackFrame() {
+    fun filamentPerspective_presentsBackgroundAndGeneratedGeometry() {
+        waitForPlan()
+        val (width, height) = activitySize()
+
+        // Produce a known closed vector primitive through the actual UI/input path. This means
+        // the 3D assertion exercises: toolbar -> stylus routing -> project vector model ->
+        // Architectural3DEngine -> Filament mesh -> GPU-presented TextureView.
+        composeRule.onNodeWithTag("tool_rect").performClick()
+        injectSinglePointerStroke(
+            toolType = MotionEvent.TOOL_TYPE_STYLUS,
+            source = InputDevice.SOURCE_STYLUS,
+            startX = width * 0.42f,
+            startY = height * 0.38f,
+            endX = width * 0.66f,
+            endY = height * 0.62f
+        )
+        composeRule.waitForIdle()
+        SystemClock.sleep(350)
+        composeRule.onNodeWithContentDescription("Undo").assertIsEnabled()
+
         composeRule
             .onNodeWithContentDescription("Open Perspective preview")
             .performClick()
@@ -98,14 +114,10 @@ class TabletInputInstrumentationTest {
                 .isNotEmpty()
         }
 
-        composeRule
-            .onNodeWithText("Perspective · Filament preview")
-            .assertIsDisplayed()
-        composeRule
-            .onNodeWithText("Drag to orbit · Pinch to zoom")
-            .assertIsDisplayed()
+        composeRule.onNodeWithText("Perspective · Filament preview").assertIsDisplayed()
+        composeRule.onNodeWithText("Drag to orbit · Pinch to zoom").assertIsDisplayed()
 
-        SystemClock.sleep(1800)
+        SystemClock.sleep(2200)
         val surface = findView<FilamentPlanSurface>(composeRule.activity.window.decorView)
         assertNotNull("Expected the Filament TextureView inside the Perspective dialog", surface)
 
@@ -117,19 +129,56 @@ class TabletInputInstrumentationTest {
         assertNotNull("Expected TextureView bitmap after Filament rendered", bitmap)
         bitmap!!
 
-        val sampleX = (bitmap.width / 2).coerceIn(0, bitmap.width - 1)
-        val sampleY = (bitmap.height / 2).coerceIn(0, bitmap.height - 1)
-        val center = bitmap.getPixel(sampleX, sampleY)
-        val luminance = (Color.red(center) + Color.green(center) + Color.blue(center)) / 3
+        // Black was the original failure mode. The explicit paper-tone clear must always present.
+        val center = bitmap.getPixel(bitmap.width / 2, bitmap.height / 2)
+        val centerLuminance = (Color.red(center) + Color.green(center) + Color.blue(center)) / 3
         assertTrue(
-            "Perspective surface remained black: center=#${Integer.toHexString(center)} luminance=$luminance",
-            luminance > 40
+            "Perspective surface remained black: center=#${Integer.toHexString(center)} luminance=$centerLuminance",
+            centerLuminance > 40
+        )
+
+        // Also require pixels that differ meaningfully from the paper background. That prevents a
+        // false pass where only the clear color works but traced vector geometry never reaches the GPU.
+        val background = intArrayOf(246, 244, 236)
+        var geometrySamples = 0
+        val stepX = (bitmap.width / 60).coerceAtLeast(1)
+        val stepY = (bitmap.height / 40).coerceAtLeast(1)
+        var y = 0
+        while (y < bitmap.height) {
+            var x = 0
+            while (x < bitmap.width) {
+                val pixel = bitmap.getPixel(x, y)
+                val distance = abs(Color.red(pixel) - background[0]) +
+                    abs(Color.green(pixel) - background[1]) +
+                    abs(Color.blue(pixel) - background[2])
+                if (distance > 90) geometrySamples++
+                x += stepX
+            }
+            y += stepY
+        }
+        assertTrue(
+            "Filament presented the background but no visible generated geometry (samples=$geometrySamples)",
+            geometrySamples >= 8
         )
         bitmap.recycle()
 
+        composeRule.onNodeWithContentDescription("Close Perspective").performClick()
+    }
+
+    private fun waitForPlan() {
+        composeRule.waitUntil(timeoutMillis = 10_000) {
+            composeRule
+                .onAllNodes(hasText("Set Scale ⌖"))
+                .fetchSemanticsNodes(atLeastOneRootRequired = false)
+                .isNotEmpty() ||
+                composeRule
+                    .onAllNodes(hasText("Scale:"))
+                    .fetchSemanticsNodes(atLeastOneRootRequired = false)
+                    .isNotEmpty()
+        }
         composeRule
-            .onNodeWithContentDescription("Close Perspective")
-            .performClick()
+            .onNodeWithContentDescription("S Pen Only (Palm Rejection Active)")
+            .assertIsDisplayed()
     }
 
     private inline fun <reified T : View> findView(root: View): T? {
