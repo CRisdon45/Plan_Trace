@@ -1,6 +1,7 @@
 package com.example.engine.filament
 
 import android.content.Context
+import android.util.Log
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.Surface
@@ -35,23 +36,22 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.math.cos
 import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.sin
 
 /**
  * Isolated native-Android Filament preview for Plan Trace.
  *
- * TextureView is intentional here. Unlike SurfaceView, it participates in the same window
- * composition as Compose, which avoids a separate native surface being hidden or captured as
- * black when the Perspective view is hosted inside a full-screen Compose Dialog.
+ * TextureView is intentional here. It participates in the same window composition as Compose,
+ * which is more predictable than a separate SurfaceView when Perspective lives in a dialog.
  *
- * The TraceProject remains authoritative. This class consumes generated preview faces and owns
- * only GPU resources / camera state. Layer-name height inference still belongs to the legacy
- * preview adapter and is intentionally not written back into the project model.
+ * TraceProject remains authoritative. This class consumes generated preview faces and owns only
+ * GPU resources and camera state. Layer-name height inference still belongs to the temporary
+ * preview adapter and is never written back into the project model.
  */
 class FilamentPlanSurface(context: Context) : TextureView(context) {
 
     companion object {
+        private const val TAG = "PlanTraceFilament"
         init { Filament.init() }
     }
 
@@ -84,36 +84,63 @@ class FilamentPlanSurface(context: Context) : TextureView(context) {
     private var lastTouchX = 0f
     private var lastTouchY = 0f
     private var destroyed = false
+    private var renderedFrames = 0L
+    private var skippedFrames = 0L
 
     private val frameScheduler = object : ChoreographerHelper() {
         override fun onFrame(frameTimeNanos: Long) {
             val chain = swapChain ?: return
-            if (uiHelper.isReadyToRender && renderer.beginFrame(chain, frameTimeNanos)) {
+            if (!uiHelper.isReadyToRender) return
+            if (renderer.beginFrame(chain, frameTimeNanos)) {
                 renderer.render(filamentView)
                 renderer.endFrame()
+                renderedFrames++
+                if (renderedFrames == 1L || renderedFrames == 30L) {
+                    Log.i(TAG, "Rendered frame=$renderedFrames viewport=${filamentView.viewport.width}x${filamentView.viewport.height}")
+                }
+            } else {
+                skippedFrames++
+                if (skippedFrames <= 3L) Log.w(TAG, "beginFrame skipped frame count=$skippedFrames")
             }
         }
     }
 
-    private val scaleDetector = ScaleGestureDetector(context,
+    private val scaleDetector = ScaleGestureDetector(
+        context,
         object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
             override fun onScale(detector: ScaleGestureDetector): Boolean {
                 cameraRadius = (cameraRadius / detector.scaleFactor).coerceIn(2.5f, 30f)
                 updateCamera()
                 return true
             }
-        })
+        }
+    )
 
     init {
         isOpaque = true
         isClickable = true
         isFocusable = true
+        uiHelper.isOpaque = true
+
+        // Always clear to the intended paper-toned scene background. This makes the viewport
+        // deterministic even when a project has no vector geometry yet, and gives CI a useful
+        // signal that swap-chain presentation is actually working instead of silently showing
+        // Android's default black buffer.
+        renderer.clearOptions = renderer.clearOptions.apply {
+            clear = true
+            discard = true
+            clearColor[0] = 0.965
+            clearColor[1] = 0.955
+            clearColor[2] = 0.925
+            clearColor[3] = 1.0
+        }
 
         uiHelper.renderCallback = object : UiHelper.RendererCallback {
             override fun onNativeWindowChanged(surface: Surface) {
                 swapChain?.let { engine.destroySwapChain(it) }
-                swapChain = engine.createSwapChain(surface)
+                swapChain = engine.createSwapChain(surface, uiHelper.swapChainFlags)
                 displayHelper.attach(renderer, display)
+                Log.i(TAG, "Native window attached; swapChain ready")
             }
 
             override fun onDetachedFromSurface() {
@@ -123,22 +150,28 @@ class FilamentPlanSurface(context: Context) : TextureView(context) {
                     engine.flushAndWait()
                     swapChain = null
                 }
+                Log.i(TAG, "Native window detached")
             }
 
             override fun onResized(width: Int, height: Int) {
+                val safeWidth = max(width, 1)
                 val safeHeight = max(height, 1)
-                val aspect = width.toDouble() / safeHeight.toDouble()
+                val aspect = safeWidth.toDouble() / safeHeight.toDouble()
                 camera.setProjection(42.0, aspect, 0.1, 100.0, Camera.Fov.VERTICAL)
-                filamentView.viewport = Viewport(0, 0, width, height)
+                filamentView.viewport = Viewport(0, 0, safeWidth, safeHeight)
                 FilamentHelper.synchronizePendingFrames(engine)
                 updateCamera()
+                Log.i(TAG, "Viewport resized to ${safeWidth}x${safeHeight}")
             }
         }
         uiHelper.attachTo(this)
 
         filamentView.scene = scene
         filamentView.camera = camera
-        filamentView.isPostProcessingEnabled = true
+        filamentView.blendMode = View.BlendMode.OPAQUE
+        // The current preview uses deliberately flat materials. Avoiding the post-process path
+        // makes the first Android proof simpler and more robust on software/emulator GPUs.
+        filamentView.isPostProcessingEnabled = false
         scene.skybox = Skybox.Builder()
             .color(0.965f, 0.955f, 0.925f, 1f)
             .build(engine)
@@ -153,17 +186,22 @@ class FilamentPlanSurface(context: Context) : TextureView(context) {
 
         frameScheduler.setRenderer(renderer)
         updateCamera()
+        Log.i(TAG, "Filament preview initialized")
     }
 
     fun setProject(project: TraceProject) {
         if (destroyed) return
         val faces = Architectural3DEngine.build3DFaces(project, heightMultiplier = 1f)
+        Log.i(TAG, "setProject title=${project.title} elements=${project.elements.size} faces=${faces.size}")
         rebuildMeshes(faces)
     }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-        if (!destroyed) frameScheduler.post()
+        if (!destroyed) {
+            frameScheduler.post()
+            Log.i(TAG, "TextureView attached; frame scheduler started")
+        }
     }
 
     override fun onDetachedFromWindow() {
@@ -223,7 +261,10 @@ class FilamentPlanSurface(context: Context) : TextureView(context) {
         solidMesh = null
         waterMesh = null
 
-        if (faces.isEmpty()) return
+        if (faces.isEmpty()) {
+            Log.i(TAG, "No preview geometry; rendering background only")
+            return
+        }
 
         val allPoints = faces.flatMap { it.vertices }
         val minX = allPoints.minOf { it.x }
@@ -250,6 +291,7 @@ class FilamentPlanSurface(context: Context) : TextureView(context) {
         val sceneHeight = maxZ * worldScale
         cameraRadius = max(cameraRadius, 6.8f + sceneHeight * 0.6f).coerceAtMost(18f)
         updateCamera()
+        Log.i(TAG, "Meshes rebuilt solids=${solids.size} water=${water.size} worldScale=$worldScale")
     }
 
     private fun createMesh(
@@ -397,5 +439,6 @@ class FilamentPlanSurface(context: Context) : TextureView(context) {
         engine.destroyCameraComponent(cameraEntity)
         EntityManager.get().destroy(cameraEntity)
         engine.destroy()
+        Log.i(TAG, "Filament preview destroyed frames=$renderedFrames skipped=$skippedFrames")
     }
 }
