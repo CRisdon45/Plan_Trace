@@ -2,11 +2,17 @@ name: Android CI
 
 on:
   push:
-    branches: [feature/tablet-input-filament-foundation]
+    branches:
+      - feature/tablet-input-filament-foundation
+      - feature/filament-perspective-preview
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: android-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -31,7 +37,6 @@ jobs:
         run: |
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager 'platform-tools' 'platforms;android-36' 'build-tools;36.0.0'
-          # API 36.1 is used by newer Android Gradle Plugin releases when available.
           sdkmanager 'platforms;android-36.1' || true
 
       - name: Create disposable debug signing key
