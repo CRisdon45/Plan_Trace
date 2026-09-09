@@ -100,6 +100,12 @@ fun PlanTraceApp(viewModel: MainViewModel) {
         }
     }
 
+    // This is a tablet/S Pen tool first: by default the pen draws while fingers navigate.
+    // Users can still tap the Pen-only control to enable one-finger drawing when desired.
+    LaunchedEffect(Unit) {
+        if (!stylusOnlyMode) viewModel.toggleStylusOnlyMode()
+    }
+
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
