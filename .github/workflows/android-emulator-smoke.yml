@@ -80,15 +80,13 @@ jobs:
             mkdir -p smoke-artifacts
             adb logcat -c
 
-            # A failed renderer assertion is valuable evidence, not a reason to destroy the
-            # emulator before we can inspect it. Preserve the composited display and Filament
-            # diagnostics first, then return the original test status to GitHub Actions.
+            # android-emulator-runner executes this block with /bin/sh. Keep it strictly POSIX
+            # so a failed renderer assertion still leaves us with the screenshot and diagnostics.
             set +e
-            set -o pipefail
-            gradle :app:connectedDebugAndroidTest --stacktrace --console=plain 2>&1 | tee smoke-artifacts/instrumentation.log
-            TEST_EXIT=${PIPESTATUS[0]}
-            set +o pipefail
+            gradle :app:connectedDebugAndroidTest --stacktrace --console=plain > smoke-artifacts/instrumentation.log 2>&1
+            TEST_EXIT=$?
             set -e
+            cat smoke-artifacts/instrumentation.log
 
             adb exec-out screencap -p > smoke-artifacts/after-instrumentation.png || true
             adb logcat -d -v threadtime > smoke-artifacts/logcat-after-instrumentation.txt || true
