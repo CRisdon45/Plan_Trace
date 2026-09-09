@@ -248,9 +248,6 @@ fun TraceCanvas(
                     val oldZoom = zoomScale
                     val ratio = (currentSpan / previousSpan).coerceIn(0.5f, 2f)
                     val newZoom = (oldZoom * ratio).coerceIn(0.20f, 30f)
-
-                    // Keep the world point under the previous centroid attached to the
-                    // moving centroid while zoom changes. This combines pan + pinch.
                     val worldX = (previousCenter.x - panOffset.x) / oldZoom
                     val worldY = (previousCenter.y - panOffset.y) / oldZoom
                     panOffset = Offset(
@@ -342,7 +339,6 @@ fun TraceCanvas(
                 val actionType = event.getToolType(actionIndex)
                 val actionIsStylus = actionType == MotionEvent.TOOL_TYPE_STYLUS || actionType == MotionEvent.TOOL_TYPE_ERASER
 
-                // Hover never participates in navigation.
                 if (action == MotionEvent.ACTION_HOVER_ENTER || action == MotionEvent.ACTION_HOVER_MOVE) {
                     if (stylusIndex != null) hoverScreen = Offset(event.getX(stylusIndex), event.getY(stylusIndex))
                     return@pointerInteropFilter true
@@ -352,8 +348,6 @@ fun TraceCanvas(
                     return@pointerInteropFilter true
                 }
 
-                // A stylus owns the gesture. A palm/finger arriving while the pen is down
-                // is consumed and ignored instead of cancelling the stroke or starting pan.
                 if (stylusIndex != null &&
                     (action == MotionEvent.ACTION_POINTER_DOWN || action == MotionEvent.ACTION_POINTER_UP) &&
                     !actionIsStylus
@@ -384,19 +378,16 @@ fun TraceCanvas(
                     type != MotionEvent.TOOL_TYPE_STYLUS && type != MotionEvent.TOOL_TYPE_ERASER
                 }
 
-                // Two fingers are navigation even when finger drawing is enabled.
                 if (stylusIndex == null && touchIndices.size >= 2) {
                     if (action == MotionEvent.ACTION_POINTER_DOWN) cancelDrawing()
                     return@pointerInteropFilter handleNavigation(event, touchIndices)
                 }
 
-                // In Pen-only mode fingers navigate. Explicit Pan mode does the same.
                 if (stylusIndex == null && (stylusOnlyMode || activeTool == DrawingTool.PAN)) {
                     cancelDrawing()
                     return@pointerInteropFilter handleNavigation(event, touchIndices.ifEmpty { listOf(0) })
                 }
 
-                // Explicit Pan also works with the stylus.
                 if (stylusIndex != null && activeTool == DrawingTool.PAN) {
                     cancelDrawing()
                     return@pointerInteropFilter handleNavigation(event, listOf(stylusIndex))
@@ -410,9 +401,6 @@ fun TraceCanvas(
                 val screen = Offset(event.getX(inputIndex), event.getY(inputIndex))
                 val rawWorld = screenToWorld(screen, pressure)
 
-                // If the stylus itself arrives/leaves as a secondary pointer, treat that as
-                // a normal pen down/up. Samsung normally reports it as the primary pointer,
-                // but this keeps routing deterministic across devices.
                 val drawingAction = when {
                     action == MotionEvent.ACTION_POINTER_DOWN && actionIsStylus -> MotionEvent.ACTION_DOWN
                     action == MotionEvent.ACTION_POINTER_UP && actionIsStylus -> MotionEvent.ACTION_UP
@@ -559,11 +547,11 @@ fun TraceCanvas(
                                     }
                                 }
                                 DrawingTool.LINE -> if (start.distanceTo(end) > 4f) {
-                                    onElementCreated(LineElement(project.activeLayerId, start = start, end = end,
+                                    onElementCreated(LineElement(layerId = project.activeLayerId, start = start, end = end,
                                         strokeColor = strokeColor, strokeWidth = strokeWidth, style = strokeStyle))
                                 }
                                 DrawingTool.RECTANGLE -> if (abs(end.x - start.x) > 4f && abs(end.y - start.y) > 4f) {
-                                    onElementCreated(RectangleElement(project.activeLayerId,
+                                    onElementCreated(RectangleElement(layerId = project.activeLayerId,
                                         left = min(start.x, end.x), top = min(start.y, end.y),
                                         right = max(start.x, end.x), bottom = max(start.y, end.y),
                                         strokeColor = strokeColor, strokeWidth = strokeWidth, style = strokeStyle,
@@ -571,7 +559,7 @@ fun TraceCanvas(
                                         fillColor = strokeColor))
                                 }
                                 DrawingTool.ELLIPSE -> if (start.distanceTo(end) > 4f) {
-                                    onElementCreated(EllipseElement(project.activeLayerId,
+                                    onElementCreated(EllipseElement(layerId = project.activeLayerId,
                                         centerX = start.x, centerY = start.y,
                                         radiusX = max(abs(end.x - start.x), 4f),
                                         radiusY = max(abs(end.y - start.y), 4f),
@@ -583,7 +571,7 @@ fun TraceCanvas(
                                     val label = if (project.scaleCalibration.isCalibrated)
                                         project.scaleCalibration.formatMeasurement(start.distanceTo(end))
                                     else "${start.distanceTo(end).roundToInt()} px"
-                                    onElementCreated(DimensionMarkup(project.activeLayerId, start = start, end = end, label = label))
+                                    onElementCreated(DimensionMarkup(layerId = project.activeLayerId, start = start, end = end, label = label))
                                 }
                                 DrawingTool.POLYLINE -> {
                                     val now = System.currentTimeMillis()
@@ -592,7 +580,7 @@ fun TraceCanvas(
                                         now - lastPolylineTapMs in 40..360 &&
                                         polylinePoints.last().distanceTo(point) < (28f / zoomScale).coerceAtLeast(5f)
                                     if (finish) {
-                                        onElementCreated(PolylineElement(project.activeLayerId,
+                                        onElementCreated(PolylineElement(layerId = project.activeLayerId,
                                             points = polylinePoints.toList(), strokeColor = strokeColor,
                                             strokeWidth = strokeWidth, style = strokeStyle))
                                         polylinePoints.clear()
@@ -761,13 +749,13 @@ private fun StraightenedResult.toElement(
     width: Float,
     style: StrokeStyle
 ): VectorElement = when (this) {
-    is StraightenedResult.Line -> LineElement(layerId, start = start, end = end,
+    is StraightenedResult.Line -> LineElement(layerId = layerId, start = start, end = end,
         strokeColor = color, strokeWidth = width, style = style)
-    is StraightenedResult.Rectangle -> RectangleElement(layerId,
+    is StraightenedResult.Rectangle -> RectangleElement(layerId = layerId,
         left = left, top = top, right = right, bottom = bottom,
         strokeColor = color, strokeWidth = width, style = style,
         isFilled = style == StrokeStyle.WATERCOLOR_WASH, fillColor = color)
-    is StraightenedResult.CircleOrEllipse -> EllipseElement(layerId,
+    is StraightenedResult.CircleOrEllipse -> EllipseElement(layerId = layerId,
         centerX = centerX, centerY = centerY, radiusX = radiusX, radiusY = radiusY,
         strokeColor = color, strokeWidth = width, style = style,
         isFilled = style == StrokeStyle.WATERCOLOR_WASH, fillColor = color)
