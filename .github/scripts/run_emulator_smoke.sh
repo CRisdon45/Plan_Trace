@@ -12,7 +12,19 @@ TEST_EXIT=$?
 set -e
 
 cat smoke-artifacts/instrumentation.log
-adb exec-out run-as com.aistudio.plantrace.jzkrwq cat files/test-evidence/filament-generated-geometry.png > smoke-artifacts/filament-generated-geometry.png || true
+
+# The renderer test captures this shared-storage PNG while its Perspective window is still open.
+# Treat missing/corrupt visual evidence as a CI failure, not as an optional artifact.
+adb pull /sdcard/filament-generated-geometry.png smoke-artifacts/filament-generated-geometry.png
+python3 - <<'PY'
+from pathlib import Path
+path = Path('smoke-artifacts/filament-generated-geometry.png')
+data = path.read_bytes()
+if len(data) < 1024 or not data.startswith(b'\x89PNG\r\n\x1a\n'):
+    raise SystemExit(f'Invalid Filament evidence PNG: {len(data)} bytes')
+print(f'Validated Filament evidence PNG: {len(data)} bytes')
+PY
+
 adb exec-out screencap -p > smoke-artifacts/after-instrumentation.png || true
 adb logcat -d -v threadtime > smoke-artifacts/logcat-after-instrumentation.txt || true
 adb logcat -d -v threadtime -s PlanTraceFilament:I '*:S' > smoke-artifacts/filament-after-instrumentation.txt || true

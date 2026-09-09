@@ -1,6 +1,5 @@
 package com.example
 
-import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.SystemClock
 import android.view.InputDevice
@@ -16,8 +15,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import java.io.File
-import java.io.FileOutputStream
+import java.io.FileInputStream
 import kotlin.math.abs
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -118,13 +116,14 @@ class TabletInputInstrumentationTest {
         assertNotNull("Expected a composited emulator screenshot", bitmap)
         bitmap!!
 
-        // Save inside the app's debuggable internal sandbox. CI can retrieve this exact PNG with
-        // `run-as`, avoiding Android's /sdcard/Android/data access restrictions.
-        val evidenceDir = File(instrumentation.targetContext.filesDir, "test-evidence")
-        evidenceDir.mkdirs()
-        FileOutputStream(File(evidenceDir, "filament-generated-geometry.png")).use { stream ->
-            bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
-        }
+        // While the Perspective window is still open, ask Android's shell to capture the same
+        // display into shared storage. This survives Gradle uninstalling the test target and gives
+        // CI a real PNG it can preserve for human review.
+        instrumentation.uiAutomation
+            .executeShellCommand("screencap -p /sdcard/filament-generated-geometry.png")
+            .use { descriptor ->
+                FileInputStream(descriptor.fileDescriptor).use { it.readBytes() }
+            }
 
         val center = bitmap.getPixel(bitmap.width / 2, bitmap.height / 2)
         val centerLuminance = (Color.red(center) + Color.green(center) + Color.blue(center)) / 3
