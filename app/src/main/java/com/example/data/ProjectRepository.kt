@@ -32,35 +32,28 @@ class ProjectRepository(private val context: Context) {
     }
 
     suspend fun getOrCreateInitialProject(): TraceProject = withContext(Dispatchers.IO) {
-        val count = dao.getProjectCount()
-        if (count == 0) {
-            // Seed default project with the Curved Pool & Landscape Construction Plan
-            val initial = TraceProject(
-                title = "Dormal Pool & Patio Plan",
-                backgroundType = BackgroundType.SAMPLE,
-                backgroundResourceOrUri = "sample_pool",
-                scaleCalibration = ScaleCalibration(
-                    isCalibrated = true,
-                    pixelDistance = 240f,
-                    realWorldUnits = 20f,
-                    unit = "ft"
-                )
-            )
-            saveProject(initial)
-            initial
-        } else {
-            val list = dao.getAllProjects()
-            // take first or create default
-            val entity = dao.getProjectById("default")
-            entity?.let { ProjectJsonConverter.fromEntity(it) } ?: run {
-                val p = TraceProject(
-                    title = "New Plan Sketch",
-                    backgroundType = BackgroundType.SAMPLE,
-                    backgroundResourceOrUri = "sample_pool"
-                )
-                saveProject(p)
-                p
-            }
+        val recent = dao.getMostRecentProject()
+        if (recent != null) {
+            // Saving a project updates updatedAt, so this naturally resumes the sketch the user
+            // most recently worked on. The previous implementation looked for the literal id
+            // "default" even though projects use UUIDs, which created another project on every
+            // process restart instead of reopening the existing drawing.
+            return@withContext ProjectJsonConverter.fromEntity(recent)
         }
+
+        // First launch only: seed a useful plan so the drawing surface is immediately testable.
+        val initial = TraceProject(
+            title = "Dormal Pool & Patio Plan",
+            backgroundType = BackgroundType.SAMPLE,
+            backgroundResourceOrUri = "sample_pool",
+            scaleCalibration = ScaleCalibration(
+                isCalibrated = true,
+                pixelDistance = 240f,
+                realWorldUnits = 20f,
+                unit = "ft"
+            )
+        )
+        saveProject(initial)
+        initial
     }
 }
