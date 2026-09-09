@@ -118,9 +118,9 @@ class TabletInputInstrumentationTest {
         assertNotNull("Expected a composited emulator screenshot", bitmap)
         bitmap!!
 
-        // Persist exactly what this assertion evaluated so a green or red cloud run always leaves
-        // human-reviewable evidence of the generated geometry, not only a post-test home screen.
-        val evidenceDir = File(instrumentation.targetContext.getExternalFilesDir(null), "test-evidence")
+        // Save inside the app's debuggable internal sandbox. CI can retrieve this exact PNG with
+        // `run-as`, avoiding Android's /sdcard/Android/data access restrictions.
+        val evidenceDir = File(instrumentation.targetContext.filesDir, "test-evidence")
         evidenceDir.mkdirs()
         FileOutputStream(File(evidenceDir, "filament-generated-geometry.png")).use { stream ->
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)

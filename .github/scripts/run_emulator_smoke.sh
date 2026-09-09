@@ -5,14 +5,14 @@ mkdir -p smoke-artifacts
 adb logcat -c
 
 # Run instrumentation without destroying the emulator on failure. Always preserve the rendered
-# display and renderer diagnostics before propagating the original test result.
+# display plus renderer diagnostics before propagating the original test status.
 set +e
 gradle :app:connectedDebugAndroidTest --stacktrace --console=plain > smoke-artifacts/instrumentation.log 2>&1
 TEST_EXIT=$?
 set -e
 
 cat smoke-artifacts/instrumentation.log
-adb pull /sdcard/Android/data/com.aistudio.plantrace.jzkrwq/files/test-evidence/filament-generated-geometry.png smoke-artifacts/filament-generated-geometry.png || true
+adb exec-out run-as com.aistudio.plantrace.jzkrwq cat files/test-evidence/filament-generated-geometry.png > smoke-artifacts/filament-generated-geometry.png || true
 adb exec-out screencap -p > smoke-artifacts/after-instrumentation.png || true
 adb logcat -d -v threadtime > smoke-artifacts/logcat-after-instrumentation.txt || true
 adb logcat -d -v threadtime -s PlanTraceFilament:I '*:S' > smoke-artifacts/filament-after-instrumentation.txt || true
