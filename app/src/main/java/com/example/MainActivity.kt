@@ -1,5 +1,6 @@
 package com.example
 
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -30,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.ui.MainViewModel
 import com.example.ui.canvas.RadialPalette
@@ -86,6 +88,7 @@ fun PlanTraceApp(viewModel: MainViewModel) {
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     var showRadialMenu by remember { mutableStateOf(false) }
     var radialMenuPosition by remember { mutableStateOf(Offset(200f, 200f)) }
@@ -110,8 +113,20 @@ fun PlanTraceApp(viewModel: MainViewModel) {
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         if (uri != null) {
-            val isPdf = uri.toString().lowercase().endsWith(".pdf") ||
-                    uri.path?.lowercase()?.endsWith(".pdf") == true
+            // OpenDocument is specifically chosen so Android can grant long-lived access to the
+            // selected document. Keep that grant because projects store the content URI and may
+            // reopen it days later after a process restart or tablet reboot.
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            }
+
+            val mimeType = context.contentResolver.getType(uri)?.lowercase()
+            val isPdf = mimeType == "application/pdf" ||
+                uri.toString().lowercase().endsWith(".pdf") ||
+                uri.path?.lowercase()?.endsWith(".pdf") == true
             viewModel.importPlanUri(uri, isPdf)
         }
     }
