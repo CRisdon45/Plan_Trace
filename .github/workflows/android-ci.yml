@@ -39,27 +39,42 @@ jobs:
           sdkmanager 'platform-tools' 'platforms;android-36' 'build-tools;36.0.0'
           sdkmanager 'platforms;android-36.1' || true
 
-      - name: Create disposable debug signing key
+      - name: Restore stable development signing identity
+        uses: actions/cache/restore@v4
+        with:
+          path: debug.keystore
+          key: plan-trace-development-signing-v1
+
+      - name: Prepare development signing identity
         shell: bash
         run: |
-          keytool -genkeypair -v \
-            -keystore debug.keystore \
-            -storepass android \
-            -alias androiddebugkey \
-            -keypass android \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -dname 'CN=Plan Trace Development,O=Development,C=US'
+          if [ ! -f debug.keystore ]; then
+            keytool -genkeypair -v \
+              -keystore debug.keystore \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname 'CN=Plan Trace Development,O=Development,C=US'
+          fi
 
       - name: Compile and package debug APK
         shell: bash
         run: gradle :app:assembleDebug --stacktrace --console=plain
 
+      - name: Preserve stable development signing identity
+        if: success()
+        uses: actions/cache/save@v4
+        with:
+          path: debug.keystore
+          key: plan-trace-development-signing-v1
+
       - name: Upload debug APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: plan-trace-tablet-preview
+          name: plan-trace-filament-preview
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 14
