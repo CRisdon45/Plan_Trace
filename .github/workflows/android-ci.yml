@@ -29,6 +29,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.3.1'
+          # Feature branches are read-only by default in setup-gradle. This branch is our active
+          # tablet development lane, so let successful runs seed the cache for the next iteration.
+          cache-read-only: false
 
       - name: Install Android SDK
         shell: bash
@@ -58,9 +61,9 @@ jobs:
               -dname 'CN=Plan Trace Development,O=Development,C=US'
           fi
 
-      - name: Compile and package debug APK
+      - name: Unit regressions and debug APK
         shell: bash
-        run: gradle :app:assembleDebug --stacktrace --console=plain
+        run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace --console=plain
 
       - name: Preserve stable development signing identity
         if: success()
@@ -68,6 +71,17 @@ jobs:
         with:
           path: debug.keystore
           key: plan-trace-development-signing-v1
+
+      - name: Upload unit-test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: plan-trace-tablet-test-report
+          path: |
+            app/build/reports/tests/testDebugUnitTest/**
+            app/build/test-results/testDebugUnitTest/**
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Upload debug APK
         if: success()
