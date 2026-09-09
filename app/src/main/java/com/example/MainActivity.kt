@@ -106,6 +106,11 @@ fun PlanTraceApp(viewModel: MainViewModel) {
         }
     }
 
+    // Tablet-first default: S Pen owns drawing while fingers are navigation.
+    LaunchedEffect(Unit) {
+        if (!stylusOnlyMode) viewModel.toggleStylusOnlyMode()
+    }
+
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
