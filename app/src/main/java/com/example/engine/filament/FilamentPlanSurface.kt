@@ -163,10 +163,13 @@ class FilamentPlanSurface(context: Context) : TextureView(context) {
         filamentView.camera = camera
         filamentView.blendMode = View.BlendMode.OPAQUE
         filamentView.isPostProcessingEnabled = false
-        // Plan Trace's generated architectural faces use the opposite front-face winding
-        // convention from Filament's default after the plan-to-world axis conversion below.
-        // Invert the View interpretation once instead of weakening materials to double-sided.
-        filamentView.setFrontFaceWindingInverted(true)
+
+        // Architectural3DEngine emits outward-wound closed faces. The plan-to-world conversion
+        // below preserves that handedness, so use Filament's normal front-face convention. The
+        // earlier inverted setting was diagnosed using an accidentally freehand test mesh and
+        // incorrectly culled the top face of a correctly generated rectangle prism.
+        filamentView.setFrontFaceWindingInverted(false)
+
         scene.skybox = Skybox.Builder()
             .color(0.965f, 0.955f, 0.925f, 1f)
             .build(engine)
