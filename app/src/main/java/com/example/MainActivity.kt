@@ -16,6 +16,10 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ViewInAr
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -39,6 +43,7 @@ import com.example.ui.canvas.tablet.TraceCanvas
 import com.example.ui.components.ArchitecturalToolbar
 import com.example.ui.components.EditTitleDialog
 import com.example.ui.components.ExportDialog
+import com.example.ui.components.FilamentPerspectiveDialog
 import com.example.ui.components.LayersDialog
 import com.example.ui.components.ProjectManagerDialog
 import com.example.ui.components.ScaleCalibrationDialog
@@ -87,6 +92,7 @@ fun PlanTraceApp(viewModel: MainViewModel) {
     val showLayersSheet by viewModel.showLayersSheet.collectAsState()
     val showExportDialog by viewModel.showExportDialog.collectAsState()
     val showProjectsDialog by viewModel.showProjectsDialog.collectAsState()
+    val show3DDialog by viewModel.show3DDialog.collectAsState()
     val textRequestPoint by viewModel.showTextDialog.collectAsState()
     val toastMessage by viewModel.toastMessage.collectAsState()
     val stylusOnlyMode by viewModel.stylusOnlyMode.collectAsState()
@@ -115,9 +121,6 @@ fun PlanTraceApp(viewModel: MainViewModel) {
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         if (uri != null) {
-            // OpenDocument is specifically chosen so Android can grant long-lived access to the
-            // selected document. Keep that grant because projects store the content URI and may
-            // reopen it days later after a process restart or tablet reboot.
             runCatching {
                 context.contentResolver.takePersistableUriPermission(
                     uri,
@@ -221,6 +224,15 @@ fun PlanTraceApp(viewModel: MainViewModel) {
                 onSelectStyle = { viewModel.setStrokeStyle(it) }
             )
 
+            FloatingActionButton(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(18.dp),
+                onClick = { viewModel.open3DView() }
+            ) {
+                Icon(Icons.Default.ViewInAr, contentDescription = "Open Perspective preview")
+            }
+
             RadialPalette(
                 visible = showRadialMenu,
                 position = radialMenuPosition,
@@ -281,6 +293,13 @@ fun PlanTraceApp(viewModel: MainViewModel) {
             onImportFile = {
                 filePickerLauncher.launch(arrayOf("application/pdf", "image/*"))
             }
+        )
+    }
+
+    if (show3DDialog) {
+        FilamentPerspectiveDialog(
+            project = project,
+            onDismiss = { viewModel.close3DView() }
         )
     }
 

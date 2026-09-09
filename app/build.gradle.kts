@@ -78,6 +78,10 @@ dependencies {
   implementation(libs.kotlinx.coroutines.core)
   implementation(libs.moshi.kotlin)
 
+  // Native Perspective projection. The tablet 2D model remains authoritative and independent.
+  implementation("com.google.android.filament:filament-android:1.75.1")
+  implementation("com.google.android.filament:filamat-android:1.75.1")
+
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)
   testImplementation(libs.androidx.junit)
