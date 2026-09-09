@@ -15,6 +15,9 @@ interface ProjectDao {
     @Query("SELECT * FROM projects WHERE id = :id LIMIT 1")
     suspend fun getProjectById(id: String): ProjectEntity?
 
+    @Query("SELECT * FROM projects ORDER BY updatedAt DESC LIMIT 1")
+    suspend fun getMostRecentProject(): ProjectEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdate(project: ProjectEntity)
 
