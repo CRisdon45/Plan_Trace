@@ -166,6 +166,11 @@ class FilamentPlanSurface(context: Context) : TextureView(context) {
         filamentView.camera = camera
         filamentView.blendMode = View.BlendMode.OPAQUE
         filamentView.isPostProcessingEnabled = false
+        // Plan Trace's generated architectural faces use the opposite front-face winding
+        // convention from Filament's default after the plan-to-world axis conversion below.
+        // Invert the View's front-face interpretation once so the material can remain correctly
+        // single-sided and normal back-face culling stays enabled.
+        filamentView.setFrontFaceWindingInverted(true)
         scene.skybox = Skybox.Builder()
             .color(0.965f, 0.955f, 0.925f, 1f)
             .build(engine)
@@ -180,7 +185,7 @@ class FilamentPlanSurface(context: Context) : TextureView(context) {
 
         frameScheduler.setRenderer(renderer)
         updateCamera()
-        Log.i(TAG, "Filament preview initialized")
+        Log.i(TAG, "Filament preview initialized frontFaceInverted=${filamentView.isFrontFaceWindingInverted}")
     }
 
     fun setProject(project: TraceProject) {
@@ -272,8 +277,9 @@ class FilamentPlanSurface(context: Context) : TextureView(context) {
         val worldScale = 6.0f / planExtent
 
         // Plan coordinates use +Y downward, while the Filament scene uses +Y upward and a
-        // right-handed X/Y/Z basis. Negating plan Y as it becomes world Z preserves handedness,
-        // so the generated face winding remains outward and normal back-face culling works.
+        // right-handed X/Y/Z basis. Negating plan Y as it becomes world Z keeps the scene's
+        // coordinate system right-handed; front-face interpretation is handled explicitly by
+        // the Filament View above rather than by weakening the material to double-sided.
         fun world(point: Point3D): Point3D = Point3D(
             (point.x - centerX) * worldScale,
             point.z * worldScale,
