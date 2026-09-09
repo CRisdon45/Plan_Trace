@@ -12,7 +12,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
+@Config(sdk = [35])
 class ProjectRepositoryTest {
 
     @Test
@@ -28,7 +28,6 @@ class ProjectRepositoryTest {
         )
         repository.saveProject(edited)
 
-        // This is the same code path a fresh ViewModel follows after an app/process restart.
         val reopened = repository.getOrCreateInitialProject()
         assertEquals(first.id, reopened.id)
         assertEquals(edited.title, reopened.title)

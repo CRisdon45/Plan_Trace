@@ -25,7 +25,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
+@Config(sdk = [35])
 class ExampleRobolectricTest {
 
     @Test
@@ -44,14 +44,12 @@ class ExampleRobolectricTest {
 
     @Test
     fun `scale calibration formats real world architectural dimensions`() {
-        // 200 pixels = 20 feet (10 pixels per foot)
         val scale = ScaleCalibration(
             isCalibrated = true,
             pixelDistance = 200f,
             realWorldUnits = 20f,
             unit = "ft"
         )
-        // 315.8 pixels should format into 31'-7" (31.58 feet)
         val formatted = scale.formatMeasurement(315.8f)
         assertEquals("31'-7\"", formatted)
     }
@@ -77,18 +75,18 @@ class ExampleRobolectricTest {
             isCalibrated = true,
             pixelDistance = 100f,
             realWorldUnits = 10f,
-            unit = "ft" // 10 px per foot
+            unit = "ft"
         )
 
         val rect = RectangleElement(
             layerId = "layer_1",
-            left = 0f, top = 0f, right = 200f, bottom = 400f // 20' x 40' pool
+            left = 0f, top = 0f, right = 200f, bottom = 400f
         )
         assertEquals("20' × 40'", rect.getMeasurementLabel(scale))
 
         val circle = EllipseElement(
             layerId = "layer_1",
-            centerX = 100f, centerY = 100f, radiusX = 80f, radiusY = 80f // 16' diameter
+            centerX = 100f, centerY = 100f, radiusX = 80f, radiusY = 80f
         )
         assertEquals("Ø 16'", circle.getMeasurementLabel(scale))
     }
