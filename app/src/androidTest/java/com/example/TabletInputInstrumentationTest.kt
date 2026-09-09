@@ -10,7 +10,7 @@ import android.view.ViewGroup
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -48,8 +48,10 @@ class TabletInputInstrumentationTest {
             .onNodeWithContentDescription("S Pen Only (Palm Rejection Active)")
             .assertIsDisplayed()
 
+        // Undo history is intentionally session-local, so every newly launched test activity
+        // begins with no undo operation even when a previous test saved vector elements.
         val undo = composeRule.onNodeWithContentDescription("Undo")
-        val hadExistingUndo = runCatching { undo.assertIsEnabled(); true }.getOrDefault(false)
+        undo.assertIsNotEnabled()
 
         val (width, height) = activitySize()
         val startX = width * 0.55f
@@ -66,7 +68,7 @@ class TabletInputInstrumentationTest {
         )
         composeRule.waitForIdle()
         SystemClock.sleep(250)
-        if (!hadExistingUndo) undo.assertIsNotEnabled()
+        undo.assertIsNotEnabled()
 
         // The same motion as a stylus must create ink and therefore make Undo available.
         injectSinglePointerStroke(
@@ -108,17 +110,19 @@ class TabletInputInstrumentationTest {
             .performClick()
 
         composeRule.waitUntil(timeoutMillis = 12_000) {
-            composeRule
-                .onAllNodes(hasText("Perspective · Filament preview"))
-                .fetchSemanticsNodes(atLeastOneRootRequired = false)
-                .isNotEmpty()
+            runCatching {
+                composeRule
+                    .onNodeWithText("Perspective · Filament preview")
+                    .fetchSemanticsNode()
+                true
+            }.getOrDefault(false)
         }
 
         composeRule.onNodeWithText("Perspective · Filament preview").assertIsDisplayed()
         composeRule.onNodeWithText("Drag to orbit · Pinch to zoom").assertIsDisplayed()
 
         SystemClock.sleep(2200)
-        val surface = findView<FilamentPlanSurface>(composeRule.activity.window.decorView)
+        val surface = findFilamentSurface(composeRule.activity.window.decorView)
         assertNotNull("Expected the Filament TextureView inside the Perspective dialog", surface)
 
         val captured = AtomicReference<Bitmap?>()
@@ -168,24 +172,18 @@ class TabletInputInstrumentationTest {
     private fun waitForPlan() {
         composeRule.waitUntil(timeoutMillis = 10_000) {
             composeRule
-                .onAllNodes(hasText("Set Scale ⌖"))
+                .onAllNodes(hasContentDescription("S Pen Only (Palm Rejection Active)"))
                 .fetchSemanticsNodes(atLeastOneRootRequired = false)
-                .isNotEmpty() ||
-                composeRule
-                    .onAllNodes(hasText("Scale:"))
-                    .fetchSemanticsNodes(atLeastOneRootRequired = false)
-                    .isNotEmpty()
+                .isNotEmpty()
         }
-        composeRule
-            .onNodeWithContentDescription("S Pen Only (Palm Rejection Active)")
-            .assertIsDisplayed()
     }
 
-    private inline fun <reified T : View> findView(root: View): T? {
-        if (root is T) return root
+    private fun findFilamentSurface(root: View): FilamentPlanSurface? {
+        if (root is FilamentPlanSurface) return root
         if (root is ViewGroup) {
             for (index in 0 until root.childCount) {
-                findView<T>(root.getChildAt(index))?.let { return it }
+                val match = findFilamentSurface(root.getChildAt(index))
+                if (match != null) return match
             }
         }
         return null
