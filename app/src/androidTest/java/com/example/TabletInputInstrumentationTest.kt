@@ -79,8 +79,17 @@ class TabletInputInstrumentationTest {
     @Test
     fun filamentPerspective_presentsBackgroundAndGeneratedGeometry() {
         waitForPlan()
-        val (width, height) = activitySize()
 
+        // Instrumentation tests share the same persisted project database. The pen-routing test
+        // intentionally leaves a saved stroke behind, so isolate this renderer proof through the
+        // real UI before creating its known rectangle. This keeps the expected geometry at exactly
+        // one element / five faces regardless of test execution order or a previous failed run.
+        composeRule.onNodeWithContentDescription("More Options").performClick()
+        composeRule.onNodeWithText("Clear All Linework").performClick()
+        composeRule.waitForIdle()
+        SystemClock.sleep(300)
+
+        val (width, height) = activitySize()
         composeRule.onNodeWithTag("tool_rect").performClick()
         injectSinglePointerStroke(
             toolType = MotionEvent.TOOL_TYPE_STYLUS,
