@@ -44,9 +44,10 @@ fun FilamentPerspectiveDialog(
         ) {
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
-                factory = { context ->
-                    FilamentPlanSurface(context).apply { setProject(project) }
-                },
+                // AndroidView invokes update after factory creation. Keep project submission in
+                // exactly one place so the first GPU buffers are never immediately destroyed by a
+                // duplicate rebuild while Filament may still be consuming their upload.
+                factory = { context -> FilamentPlanSurface(context) },
                 update = { surface -> surface.setProject(project) }
             )
 
