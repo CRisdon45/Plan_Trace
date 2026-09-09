@@ -33,7 +33,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.dp
 import com.example.ui.MainViewModel
 import com.example.ui.canvas.RadialPalette
-import com.example.ui.canvas.TraceCanvas
+import com.example.ui.canvas.tablet.TraceCanvas
 import com.example.ui.components.ArchitecturalToolbar
 import com.example.ui.components.EditTitleDialog
 import com.example.ui.components.ExportDialog
@@ -86,14 +86,10 @@ fun PlanTraceApp(viewModel: MainViewModel) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    // S Pen radial menu state
     var showRadialMenu by remember { mutableStateOf(false) }
     var radialMenuPosition by remember { mutableStateOf(Offset(200f, 200f)) }
-
-    // Edit Title state
     var showEditTitle by remember { mutableStateOf(false) }
 
-    // Toast/Snackbar listener
     LaunchedEffect(toastMessage) {
         toastMessage?.let {
             scope.launch {
@@ -103,7 +99,6 @@ fun PlanTraceApp(viewModel: MainViewModel) {
         }
     }
 
-    // Document Picker for PDF or Image plans
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
@@ -156,7 +151,6 @@ fun PlanTraceApp(viewModel: MainViewModel) {
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Main Canvas (Infinite Pan and Zoom, S Pen pressure & inking)
             TraceCanvas(
                 modifier = Modifier.fillMaxSize(),
                 project = project,
@@ -188,7 +182,6 @@ fun PlanTraceApp(viewModel: MainViewModel) {
                 onFeedbackMessage = { viewModel.showToast(it) }
             )
 
-            // Left floating architectural toolbar
             ArchitecturalToolbar(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
@@ -203,7 +196,6 @@ fun PlanTraceApp(viewModel: MainViewModel) {
                 onSelectStyle = { viewModel.setStrokeStyle(it) }
             )
 
-            // S Pen Radial Palette (triggered by barrel button or quick tool gesture)
             RadialPalette(
                 visible = showRadialMenu,
                 position = radialMenuPosition,
@@ -214,7 +206,6 @@ fun PlanTraceApp(viewModel: MainViewModel) {
         }
     }
 
-    // Dialogs
     if (showLayersSheet) {
         LayersDialog(
             project = project,
