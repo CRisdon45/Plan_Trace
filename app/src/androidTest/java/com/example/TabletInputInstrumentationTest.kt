@@ -90,7 +90,15 @@ class TabletInputInstrumentationTest {
         SystemClock.sleep(300)
 
         val (width, height) = activitySize()
+
+        // Raw UiAutomation MotionEvents bypass Compose's normal test-action synchronization. Wait
+        // for the tool click to propagate through ViewModel state and recompose TraceCanvas before
+        // injecting the stylus drag; otherwise the previous Pen tool can consume the stroke and
+        // produce an 8-face freehand ribbon instead of the intended 5-face rectangle prism.
         composeRule.onNodeWithTag("tool_rect").performClick()
+        composeRule.waitForIdle()
+        SystemClock.sleep(300)
+
         injectSinglePointerStroke(
             toolType = MotionEvent.TOOL_TYPE_STYLUS,
             source = InputDevice.SOURCE_STYLUS,
