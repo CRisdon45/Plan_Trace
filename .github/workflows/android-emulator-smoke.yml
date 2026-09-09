@@ -1,0 +1,95 @@
+name: Android Emulator Smoke
+
+on:
+  push:
+    branches:
+      - feature/filament-perspective-preview
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-emulator-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  emulator-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+
+      - name: Install Android SDK
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager 'platform-tools' 'platforms;android-36' 'build-tools;36.0.0'
+          sdkmanager 'platforms;android-36.1' || true
+
+      - name: Prepare debug signing identity
+        shell: bash
+        run: |
+          if [ ! -f debug.keystore ]; then
+            keytool -genkeypair -v \
+              -keystore debug.keystore \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname 'CN=Plan Trace Emulator Test,O=Development,C=US'
+          fi
+
+      - name: Compile app and instrumentation APKs
+        shell: bash
+        run: gradle :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace --console=plain
+
+      - name: Enable KVM permissions
+        shell: bash
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Boot tablet emulator and exercise app
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_c
+          disable-animations: true
+          emulator-options: >-
+            -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+            -camera-back none -camera-front none
+          script: |
+            mkdir -p smoke-artifacts
+            gradle :app:connectedDebugAndroidTest --stacktrace --console=plain
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            python3 .github/scripts/emulator_smoke.py
+
+      - name: Upload emulator evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: plan-trace-emulator-evidence
+          path: |
+            smoke-artifacts/**
+            app/build/reports/androidTests/connected/**
+            app/build/outputs/androidTest-results/connected/**
+          if-no-files-found: warn
+          retention-days: 14
