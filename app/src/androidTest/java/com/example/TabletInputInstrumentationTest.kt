@@ -1,8 +1,12 @@
 package com.example
 
+import android.graphics.Bitmap
+import android.graphics.Color
 import android.os.SystemClock
 import android.view.InputDevice
 import android.view.MotionEvent
+import android.view.View
+import android.view.ViewGroup
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsDisplayed
@@ -13,17 +17,20 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.example.engine.filament.FilamentPlanSurface
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Emulator coverage for the tablet input contract.
  *
- * This deliberately injects MotionEvents with Android's real tool type/source metadata instead of
- * relying on adb's generic touch input. It does not replace physical Samsung S Pen / palm-rejection
- * testing, but it catches the regression where a stylus gesture is accidentally routed into pan.
+ * Stylus tests inject MotionEvents with Android's real tool type/source metadata instead of adb's
+ * generic touch input. They do not replace physical Samsung S Pen / palm-rejection testing, but
+ * they catch the regression where stylus input is accidentally routed into pan.
  */
 @RunWith(AndroidJUnit4::class)
 class TabletInputInstrumentationTest {
@@ -79,7 +86,7 @@ class TabletInputInstrumentationTest {
     }
 
     @Test
-    fun filamentPerspective_opensOnEmulatorWithoutCrashing() {
+    fun filamentPerspective_presentsANonBlackFrame() {
         composeRule
             .onNodeWithContentDescription("Open Perspective preview")
             .performClick()
@@ -98,9 +105,41 @@ class TabletInputInstrumentationTest {
             .onNodeWithText("Drag to orbit · Pinch to zoom")
             .assertIsDisplayed()
 
+        SystemClock.sleep(1800)
+        val surface = findView<FilamentPlanSurface>(composeRule.activity.window.decorView)
+        assertNotNull("Expected the Filament TextureView inside the Perspective dialog", surface)
+
+        val captured = AtomicReference<Bitmap?>()
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            captured.set(surface?.bitmap)
+        }
+        val bitmap = captured.get()
+        assertNotNull("Expected TextureView bitmap after Filament rendered", bitmap)
+        bitmap!!
+
+        val sampleX = (bitmap.width / 2).coerceIn(0, bitmap.width - 1)
+        val sampleY = (bitmap.height / 2).coerceIn(0, bitmap.height - 1)
+        val center = bitmap.getPixel(sampleX, sampleY)
+        val luminance = (Color.red(center) + Color.green(center) + Color.blue(center)) / 3
+        assertTrue(
+            "Perspective surface remained black: center=#${Integer.toHexString(center)} luminance=$luminance",
+            luminance > 40
+        )
+        bitmap.recycle()
+
         composeRule
             .onNodeWithContentDescription("Close Perspective")
             .performClick()
+    }
+
+    private inline fun <reified T : View> findView(root: View): T? {
+        if (root is T) return root
+        if (root is ViewGroup) {
+            for (index in 0 until root.childCount) {
+                findView<T>(root.getChildAt(index))?.let { return it }
+            }
+        }
+        return null
     }
 
     private fun activitySize(): Pair<Float, Float> {
