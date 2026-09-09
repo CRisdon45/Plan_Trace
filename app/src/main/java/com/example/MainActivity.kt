@@ -53,6 +53,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // This is a tablet/S Pen tool first. Establish the input contract before Compose creates
+        // the first interactive frame so there is never a startup window where one finger can be
+        // interpreted as drawing while the user expects it to navigate.
+        if (!viewModel.stylusOnlyMode.value) {
+            viewModel.toggleStylusOnlyMode()
+        }
+
         enableEdgeToEdge()
         setContent {
             MyApplicationTheme {
@@ -101,12 +109,6 @@ fun PlanTraceApp(viewModel: MainViewModel) {
             }
             viewModel.clearToast()
         }
-    }
-
-    // This is a tablet/S Pen tool first: by default the pen draws while fingers navigate.
-    // Users can still tap the Pen-only control to enable one-finger drawing when desired.
-    LaunchedEffect(Unit) {
-        if (!stylusOnlyMode) viewModel.toggleStylusOnlyMode()
     }
 
     val filePickerLauncher = rememberLauncherForActivityResult(
