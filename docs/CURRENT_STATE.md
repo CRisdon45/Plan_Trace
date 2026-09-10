@@ -1,41 +1,40 @@
 # Current state and next-session handoff
 
-Updated 2026-09-10 after the first project-owned geometry slice. Verify live refs and local work before changing branches or merging. The physical-tablet test remains interrupted/unavailable; independent implementation is authorized, but device acceptance is not passed.
+Updated 2026-09-10 after the first editable workspace and successful virtual Android testing. Verify live refs, PRs and local changes before working. Implementation is authorized without physical tablet access. The interrupted physical-device test is still pending, not a global development block or a passed acceptance gate.
 
-## Branch routing
+## Active branch and preserved baseline
 
-**Current implementation: `feat/project-geometry-seam`, PR #4 into `feat/off-tablet-integrity`.** It is stacked above PR #3's export/measurement fixes, which target `feat/2d-foundation-northstar` (PR #2 into main). The working application revision for the geometry slice is `0d18c20e6dbef82948d27400dc3803fb3a53b9dd`; later documentation commits do not change those results. None of these application PRs was merged in this session.
+**Work on `feat/project-geometry-seam`, PR #4 into `feat/off-tablet-integrity`.** PR #3 targets the 2D foundation branch; PR #2 targets main. No application PR was merged in this session. The foundation/tablet app, its signing key, data and ongoing test were not changed. Main receives a routing checkpoint, not these application changes.
 
-`main` carries product/context documents and a routing checkpoint, not the unfinished application. The tablet/foundation code has not been changed by this geometry work. Do not install anything, replace a signing key, uninstall the app, clear storage or disrupt the ongoing device-test session to simplify development.
+Tested application refinement: `b4fb724cba3f48d18c394df0e54fbec92a6e8a66`. The emulator-verified revision `b01cec4698262086a07fecc11b2696dc4cdfed20` contains the same application/tests with an AVD-script repair. Later documentation commits do not create new application-validation claims.
 
-## What exists now
+## What is now usable in the development branch
 
-A storage-neutral ProjectDesign core owns typed objects, exact line/circular-arc boundaries and stable object/vertex/edge IDs independently of PDF sheets. Commands support preview, add/remove/translate, vertex/arc/boundary changes and whole-command Undo/Redo, preserving locks and unrelated objects. Versioned JSON preserves the new authority and rejects unsupported/corrupt input without partial recovery masquerading as a complete yard.
+**Projects -> Design workspace · preview** opens one separately saved local design draft. Add original straight or concave/convex pool outlines and a paving outline; select objects, drag vertices/curve handles/boundaries, Undo/Redo, Delete/Undo, Fit, and see analytic perimeter in feet. Preview remains transient; completed edits use the canonical ProjectDesign command path. The existing WatercolorRenderer draws its disposable projection, not a second editable document or demo renderer.
 
-A read-only adapter feeds the EXISTING renderer/PNG export path with bounded curve sampling and Float conversion, keeping analytic perimeter labels independent of sampling. Internal metric/y-up coordinates do not change the feet/inches product requirement; labels default to imperial. These APIs are compiled/tested but are NOT yet wired into the ordinary drawing UI or the Room/automatic-save repository. Legacy projects and their per-page storage remain unchanged.
+Serial background AtomicFile writes preserve exact canonical JSON and verify readback before Saved is shown. Stale/conflicting writes and corrupt existing documents are rejected rather than silently overwriting/resetting. This opt-in draft is separate from legacy Room projects; no migration occurred. Undo history is session-only. One local draft is not multi-project management, portable backup or a guarantee for edits killed before the save completes.
 
-## Evidence
+The workspace has an explicit Touch edit mode; fingers otherwise navigate. Physical pen, palm, hover and barrel events remain unverified, and the primary radial menu has not yet been built. Current controls and outline-only appearance are an integration preview, not the approved final UI/Northstar.
 
-- Geometry refinement `0d18c20` / run 34512772848: **78 tests passed, zero failures/errors/skips; Android debug build succeeded**. The 29 new tests cover exact curves/IDs/numerics, session history/locks, JSON and real PNG output. Downloaded XML totals independently matched the job log.
-- Initial geometry `3bf9200` / run 34512053545: 76 tests passed and debug assembly succeeded.
-- Earlier off-tablet patch `e7e75e8` / run 34497580131: 49 tests passed and debug assembly succeeded; see OFF_TABLET_IMPLEMENTATION.md.
-- Two authentic synthetic PNGs were inspected for technical outline integrity, not style approval. Label toggling currently changes legacy auto-fit framing. Fixed export frames are still needed for pixel-stable comparisons.
-- The earlier KSP/AWT exception recurred in the initial geometry run, but was absent from the final retrieved log. It was not deliberately fixed; keep the toolchain follow-up. Existing service/deprecation warnings persist.
+## Evidence actually obtained
 
-See [PROJECT_GEOMETRY_IMPLEMENTATION.md](PROJECT_GEOMETRY_IMPLEMENTATION.md) on this branch for pinned revisions/runs, artifact hashes and limits. A separate exploratory local script exercised the actual geometry on randomized arcs; it is not part of the 78-test CI count. Physical pen/button/palm checks, tablet usability, Northstar quality, new-path PDF visual review and integrated project recovery were not performed.
+- Final unit/build run 34518645007 at b4fb724: **90 tests passed, zero failures/errors/skips; debug assembly succeeded**. Downloaded XML totals were checked. These include twelve new editing/storage tests above the previous 78.
+- Actual Android run 34518920691 at b01cec4: **two instrumentation scenarios passed** on API35 x86_64 with 1600x1000 / density240 override. They exercise creation, finger navigation, vertex and curve drags, cancellation, Undo/Redo/Delete recovery, local save, screen reentry, force-stop/relaunch and activity recreation. Canonical files before/after process restart were byte-identical after waiting for verified Saved.
+- Actual screenshots were inspected for screen/outline integrity. They are not synchronized pixel goldens or Northstar acceptance. Low-contrast system-bar icons after recreation and capture synchronization remain polish follow-ups.
+- The first AVD startup failed before app tests and was superseded. Explicit AVD paths and bounded diagnostics repaired the test harness. KSP/AWT background exceptions still appeared during the successful emulator build; the toolchain follow-up and service/deprecation warnings remain.
+
+[WORKSPACE_IMPLEMENTATION.md](WORKSPACE_IMPLEMENTATION.md) owns the pinned runs, hashes, exact scenario coverage and limits. PROJECT_GEOMETRY_IMPLEMENTATION.md and OFF_TABLET_IMPLEMENTATION.md remain dated earlier evidence, not today's capability summary. No local Android build or physical device acceptance is claimed.
 
 ## Next bounded outcome
 
-Connect this authority to one small **actual on-canvas editing and safe persistence flow**, exercised with both straight and concave/convex synthetic shapes. Do not grow a disconnected geometry laboratory or build a parallel demo renderer. Use stable node/edge identity for hit targets and commands, with explicit source/view registration. Preview, commit, Undo, save/reopen and export must refer to the same authority.
+Advance one real pool-boundary/coping edit through this workspace: validate the boundary and offset result, follow the selected pool perimeter, handle concave/invalid cases clearly, and preserve related intent through preview, one Undo and save/reopen. Use the same authority and real renderer. Keep exact numeric manipulation and primary radial access near this workflow; do not grow a detached geometry lab or a generic drawing-toolbar product.
 
-Before introducing filled surfaces, area takeoffs or following coping, establish topology validation and the required offset behavior, including concave failure cases. Current signed area is algebraic only, and the adapter deliberately draws outlines rather than implying valid pool/deck regions. Tangency is diagnosed, not automatically constrained. Keep these dependencies scoped to the first useful workflow instead of building a universal CAD solver.
+Before filled surfaces or takeoff quantities, establish topology/offset validity. The current core reports algebraic area only, not a certified surface. No source-page registration, arbitrary drawing path, automatic legacy promotion or shared-boundary model exists yet. Do not save the disposable TraceProject projection as the canonical yard. Fixed export frames remain needed because existing auto-fit changes framing when labels toggle.
 
-No automatic migration or reinterpretation of legacy strokes/material colors is authorized by the new types. Preserve old drawings and establish a reviewed opt-in transition before connecting stored documents. Do not save the disposable TraceProject output projection as the canonical yard. Consider fixed output frames before using label-on/off pixels as geometry comparisons.
+## Pending checks and constraints
 
-## Remaining acceptance and boundaries
+The new-screen export/share action is wired but not exercised by the emulator scenarios. Physical S Pen/palm/button feel, pinch synthesis, portrait/handedness, hardware performance, latest courtyard acceptance and final PNG/PDF visual checks remain pending. Finish the interrupted physical test on its known build before deliberately switching versions. No uninstall or data clearing to work around signing differences; CI uses ephemeral keys and does not publish replacement APKs.
 
-Finish the interrupted tablet session on its known build when the device becomes available, then deliberately test a newer build. Q0 still needs physical export-control usability, latest courtyard composition, real source-file/reopen behavior and PNG/PDF visual checks. These checks remain pending, not blockers for all independent implementation.
+Connected steps/shelves, shared surfaces, full site setup, options, multi-project recovery, associative dimensions, primary radial menus and Northstar appearance remain unfinished. Exact Estimator interchange and inherited runtime-service cleanup are separate work. No runtime AI, no framework restart or repository merger; 3D remains paused. Client originals and unapproved Northstar pixels stay outside public Git/PRs/logs/artifacts.
 
-Connected coping/shelves/steps, shared surfaces, true associative dimensions, primary radial interaction, source calibration/registration, complete project options, integrated recovery and Northstar rendering remain unfinished. Q1 is partial, not complete. Private references stay outside the public repo; use original synthetic cases. No runtime AI, no framework restart or repository merger; 3D stays paused. The inherited runtime-service dependency audit and exact Estimator/Design-Platform interchange are still separate work.
-
-Keep this handoff concise and replace stale status at the next meaningful checkpoint. Record actual evidence and source revisions, not aspirations. Preserve concurrent changes and original user data; review every published diff, log and artifact for private content.
+Replace this checkpoint at meaningful milestones with the actual application revision, checks, limitations and next outcome. Update the main routing file when the active branch/checkpoint changes. Preserve concurrent work and user data; review every publication for private material.
