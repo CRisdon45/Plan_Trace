@@ -16,14 +16,7 @@ object ExportGeometry {
         } else null
         val visibleLayers = project.layers.filter { it.isVisible }.map { it.id }.toSet()
         for (element in project.elements.filter { it.layerId in visibleLayers }) {
-            val box = if (element is TextElement) {
-                val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    textSize = element.fontSizeSp * 2.2f
-                    isFakeBoldText = true
-                }
-                RectF(element.position.x, element.position.y + paint.fontMetrics.top,
-                    element.position.x + paint.measureText(element.text), element.position.y + paint.fontMetrics.bottom)
-            } else element.boundingBox()
+            val box = element.boundingBox()
             // Reserve stroke overshoot and annotation clearance, including zero-height lines.
             val pad = maxOf(32f, element.strokeWidth * 3f)
             box.inset(-pad, -pad)

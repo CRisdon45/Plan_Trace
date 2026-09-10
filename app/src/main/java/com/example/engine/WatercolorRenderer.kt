@@ -192,7 +192,9 @@ object WatercolorRenderer {
                     textSize = element.fontSizeSp * 2.2f
                     isFakeBoldText = true
                 }
-                canvas.drawText(element.text, element.position.x, element.position.y, textPaint)
+                element.text.lines().forEachIndexed { index, line ->
+                    canvas.drawText(line, element.position.x, element.position.y + index * textPaint.fontSpacing, textPaint)
+                }
             }
 
             is DimensionMarkup -> {

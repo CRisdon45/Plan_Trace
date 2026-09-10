@@ -8,7 +8,7 @@ September 9, 2026. Authorized to proceed with implementation and verification wi
 |---|---|---|---|
 | 0 | Reproducible source/build baseline; preserve existing projects | Local build, commit/build identity, source/APK discrepancy recorded | In progress |
 | 1 | Trustworthy 2D core | QA regressions for calibration, locks, layer/history integrity, share and world/output alignment | In progress |
-| 2 | Complete document and editing workflow | Per-page state, exact shape editing, notes, overlay input, clear path completion | Planned |
+| 2 | Complete document and editing workflow | Per-page state, exact shape editing, notes, overlay input, clear path completion | In progress |
 | 3 | Calm tablet UI and excellent S Pen | Responsive docks, persistent settings, fit view, physical barrel/palm tests | Planned |
 | 4 | Deterministic semantic Graphic renderer | Versioned roles/styles, token-driven linework/fills/water, original benchmark | Planned |
 | 5 | Northstar presentation renderer | Designed plants, consistent shadows, stable wash, faithful sheet exports | Planned |
@@ -45,9 +45,16 @@ Code compiles; relevant tests pass; runtime/visual checks are performed where ne
 - Defined the Northstar visual contract from the five supplied images and attached prose. Adapted pass ordering for correct compositing. Recorded that semantic pool/material roles must be added rather than assumed present.
 - Established a compiling source baseline, restored Gradle 9.4.1 launchers and installed an isolated Plan Trace Dev build. The historical APK/source parity question remains open.
 - Implemented the first core package: shared export coordinates, scale-bar math, chooser delivery, full layer/element history, gesture transactions, calibration exclusivity, locked-mutation guards and canvas-overlay input separation. See [implementation and runtime evidence](FOUNDATION_IMPLEMENTATION.md).
-- Final expanded run: **15 tests passed, zero failures** (7 integrity regressions + 8 existing model/context tests), and debug assembly succeeded. Tablet checks confirmed floating actions, whole-drag Undo, layer recovery, locked geometry protection, PNG/PDF sharing and export alignment. After the final save-serialization build was installed, a new line saved and all six QA objects survived force-stop/reopen unchanged.
-- Final development APK SHA-256: `EEEA0A600CC941537EC72185AA9CF66CE095D0FFE6D45C6B6AE676A58C1B3593`. Tablet left in Select / S Pen Only mode in Plan Trace Dev. The original installed app was not replaced.
+- First package expanded run: **15 tests passed, zero failures** (7 integrity regressions + 8 existing model/context tests), and debug assembly succeeded. Tablet checks confirmed floating actions, whole-drag Undo, layer recovery, locked geometry protection, PNG/PDF sharing and export alignment. After the final save-serialization build was installed, a new line saved and all six QA objects survived force-stop/reopen unchanged.
+- First package development APK SHA-256: `EEEA0A600CC941537EC72185AA9CF66CE095D0FFE6D45C6B6AE676A58C1B3593`. Tablet left in Select / S Pen Only mode in Plan Trace Dev. The original installed app was not replaced.
 
 ## Next executable package
 
-Finish compatibility and correctness before styling: source polyline completion; durable page-specific object/scale storage; exact resize and note editing; layer/portrait controls; persistent input preferences. Then validate the S Pen modifier contract on hardware. Build the semantic model and original visual benchmark before enabling Graphic/Northstar styles. Use [Build and Verify](BUILD_AND_VERIFY.md) for repeatable checks.
+Finish compatibility and correctness before styling: durable page-specific object/scale storage; exact editing beyond rectangles; layer/portrait controls; persistent input preferences. Then validate the S Pen modifier contract on hardware. Build the semantic model and original visual benchmark before enabling Graphic/Northstar styles. Use [Build and Verify](BUILD_AND_VERIFY.md) for repeatable checks.
+
+
+## Second package completed
+
+Implemented and tablet-checked rectangle corner resizing and decimal exact-size entry, existing-note revision, open/closed polyline completion and draft cancellation. All edits tested with exact Undo comparisons. Added multiline note bounds/rendering regression coverage. A visual reopen check found missing persistent source-file access; repaired document permission retention and MIME-based PDF identification, then confirmed image and PDF underlays survive force-stop/reopen. Final build: 18 passing tests, zero failures. Latest APK SHA-256: `4200195D1BF007F165EF83AF16123E84F9C0DE123C573E223EDB8D53B7A32A4B`. See the implementation report for evidence and remaining limitations.
+
+Next priority is migration-safe page-specific document state, followed by responsive controls, persistent input preferences and the S Pen modifier contract. The broad premium roadmap remains unfinished; this milestone establishes the first reliable editing foundations.

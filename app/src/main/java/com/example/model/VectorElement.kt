@@ -305,7 +305,17 @@ data class TextElement(
     override val alpha: Float = 1f
 ) : VectorElement {
     override fun distanceToPoint(point: Point2D): Float = point.distanceTo(position)
-    override fun boundingBox(): RectF = RectF(position.x - 20f, position.y - 30f, position.x + 120f, position.y + 10f)
+    override fun boundingBox(): RectF {
+        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            textSize = fontSizeSp * 2.2f
+            isFakeBoldText = true
+        }
+        val lines = text.lines()
+        return RectF(position.x, position.y + paint.fontMetrics.top,
+            position.x + (lines.maxOfOrNull { paint.measureText(it) } ?: 0f),
+            position.y + paint.fontSpacing * (lines.size - 1) + paint.fontMetrics.bottom)
+    }
+    override fun isPointInside(point: Point2D): Boolean = boundingBox().contains(point.x, point.y)
     override fun translate(dx: Float, dy: Float): VectorElement = copy(
         position = Point2D(position.x + dx, position.y + dy)
     )

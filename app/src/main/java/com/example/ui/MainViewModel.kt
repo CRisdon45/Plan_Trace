@@ -1,6 +1,7 @@
 package com.example.ui
 
 import android.app.Application
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -366,6 +367,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 BackgroundType.BLANK_GRID -> null
             }
             _backgroundBitmap.value = bitmap
+            if (bitmap == null && p.backgroundType in listOf(BackgroundType.IMAGE_URI, BackgroundType.PDF_URI)) {
+                showToast("Cannot open this plan's source file. Import it again to restore the underlay.")
+            }
         }
     }
 
@@ -674,9 +678,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _toastMessage.value = "Loaded architectural sample plan"
     }
 
-    fun importPlanUri(uri: Uri, isPdf: Boolean) {
+    fun importPlanUri(uri: Uri) {
         viewModelScope.launch {
             val context = getApplication<Application>()
+            val isPdf: Boolean
+            try {
+                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                isPdf = context.contentResolver.getType(uri) == "application/pdf" ||
+                    uri.lastPathSegment?.endsWith(".pdf", ignoreCase = true) == true
+                val preview = if (isPdf) PdfManager.renderPdfPage(context, uri, 0) else withContext(Dispatchers.IO) {
+                    context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
+                }
+                if (preview == null) {
+                    showToast("Could not read this plan. The current drawing has been kept.")
+                    return@launch
+                }
+                preview.recycle()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                showToast("Could not retain access to this file. Try importing it from Files.")
+                return@launch
+            }
             if (isPdf) {
                 val totalPages = PdfManager.getPdfPageCount(context, uri)
                 _project.value = _project.value.copy(

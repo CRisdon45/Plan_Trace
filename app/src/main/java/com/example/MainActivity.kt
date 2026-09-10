@@ -62,6 +62,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun PlanTraceApp(viewModel: MainViewModel) {
+    var editingNote by remember { mutableStateOf<com.example.model.TextElement?>(null) }
     val project by viewModel.project.collectAsState()
     val projectsList by viewModel.projectsList.collectAsState()
     val activeTool by viewModel.activeTool.collectAsState()
@@ -108,9 +109,7 @@ fun PlanTraceApp(viewModel: MainViewModel) {
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         if (uri != null) {
-            val isPdf = uri.toString().lowercase().endsWith(".pdf") ||
-                    uri.path?.lowercase()?.endsWith(".pdf") == true
-            viewModel.importPlanUri(uri, isPdf)
+            viewModel.importPlanUri(uri)
         }
     }
 
@@ -180,6 +179,10 @@ fun PlanTraceApp(viewModel: MainViewModel) {
                 onColorSampled = { viewModel.sampleColor(it) },
                 onCalibrationSegmentDrawn = { p1, p2 -> viewModel.setCalibrationSegment(p1, p2) },
                 onTextRequested = { viewModel.setShowTextDialog(it) },
+                onTextEditRequested = { note ->
+                    if (project.layers.any { it.id == note.layerId && !it.isLocked && it.isVisible }) editingNote = note
+                    else viewModel.showToast("Unlock this layer to edit its note")
+                },
                 onShowRadialPalette = { offset ->
                     radialMenuPosition = offset
                     showRadialMenu = true
@@ -271,13 +274,14 @@ fun PlanTraceApp(viewModel: MainViewModel) {
         )
     }
 
-    if (textRequestPoint != null) {
+    if (textRequestPoint != null || editingNote != null) {
         TextAnnotationDialog(
-            position = textRequestPoint!!,
+            position = editingNote?.position ?: textRequestPoint!!,
             activeLayerId = project.activeLayerId,
             strokeColor = strokeColor,
-            onDismiss = { viewModel.setShowTextDialog(null) },
-            onAddText = { viewModel.addVectorElement(it) }
+            existingNote = editingNote,
+            onDismiss = { viewModel.setShowTextDialog(null); editingNote = null },
+            onAddText = { if (editingNote != null) viewModel.updateElement(it) else viewModel.addVectorElement(it) }
         )
     }
 

@@ -27,4 +27,10 @@ Use disposable QA projects in Plan Trace Dev. Do not uninstall the original app 
 7. Export PNG and PDF. The Android chooser must open; no message needs to be sent. Inspect the actual generated files for underlay/annotation alignment and graphic scale accuracy.
 8. Force-stop/reopen. Compare project, geometry and calibration. Test finger pan/zoom separately from drawing.
 
-This is a development milestone, not a premium release certification. Physical S Pen behavior, per-page markup, exact resizing, portrait layout and the Northstar renderer remain subsequent work.
+This is a development milestone, not a premium release certification. Physical S Pen behavior, per-page markup, exact editing beyond rectangles, portrait layout and the Northstar renderer remain subsequent work.
+
+
+9. Set a rectangle to a known width/height in calibrated units. Drag a corner; verify the opposite corner stays fixed and one Undo restores exact bounds.
+10. Finish an open polyline; Undo it. Close a three-point path. Cancel a draft and confirm no saved object was added.
+11. Revise an existing note. Confirm identity, position and styling remain unchanged; Undo restores the prior text.
+12. Import an image and an extensionless-provider PDF through Files, force-stop/reopen and visually confirm the underlay survives. Geometry-only database comparison is insufficient for this check.

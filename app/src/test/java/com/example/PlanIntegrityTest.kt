@@ -128,4 +128,35 @@ class PlanIntegrityTest {
         assertTrue(send.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION != 0)
         assertEquals(uri, send.clipData!!.getItemAt(0).uri)
     }
+
+    @Test fun `bottom right resize changes dimensions without moving the opposite anchor`() {
+        val original = RectangleElement(layerId = "base", left = 100f, top = 200f, right = 500f, bottom = 500f)
+        val session = RectangleResize.hit(original, Point2D(508f, 508f), 1f)!!
+        assertEquals(original, session.at(Point2D(508f, 508f)))
+        val resized = session.at(Point2D(608f, 708f))
+        assertEquals(100f, resized.left, 0f)
+        assertEquals(200f, resized.top, 0f)
+        assertEquals(600f, resized.right, 0f)
+        assertEquals(700f, resized.bottom, 0f)
+    }
+
+    @Test fun `exact dimensions use calibrated units and reject invalid sizes`() {
+        val original = RectangleElement(layerId = "base", left = 100f, top = 200f, right = 500f, bottom = 500f)
+        val resized = original.withExactSize(22.5f, 15f, ScaleCalibration(true, 400f, 20f, "ft"))
+        assertEquals(100f, resized.left, 0f)
+        assertEquals(200f, resized.top, 0f)
+        assertEquals(450f, resized.boundingBox().width(), 0f)
+        assertEquals(300f, resized.boundingBox().height(), 0f)
+        assertThrows(IllegalArgumentException::class.java) { original.withExactSize(Float.NaN, 15f, ScaleCalibration()) }
+        assertThrows(IllegalArgumentException::class.java) { original.withExactSize(-1f, 15f, ScaleCalibration()) }
+    }
+
+    @Test fun `multiline note bounds include later lines and support selection across text`() {
+        val one = TextElement(layerId = "base", text = "First line", position = Point2D(100f, 200f))
+        val two = one.copy(text = "First line\nA much longer second line")
+        assertTrue(two.boundingBox().height() > one.boundingBox().height())
+        assertTrue(two.boundingBox().width() > one.boundingBox().width())
+        val bounds = two.boundingBox()
+        assertTrue(two.isPointInside(Point2D(bounds.right - 2f, bounds.bottom - 2f)))
+    }
 }

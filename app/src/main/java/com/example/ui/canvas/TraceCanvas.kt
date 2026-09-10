@@ -34,12 +34,16 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FormatColorFill
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Straighten
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -76,11 +80,13 @@ import com.example.model.LineElement
 import com.example.model.Point2D
 import com.example.model.PolylineElement
 import com.example.model.RectangleElement
+import com.example.model.RectangleResize
 import com.example.model.StrokeStyle
 import com.example.model.TextElement
 import com.example.model.TraceProject
 import com.example.model.VectorElement
 import com.example.ui.DrawingTool
+import com.example.ui.components.ShapeSizeDialog
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -120,6 +126,7 @@ fun TraceCanvas(
     onColorSampled: (Long) -> Unit,
     onCalibrationSegmentDrawn: (Point2D, Point2D) -> Unit,
     onTextRequested: (Point2D) -> Unit,
+    onTextEditRequested: (TextElement) -> Unit = {},
     onShowRadialPalette: (Offset) -> Unit,
     onHideRadialPalette: () -> Unit,
     onQuickUndo: () -> Unit = {},
@@ -150,6 +157,23 @@ fun TraceCanvas(
 
     // Polyline ongoing points
     val polylinePoints = remember { mutableStateListOf<Point2D>() }
+    var lastPolylineTap by remember { mutableStateOf(0L) }
+
+    fun finishPolyline(closed: Boolean = false) {
+        if (polylinePoints.size >= (if (closed) 3 else 2)) {
+            onElementCreated(PolylineElement(layerId = project.activeLayerId, points = polylinePoints.toList(),
+                isClosed = closed, strokeColor = strokeColor, strokeWidth = strokeWidth, style = strokeStyle))
+        }
+        polylinePoints.clear()
+        lastPolylineTap = 0L
+    }
+
+    LaunchedEffect(project.id, project.pdfPageNumber, project.activeLayerId, activeTool, isCalibratingScale) {
+        if (polylinePoints.isNotEmpty()) {
+            polylinePoints.clear()
+            onFeedbackMessage("Unfinished polyline cancelled")
+        }
+    }
 
     // S Pen Air View / Hover Reticle state
     var hoverScreenPos by remember { mutableStateOf<Offset?>(null) }
@@ -166,6 +190,8 @@ fun TraceCanvas(
 
     // Selection Dragging State
     var dragStartWorldPoint by remember { mutableStateOf<Point2D?>(null) }
+    var rectangleResize by remember { mutableStateOf<RectangleResize?>(null) }
+    var sizingRectangle by remember(project.id) { mutableStateOf<RectangleElement?>(null) }
 
     // Eyedropper sampling loupe position & color
     var eyedropperSampleColor by remember { mutableStateOf<Long?>(null) }
@@ -212,6 +238,10 @@ fun TraceCanvas(
             }
         }
         return 0xFF0F172A // Default charcoal
+    }
+
+    sizingRectangle?.let { rectangle ->
+        ShapeSizeDialog(rectangle, project.scaleCalibration, onDismiss = { sizingRectangle = null }, onApply = onElementUpdated)
     }
 
     Box(
@@ -355,6 +385,10 @@ fun TraceCanvas(
 
                         // Select Object tool
                         if (effectiveTool == DrawingTool.SELECT) {
+                            val selected = project.elements.find { it.id == selectedElementId } as? RectangleElement
+                            rectangleResize = selected?.takeIf { rectangle -> project.layers.any { it.id == rectangle.layerId && it.isVisible && !it.isLocked } }
+                                ?.let { RectangleResize.hit(it, worldPoint, zoomScale) }
+                            if (rectangleResize != null) return@pointerInteropFilter true
                             val hit = project.elements.asReversed().firstOrNull { it.isPointInside(worldPoint) }
                             onElementSelected(hit?.id)
                             dragStartWorldPoint = worldPoint
@@ -391,6 +425,10 @@ fun TraceCanvas(
 
                     MotionEvent.ACTION_MOVE -> {
                         currentEndPoint = worldPoint
+                        if (effectiveTool == DrawingTool.SELECT && rectangleResize != null) {
+                            onElementUpdated(rectangleResize!!.at(worldPoint))
+                            return@pointerInteropFilter true
+                        }
 
                         // Eyedropper sampling during move
                         if (effectiveTool == DrawingTool.EYEDROPPER) {
@@ -486,6 +524,8 @@ fun TraceCanvas(
                     }
 
                     MotionEvent.ACTION_UP -> {
+                        rectangleResize?.let { onElementUpdated(it.at(worldPoint)) }
+                        rectangleResize = null
                         holdTimerJob?.cancel()
                         eyedropperScreenPos = null
                         dragStartWorldPoint = null
@@ -500,6 +540,24 @@ fun TraceCanvas(
                             currentStartPoint = null
                             currentEndPoint = null
                             liveMeasurementText = null
+                            onEditGestureEnded()
+                            return@pointerInteropFilter true
+                        }
+
+                        if (effectiveTool == DrawingTool.POLYLINE) {
+                            val last = polylinePoints.lastOrNull()
+                            val now = motionEvent.eventTime
+                            if (polylinePoints.size >= 3 && polylinePoints.first().distanceTo(worldPoint) < 18f / zoomScale) {
+                                finishPolyline(closed = true)
+                            } else if (polylinePoints.size >= 2 && now - lastPolylineTap < 350L && last != null && last.distanceTo(worldPoint) < 18f / zoomScale) {
+                                finishPolyline()
+                            } else {
+                                if (last == null || last.distanceTo(worldPoint) > 1f) polylinePoints.add(worldPoint)
+                                lastPolylineTap = now
+                            }
+                            currentPoints.clear()
+                            currentStartPoint = null
+                            currentEndPoint = null
                             onEditGestureEnded()
                             return@pointerInteropFilter true
                         }
@@ -533,6 +591,7 @@ fun TraceCanvas(
                     }
 
                     MotionEvent.ACTION_CANCEL -> {
+                        rectangleResize = null
                         onEditGestureCancelled()
                         holdTimerJob?.cancel()
                         eyedropperScreenPos = null
@@ -590,6 +649,21 @@ fun TraceCanvas(
                     }
                 }
 
+                if (polylinePoints.isNotEmpty()) {
+                    val path = Path().apply {
+                        moveTo(polylinePoints.first().x, polylinePoints.first().y)
+                        polylinePoints.drop(1).forEach { lineTo(it.x, it.y) }
+                        currentEndPoint?.let { lineTo(it.x, it.y) }
+                    }
+                    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        color = AndroidColor.rgb(36, 99, 181)
+                        style = Paint.Style.STROKE
+                        this.strokeWidth = strokeWidth
+                    }
+                    nativeCanvas.drawPath(path, paint)
+                    polylinePoints.forEach { nativeCanvas.drawCircle(it.x, it.y, 5f / zoomScale, paint) }
+                }
+
                 // 3. Draw Active In-Progress Gesture / Stroke Preview
                 if (snappedResult != null) {
                     // Snapped clean geometry preview (Hold-to-Straighten)
@@ -610,6 +684,18 @@ fun TraceCanvas(
                 }
 
                 nativeCanvas.restore()
+            }
+        }
+
+        if (polylinePoints.isNotEmpty()) {
+            Surface(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp),
+                shape = RoundedCornerShape(12.dp), tonalElevation = 4.dp) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("${polylinePoints.size} points · unfinished", modifier = Modifier.padding(12.dp))
+                    TextButton(onClick = { finishPolyline() }, enabled = polylinePoints.size >= 2) { Text("Finish") }
+                    TextButton(onClick = { finishPolyline(true) }, enabled = polylinePoints.size >= 3) { Text("Close shape") }
+                    TextButton(onClick = { polylinePoints.clear(); lastPolylineTap = 0L }) { Text("Cancel") }
+                }
             }
         }
 
@@ -695,6 +781,17 @@ fun TraceCanvas(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             // 1. Delete
+                            if (selectedEl is RectangleElement) {
+                                IconButton(onClick = {
+                                    if (project.layers.any { it.id == selectedEl.layerId && !it.isLocked && it.isVisible }) sizingRectangle = selectedEl
+                                    else onFeedbackMessage("Unlock this layer to resize its objects")
+                                }) { Icon(Icons.Default.Straighten, contentDescription = "Edit size") }
+                            }
+                            if (selectedEl is TextElement) {
+                                IconButton(onClick = { onTextEditRequested(selectedEl) }) {
+                                    Icon(Icons.Default.Edit, contentDescription = "Edit note")
+                                }
+                            }
                             IconButton(onClick = { onElementsDeleted(setOf(selectedElementId)) }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
                             }

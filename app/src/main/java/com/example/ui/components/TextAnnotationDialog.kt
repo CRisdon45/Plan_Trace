@@ -42,15 +42,16 @@ fun TextAnnotationDialog(
     position: Point2D,
     activeLayerId: String,
     strokeColor: Long,
+    existingNote: TextElement? = null,
     onDismiss: () -> Unit,
     onAddText: (TextElement) -> Unit
 ) {
-    var text by remember { mutableStateOf("") }
+    var text by remember(existingNote?.id, position) { mutableStateOf(existingNote?.text ?: "") }
 
     fun submit() {
         if (text.isNotBlank()) {
             onAddText(
-                TextElement(
+                existingNote?.copy(text = text.trim()) ?: TextElement(
                     layerId = activeLayerId,
                     text = text.trim(),
                     position = position,
@@ -89,7 +90,7 @@ fun TextAnnotationDialog(
                             tint = MaterialTheme.colorScheme.primary
                         )
                         Text(
-                            text = "Add Plan Note",
+                            text = if (existingNote == null) "Add Plan Note" else "Edit Plan Note",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                         )
                     }
@@ -123,7 +124,7 @@ fun TextAnnotationDialog(
                         enabled = text.isNotBlank(),
                         modifier = Modifier.testTag("btn_save_note")
                     ) {
-                        Text("Add to Plan")
+                        Text(if (existingNote == null) "Add to Plan" else "Save note")
                     }
                 }
             }
