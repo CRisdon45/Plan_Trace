@@ -1,0 +1,539 @@
+{
+  "premium-selected": {
+    "projectTitle": "QA_Premium_Patio",
+    "layers": [
+      {
+        "id": "layer_tracing_base",
+        "name": "Layer 1: Base Linework",
+        "isVisible": true,
+        "isLocked": false,
+        "opacity": 1,
+        "blendMode": "NORMAL",
+        "colorTag": 4280640491
+      },
+      {
+        "id": "layer_geometry",
+        "name": "Layer 2: Features & Geometry",
+        "isVisible": true,
+        "isLocked": false,
+        "opacity": 1,
+        "blendMode": "NORMAL",
+        "colorTag": 4280640491
+      },
+      {
+        "id": "layer_annotations",
+        "name": "Layer 3: Notes & Dimensions",
+        "isVisible": true,
+        "isLocked": false,
+        "opacity": 1,
+        "blendMode": "NORMAL",
+        "colorTag": 4280640491
+      }
+    ],
+    "elements": [
+      {
+        "id": "1b187dec-0536-4649-b833-70c09a97e3fe",
+        "layerId": "layer_tracing_base",
+        "strokeColor": 4281908728,
+        "strokeWidth": 7,
+        "style": "INK",
+        "alpha": 1,
+        "type": "Rectangle",
+        "left": 300,
+        "top": 500,
+        "right": 700,
+        "bottom": 800,
+        "isFilled": false,
+        "fillColor": 4281908728
+      }
+    ],
+    "layerCount": 3,
+    "objectCount": 1,
+    "orphanedObjectIds": []
+  },
+  "premium-corner-drag": {
+    "projectTitle": "QA_Premium_Patio",
+    "layers": [
+      {
+        "id": "layer_tracing_base",
+        "name": "Layer 1: Base Linework",
+        "isVisible": true,
+        "isLocked": false,
+        "opacity": 1,
+        "blendMode": "NORMAL",
+        "colorTag": 4280640491
+      },
+      {
+        "id": "layer_geometry",
+        "name": "Layer 2: Features & Geometry",
+        "isVisible": true,
+        "isLocked": false,
+        "opacity": 1,
+        "blendMode": "NORMAL",
+        "colorTag": 4280640491
+      },
+      {
+        "id": "layer_annotations",
+        "name": "Layer 3: Notes & Dimensions",
+        "isVisible": true,
+        "isLocked": false,
+        "opacity": 1,
+        "blendMode": "NORMAL",
+        "colorTag": 4280640491
+      }
+    ],
+    "elements": [
+      {
+        "id": "1b187dec-0536-4649-b833-70c09a97e3fe",
+        "layerId": "layer_tracing_base",
+        "strokeColor": 4281908728,
+        "strokeWidth": 7,
+        "style": "INK",
+        "alpha": 1,
+        "type": "Rectangle",
+        "left": 498.5029296875,
+        "top": 648.8779296875,
+        "right": 898.5029296875,
+        "bottom": 948.8779296875,
+        "isFilled": false,
+        "fillColor": 4281908728
+      }
+    ],
+    "layerCount": 3,
+    "objectCount": 1,
+    "orphanedObjectIds": []
+  },
+  "premium-before-pinch": {
+    "projectTitle": "QA_Premium_Patio",
+    "layers": [
+      {
+        "id": "layer_tracing_base",
+        "name": "Layer 1: Base Linework",
+        "isVisible": true,
+        "isLocked": false,
+        "opacity": 1,
+        "blendMode": "NORMAL",
+        "colorTag": 4280640491
+      },
+      {
+        "id": "layer_geometry",
+        "name": "Layer 2: Features & Geometry",
+        "isVisible": true,
+        "isLocked": false,
+        "opacity": 1,
+        "blendMode": "NORMAL",
+        "colorTag": 4280640491
+      },
+      {
+        "id": "layer_annotations",
+        "name": "Layer 3: Notes & Dimensions",
+        "isVisible": true,
+        "isLocked": false,
+        "opacity": 1,
+        "blendMode": "NORMAL",
+        "colorTag": 4280640491
+      }
+    ],
+    "elements": [
+      {
+        "id": "1b187dec-0536-4649-b833-70c09a97e3fe",
+        "layerId": "layer_tracing_base",
+        "strokeColor": 4281908728,
+        "strokeWidth": 7,
+        "style": "INK",
+        "alpha": 1,
+        "type": "Rectangle",
+        "left": 498.5029296875,
+        "top": 648.8779296875,
+        "right": 898.5029296875,
+        "bottom": 948.8779296875,
+        "isFilled": false,
+        "fillColor": 4281908728
+      }
+    ],
+    "layerCount": 3,
+    "objectCount": 1,
+    "orphanedObjectIds": []
+  },
+  "premium-after-pinch": {
+    "projectTitle": "QA_Premium_Patio",
+    "layers": [
+      {
+        "id": "layer_tracing_base",
+        "name": "Layer 1: Base Linework",
+        "isVisible": true,
+        "isLocked": false,
+        "opacity": 1,
+        "blendMode": "NORMAL",
+        "colorTag": 4280640491
+      },
+      {
+        "id": "layer_geometry",
+        "name": "Layer 2: Features & Geometry",
+        "isVisible": true,
+        "isLocked": false,
+        "opacity": 1,
+        "blendMode": "NORMAL",
+        "colorTag": 4280640491
+      },
+      {
+        "id": "layer_annotations",
+        "name": "Layer 3: Notes & Dimensions",
+        "isVisible": true,
+        "isLocked": false,
+        "opacity": 1,
+        "blendMode": "NORMAL",
+        "colorTag": 4280640491
+      }
+    ],
+    "elements": [
+      {
+        "id": "1b187dec-0536-4649-b833-70c09a97e3fe",
+        "layerId": "layer_tracing_base",
+        "strokeColor": 4281908728,
+        "strokeWidth": 7,
+        "style": "INK",
+        "alpha": 1,
+        "type": "Rectangle",
+        "left": 498.5029296875,
+        "top": 648.8779296875,
+        "right": 898.5029296875,
+        "bottom": 948.8779296875,
+        "isFilled": false,
+        "fillColor": 4281908728
+      }
+    ],
+    "layerCount": 3,
+    "objectCount": 1,
+    "orphanedObjectIds": []
+  },
+  "premium-before-layer-delete": {
+    "projectTitle": "QA_Premium_Patio",
+    "layers": [
+      {
+        "id": "layer_tracing_base",
+        "name": "Layer 1: Base Linework",
+        "isVisible": true,
+        "isLocked": false,
+        "opacity": 1,
+        "blendMode": "NORMAL",
+        "colorTag": 4280640491
+      },
+      {
+        "id": "layer_geometry",
+        "name": "Layer 2: Features & Geometry",
+        "isVisible": true,
+        "isLocked": false,
+        "opacity": 1,
+        "blendMode": "NORMAL",
+        "colorTag": 4280640491
+      },
+      {
+        "id": "layer_annotations",
+        "name": "Layer 3: Notes & Dimensions",
+        "isVisible": true,
+        "isLocked": false,
+        "opacity": 1,
+        "blendMode": "NORMAL",
+        "colorTag": 4280640491
+      },
+      {
+        "id": "fecaa873-c348-45e9-8d20-4938ac0801e9",
+        "name": "Patio",
+        "isVisible": true,
+        "isLocked": false,
+        "opacity": 1,
+        "blendMode": "NORMAL",
+        "colorTag": 4280640491
+      }
+    ],
+    "elements": [
+      {
+        "id": "1b187dec-0536-4649-b833-70c09a97e3fe",
+        "layerId": "layer_tracing_base",
+        "strokeColor": 4281908728,
+        "strokeWidth": 7,
+        "style": "INK",
+        "alpha": 1,
+        "type": "Rectangle",
+        "left": 498.5029296875,
+        "top": 648.8779296875,
+        "right": 898.5029296875,
+        "bottom": 948.8779296875,
+        "isFilled": false,
+        "fillColor": 4281908728
+      },
+      {
+        "id": "2dfafded-7c17-422e-8c8a-39f66470cc1f",
+        "layerId": "layer_tracing_base",
+        "strokeColor": 4281908728,
+        "strokeWidth": 1,
+        "style": "INK",
+        "alpha": 1,
+        "type": "Text",
+        "text": "PATIO_OPTION_A",
+        "fontSizeSp": 16,
+        "posX": 1202.1622314453125,
+        "posY": 700.5996704101562
+      },
+      {
+        "id": "b922e91d-909c-4675-a17b-47909a3c47fc",
+        "layerId": "fecaa873-c348-45e9-8d20-4938ac0801e9",
+        "strokeColor": 4281908728,
+        "strokeWidth": 7,
+        "style": "INK",
+        "alpha": 1,
+        "type": "Line",
+        "showDimension": true,
+        "x1": 1300,
+        "y1": 850,
+        "x2": 1553.4814453125,
+        "y2": 850
+      },
+      {
+        "id": "33545e79-cd96-446d-8d4d-09e515eb5dd8",
+        "layerId": "fecaa873-c348-45e9-8d20-4938ac0801e9",
+        "strokeColor": 4281908728,
+        "strokeWidth": 7,
+        "style": "INK",
+        "alpha": 1,
+        "type": "Line",
+        "showDimension": true,
+        "x1": 1300,
+        "y1": 950,
+        "x2": 1552.2734375,
+        "y2": 950
+      }
+    ],
+    "layerCount": 4,
+    "objectCount": 4,
+    "orphanedObjectIds": []
+  },
+  "premium-after-layer-delete": {
+    "projectTitle": "QA_Premium_Patio",
+    "layers": [
+      {
+        "id": "layer_tracing_base",
+        "name": "Layer 1: Base Linework",
+        "isVisible": true,
+        "isLocked": false,
+        "opacity": 1,
+        "blendMode": "NORMAL",
+        "colorTag": 4280640491
+      },
+      {
+        "id": "layer_geometry",
+        "name": "Layer 2: Features & Geometry",
+        "isVisible": true,
+        "isLocked": false,
+        "opacity": 1,
+        "blendMode": "NORMAL",
+        "colorTag": 4280640491
+      },
+      {
+        "id": "layer_annotations",
+        "name": "Layer 3: Notes & Dimensions",
+        "isVisible": true,
+        "isLocked": false,
+        "opacity": 1,
+        "blendMode": "NORMAL",
+        "colorTag": 4280640491
+      }
+    ],
+    "elements": [
+      {
+        "id": "1b187dec-0536-4649-b833-70c09a97e3fe",
+        "layerId": "layer_tracing_base",
+        "strokeColor": 4281908728,
+        "strokeWidth": 7,
+        "style": "INK",
+        "alpha": 1,
+        "type": "Rectangle",
+        "left": 498.5029296875,
+        "top": 648.8779296875,
+        "right": 898.5029296875,
+        "bottom": 948.8779296875,
+        "isFilled": false,
+        "fillColor": 4281908728
+      },
+      {
+        "id": "2dfafded-7c17-422e-8c8a-39f66470cc1f",
+        "layerId": "layer_tracing_base",
+        "strokeColor": 4281908728,
+        "strokeWidth": 1,
+        "style": "INK",
+        "alpha": 1,
+        "type": "Text",
+        "text": "PATIO_OPTION_A",
+        "fontSizeSp": 16,
+        "posX": 1202.1622314453125,
+        "posY": 700.5996704101562
+      }
+    ],
+    "layerCount": 3,
+    "objectCount": 2,
+    "orphanedObjectIds": []
+  },
+  "premium-after-layer-undo": {
+    "projectTitle": "QA_Premium_Patio",
+    "layers": [
+      {
+        "id": "layer_tracing_base",
+        "name": "Layer 1: Base Linework",
+        "isVisible": true,
+        "isLocked": false,
+        "opacity": 1,
+        "blendMode": "NORMAL",
+        "colorTag": 4280640491
+      },
+      {
+        "id": "layer_geometry",
+        "name": "Layer 2: Features & Geometry",
+        "isVisible": true,
+        "isLocked": false,
+        "opacity": 1,
+        "blendMode": "NORMAL",
+        "colorTag": 4280640491
+      },
+      {
+        "id": "layer_annotations",
+        "name": "Layer 3: Notes & Dimensions",
+        "isVisible": true,
+        "isLocked": false,
+        "opacity": 1,
+        "blendMode": "NORMAL",
+        "colorTag": 4280640491
+      }
+    ],
+    "elements": [
+      {
+        "id": "1b187dec-0536-4649-b833-70c09a97e3fe",
+        "layerId": "layer_tracing_base",
+        "strokeColor": 4281908728,
+        "strokeWidth": 7,
+        "style": "INK",
+        "alpha": 1,
+        "type": "Rectangle",
+        "left": 498.5029296875,
+        "top": 648.8779296875,
+        "right": 898.5029296875,
+        "bottom": 948.8779296875,
+        "isFilled": false,
+        "fillColor": 4281908728
+      },
+      {
+        "id": "2dfafded-7c17-422e-8c8a-39f66470cc1f",
+        "layerId": "layer_tracing_base",
+        "strokeColor": 4281908728,
+        "strokeWidth": 1,
+        "style": "INK",
+        "alpha": 1,
+        "type": "Text",
+        "text": "PATIO_OPTION_A",
+        "fontSizeSp": 16,
+        "posX": 1202.1622314453125,
+        "posY": 700.5996704101562
+      },
+      {
+        "id": "b922e91d-909c-4675-a17b-47909a3c47fc",
+        "layerId": "fecaa873-c348-45e9-8d20-4938ac0801e9",
+        "strokeColor": 4281908728,
+        "strokeWidth": 7,
+        "style": "INK",
+        "alpha": 1,
+        "type": "Line",
+        "showDimension": true,
+        "x1": 1300,
+        "y1": 850,
+        "x2": 1553.4814453125,
+        "y2": 850
+      }
+    ],
+    "layerCount": 3,
+    "objectCount": 3,
+    "orphanedObjectIds": [
+      "b922e91d-909c-4675-a17b-47909a3c47fc"
+    ]
+  },
+  "premium-handle-drag": {
+    "projectTitle": "QA_Premium_Patio",
+    "layers": [
+      {
+        "id": "layer_tracing_base",
+        "name": "Layer 1: Base Linework",
+        "isVisible": true,
+        "isLocked": false,
+        "opacity": 1,
+        "blendMode": "NORMAL",
+        "colorTag": 4280640491
+      },
+      {
+        "id": "layer_geometry",
+        "name": "Layer 2: Features & Geometry",
+        "isVisible": true,
+        "isLocked": false,
+        "opacity": 1,
+        "blendMode": "NORMAL",
+        "colorTag": 4280640491
+      },
+      {
+        "id": "layer_annotations",
+        "name": "Layer 3: Notes & Dimensions",
+        "isVisible": true,
+        "isLocked": false,
+        "opacity": 1,
+        "blendMode": "NORMAL",
+        "colorTag": 4280640491
+      }
+    ],
+    "elements": [
+      {
+        "id": "1b187dec-0536-4649-b833-70c09a97e3fe",
+        "layerId": "layer_tracing_base",
+        "strokeColor": 4281908728,
+        "strokeWidth": 7,
+        "style": "INK",
+        "alpha": 1,
+        "type": "Rectangle",
+        "left": 597.9677734375,
+        "top": 748.3427734375,
+        "right": 997.9677734375,
+        "bottom": 1048.3427734375,
+        "isFilled": false,
+        "fillColor": 4281908728
+      },
+      {
+        "id": "2dfafded-7c17-422e-8c8a-39f66470cc1f",
+        "layerId": "layer_tracing_base",
+        "strokeColor": 4281908728,
+        "strokeWidth": 1,
+        "style": "INK",
+        "alpha": 1,
+        "type": "Text",
+        "text": "PATIO_OPTION_A",
+        "fontSizeSp": 16,
+        "posX": 1202.1622314453125,
+        "posY": 700.5996704101562
+      },
+      {
+        "id": "b922e91d-909c-4675-a17b-47909a3c47fc",
+        "layerId": "fecaa873-c348-45e9-8d20-4938ac0801e9",
+        "strokeColor": 4281908728,
+        "strokeWidth": 7,
+        "style": "INK",
+        "alpha": 1,
+        "type": "Line",
+        "showDimension": true,
+        "x1": 1300,
+        "y1": 850,
+        "x2": 1553.4814453125,
+        "y2": 850
+      }
+    ],
+    "layerCount": 3,
+    "objectCount": 3,
+    "orphanedObjectIds": [
+      "b922e91d-909c-4675-a17b-47909a3c47fc"
+    ]
+  }
+}
