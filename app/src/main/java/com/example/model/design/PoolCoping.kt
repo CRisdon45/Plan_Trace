@@ -55,8 +55,11 @@ object PoolCoping {
             }
         }
         val origin = boundary.nodes.first().point
-        val points = boundary.sample(CHORD_ERROR_METRES, MAX_SAMPLES)
-        val coordinates = points.map { Coordinate(it.x - origin.x, it.y - origin.y) }
+        // Localize BEFORE interpolation. Sampling in translated world coordinates first can
+        // change near-collinear buffer joins through rounding, even when the shape only moved.
+        val localBoundary = boundary.translated(-origin.x, -origin.y)
+        val points = localBoundary.sample(CHORD_ERROR_METRES, MAX_SAMPLES)
+        val coordinates = points.map { Coordinate(it.x, it.y) }
         require(coordinates.all { abs(it.x) <= 1000.0 && abs(it.y) <= 1000.0 }) {
             "Pool extent exceeds this coping preview's supported range"
         }
