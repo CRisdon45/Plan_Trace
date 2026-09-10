@@ -7,6 +7,12 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -92,8 +98,8 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                 val ready = state.document != null && state.preview == null
-                OutlinedButton(onClick = { model.addOutline(false) }, enabled = ready, modifier = Modifier.testTag("workspace-add-pool")) { Text("Pool outline") }
-                OutlinedButton(onClick = { model.addOutline(true) }, enabled = ready, modifier = Modifier.testTag("workspace-add-curved")) { Text("Curved outline") }
+                OutlinedButton(onClick = { model.addOutline(false) }, enabled = ready, modifier = Modifier.testTag("workspace-add-pool")) { Text("Pool + coping") }
+                OutlinedButton(onClick = { model.addOutline(true) }, enabled = ready, modifier = Modifier.testTag("workspace-add-curved")) { Text("Curved pool") }
                 OutlinedButton(onClick = { model.addOutline(false, DesignObjectKind.PAVING) }, enabled = ready,
                     modifier = Modifier.testTag("workspace-add-paving")) { Text("Paving outline") }
                 TextButton(onClick = model::undo, enabled = state.canUndo && state.preview == null, modifier = Modifier.testTag("workspace-undo")) { Text("Undo") }
@@ -128,12 +134,15 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
                 }
                 WorkspaceCanvas(state, model, touchEdit, Modifier.weight(1f).fillMaxWidth())
                 val selected = doc.objects.firstOrNull { it.id == state.selectedId }
+                if (selected != null && (selected.kind == DesignObjectKind.POOL || selected.kind == DesignObjectKind.SPA)) {
+                    CopingWidthControl(selected, model, state.preview == null)
+                }
                 Text(selected?.let { String.format(Locale.US, "%s · perimeter %.2f ft", it.name, it.boundary.perimeterMetres / 0.3048) }
                     ?: "Add an outline, then select its edge to edit.", style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("workspace-selection"))
                 Text(state.message ?: "Drag round handles for vertices, amber handles for curves. Pen edits; fingers pan unless Touch edit is on.",
                     style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
-                Text("Outline preview: coping, surface validation and the final Northstar appearance are not implemented here yet.",
+                Text("Coping follows the pool. Surface checks are resolution-limited; steps, site clearances and Northstar styling are still in development.",
                     style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
             } else if (state.loading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
@@ -159,6 +168,40 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
             }
         }
     })
+}
+
+
+/** Width entry commits on keyboard Done, without a separate Apply/Accept dialog. */
+@Composable
+private fun CopingWidthControl(obj: DesignObject, model: DesignWorkspaceViewModel, ready: Boolean) {
+    val focus = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    var text by remember(obj.id, obj.coping) { mutableStateOf(String.format(Locale.US, "%.2f", obj.coping?.widthInches ?: 12.0)) }
+    val enabled = ready && !obj.locked
+    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (obj.coping == null) {
+            TextButton(onClick = { model.execute(DesignCommand.SetCoping(obj.id, CopingSpec())) }, enabled = enabled,
+                modifier = Modifier.testTag("workspace-attach-coping")) { Text("Add following coping") }
+            Text("Existing outline left unchanged until you choose this.", style = MaterialTheme.typography.labelSmall)
+        } else {
+            OutlinedTextField(value = text, onValueChange = { if (it.length <= 8) text = it },
+                label = { Text("Coping width (in)") }, singleLine = true, enabled = enabled,
+                modifier = Modifier.width(175.dp).testTag("workspace-coping-width"),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = {
+                    val inches = text.trim().toDoubleOrNull()
+                    if (inches == null || !inches.isFinite() || inches !in 2.0..48.0) {
+                        model.feedback("Enter a coping width from 2 to 48 inches")
+                    } else model.execute(DesignCommand.SetCoping(obj.id, CopingSpec(inches * CopingSpec.INCH)))
+                    val actual = model.state.value.document?.objects?.firstOrNull { it.id == obj.id }?.coping
+                    text = String.format(Locale.US, "%.2f", actual?.widthInches ?: obj.coping.widthInches)
+                    focus.clearFocus(); keyboard?.hide()
+                }))
+            Text(String.format(Locale.US, "Following coping · %.2f in", obj.coping.widthInches),
+                style = MaterialTheme.typography.labelMedium, modifier = Modifier.testTag("workspace-coping-status"))
+        }
+    }
 }
 
 private class PointerSession {

@@ -13,6 +13,17 @@ class PoolCopingTest {
     private fun boundary(points: List<Pair<Double,Double>>) = DesignBoundary(points.mapIndexed { i, p ->
         BoundaryNode("v$i", DesignPoint(p.first,p.second), "e$i") })
 
+    /** A polygon ring has no distinguished first vertex; permit cyclic order/reversal, not shape drift. */
+    private fun assertSameRing(expected: List<DesignPoint>, actual: List<DesignPoint>) {
+        assertEquals(expected.size, actual.size)
+        val start = actual.indices.minBy { actual[it].distanceTo(expected.first()) }
+        val matches = listOf(1,-1).any { direction -> expected.indices.all { i ->
+            val index = (start + direction * i + actual.size) % actual.size
+            expected[i].distanceTo(actual[index]) <= 1e-8
+        } }
+        assertTrue("Boundary drift beyond 1e-8 metres (allowing cyclic start and winding)", matches)
+    }
+
     @Test fun `rectangle coping has the requested outward width and is not another object`() {
         val d = doc(); val p = d.objectById("pool")
         val ring = p.copingFootprint!!.outerBoundary; val w = p.coping!!.widthMetres
@@ -28,7 +39,7 @@ class PoolCopingTest {
     }
     @Test fun `both winding directions generate outward coping`() {
         val a=pool(); val b=pool(a.boundary.reversed())
-        assertEquals(a.copingFootprint!!.outerBoundary.toSet(), b.copingFootprint!!.outerBoundary.toSet())
+        assertSameRing(a.copingFootprint!!.outerBoundary, b.copingFootprint!!.outerBoundary)
     }
     @Test fun `concave and convex curves can have following coping without flattening the authority`() {
         val p=pool(DesignFixtures.organic())
@@ -112,9 +123,6 @@ class PoolCopingTest {
         val moved=DesignCommands.apply(initial,DesignCommand.Translate("pool",40.0,-20.0))
         val a=initial.objectById("pool");val b=moved.objectById("pool")
         assertEquals(a.coping,b.coping)
-        assertEquals(a.copingFootprint!!.outerBoundary.size,b.copingFootprint!!.outerBoundary.size)
-        a.copingFootprint!!.outerBoundary.zip(b.copingFootprint!!.outerBoundary).forEach { (p,q) ->
-            assertEquals(p.x+40.0,q.x,1e-8);assertEquals(p.y-20.0,q.y,1e-8)
-        }
+        assertSameRing(a.copingFootprint!!.outerBoundary.map { it.translated(40.0,-20.0) }, b.copingFootprint!!.outerBoundary)
     }
 }
