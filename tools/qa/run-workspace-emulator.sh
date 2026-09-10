@@ -51,7 +51,8 @@ timeout 120 adb -s "$serial" install -r app/build/outputs/apk/androidTest/debug/
 device logcat -c
 function run_case() {
   local name="$1"
-  timeout 180 adb -s "$serial" shell am instrument -w -r -e class "com.example.DesignWorkspaceDeviceTest#$name" \
+  local test_class="${2:-com.example.DesignWorkspaceDeviceTest}"
+  timeout 180 adb -s "$serial" shell am instrument -w -r -e class "$test_class#$name" \
     "$package.test/androidx.test.runner.AndroidJUnitRunner" | tee "emulator-evidence/$name.txt"
   grep -qE 'OK \([1-9][0-9]* tests?\)' "emulator-evidence/$name.txt"
   ! grep -qE 'FAILURES!!!|INSTRUMENTATION_FAILED|Process crashed' "emulator-evidence/$name.txt"
@@ -63,9 +64,22 @@ run_case reopenAfterProcessDeath
 device shell am force-stop "$package"
 device exec-out run-as "$package" cat files/project-design/workspace.json > emulator-evidence/saved-after-restart.json
 cmp emulator-evidence/saved-before-restart.json emulator-evidence/saved-after-restart.json
+# Independent follow-on scenarios keep the existing synthetic draft; no pm clear or reinstall.
+run_case radialEditingSafety com.example.RadialWorkflowDeviceTest
+device shell am force-stop "$package"
+device shell wm size 1000x1600
+run_case portraitCommands com.example.RadialWorkflowDeviceTest
+device shell am force-stop "$package"
+device shell wm size 800x1400
+device shell wm density 400
+run_case compactCommands com.example.RadialWorkflowDeviceTest
+device shell am force-stop "$package"
+device exec-out run-as "$package" cat files/project-design/workspace.json > emulator-evidence/saved-after-radial-review.json
+
 {
   echo "Source: ${GITHUB_SHA:-local}"
-  echo 'Completed: creation, vertex drag, curve drag, finger navigation, cancellation, Delete/Undo/Redo, disk save, process restart, activity recreation.'
+  echo 'Completed: existing edit/save/restart scenarios, real grid-snapped drag, canceled size entry, freeform uniform sizing, four-corner wheel access, disabled actions, portrait and 320dp compact fallback.'
+  echo 'Display cases: landscape 1600x1000@240, portrait 1000x1600@240, compact 800x1400@400.'
   echo "API: $(device shell getprop ro.build.version.sdk | tr -d '\r')"
   echo "ABI: $(device shell getprop ro.product.cpu.abi | tr -d '\r')"
   device shell wm size

@@ -117,30 +117,9 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
     }
     BackHandler { close() }
     Scaffold(modifier = Modifier.fillMaxSize(), topBar = {
-        Column(Modifier.statusBarsPadding()) {
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = { close() }, modifier = Modifier.testTag("workspace-back")) { Text("Back to plans") }
-                Text("Design workspace", style = MaterialTheme.typography.titleMedium)
-                OutlinedButton(onClick = { inspector=null;commandRequest++ }, enabled=state.document!=null,
-                    modifier=Modifier.testTag("workspace-commands")) { Text("Commands") }
-                TextButton(onClick=model::undo,enabled=state.canUndo && state.preview==null,modifier=Modifier.testTag("workspace-undo")) { Text("Undo") }
-                TextButton(onClick=model::redo,enabled=state.canRedo && state.preview==null,modifier=Modifier.testTag("workspace-redo")) { Text("Redo") }
-                val saveText = when {
-                    state.loading -> "Opening…"
-                    state.loadError != null -> "Could not open"
-                    state.saveError != null -> "Not saved"
-                    state.preview != null -> "Previewing edit"
-                    state.saved -> "Saved on device"
-                    state.document?.revision == 0L -> "One local draft"
-                    else -> "Saving…"
-                }
-                Text(saveText, modifier = Modifier.testTag("workspace-save-status"), style = MaterialTheme.typography.labelMedium)
-                TextButton(onClick = { exporting = true }, enabled = state.document?.objects?.isNotEmpty() == true &&
-                    state.preview == null && !exportBusy, modifier = Modifier.testTag("workspace-export")) { Text("Export") }
-            }
-
-        }
+        WorkspaceHeader(state, exportBusy, onBack = { close() },
+            onCommands = { inspector = null; commandRequest++ }, onUndo = model::undo,
+            onRedo = model::redo, onExport = { exporting = true })
     }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).navigationBarsPadding()) {
             state.loadError?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp)) }
