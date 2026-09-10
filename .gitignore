@@ -16,3 +16,20 @@
 local.properties
 .env
 debug.keystore
+
+# Private inputs and local evidence: preferably keep these outside the checkout.
+# Ignore rules are a staging guard, not access control or a history scrub.
+/.private/
+/private/
+/private-references/
+/references/private/
+/docs/references/private/
+/local-artifacts/
+.env.*
+!.env.example
+*.jks
+*.keystore
+**/google-services.json
+*.apk
+*.apks
+*.aab

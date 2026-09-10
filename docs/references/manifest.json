@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "recorded_on": "2026-09-10",
+  "note": "Metadata-only inventory. No source pixels or client originals are included. Visual locators come from the earlier repository specification, not a new image review.",
+  "visual_references": [
+    {"id": "NS-01", "filename_locator": "1000008490(2).png", "purpose": "Full-sheet composition, white space and hierarchy", "repository_path": null, "sha256": null, "availability": "external_not_in_repository", "publication_permission": "not_established"},
+    {"id": "NS-02", "filename_locator": "1000008531(5).png", "purpose": "Canopy silhouettes, negative space, turf and water", "repository_path": null, "sha256": null, "availability": "external_not_in_repository", "publication_permission": "not_established"},
+    {"id": "NS-03", "filename_locator": "1000008532(5).png", "purpose": "Paving rhythm, built edges, planting layers and shadows", "repository_path": null, "sha256": null, "availability": "external_not_in_repository", "publication_permission": "not_established"},
+    {"id": "NS-04", "filename_locator": "1000008533(5).png", "purpose": "Light turf fields, narrow hardscape and restrained detail", "repository_path": null, "sha256": null, "availability": "external_not_in_repository", "publication_permission": "not_established"},
+    {"id": "NS-05", "filename_locator": "1000008530(4).png", "purpose": "Low-frequency wash, pigment edges and paper highlights", "repository_path": null, "sha256": null, "availability": "external_not_in_repository", "publication_permission": "not_established"}
+  ],
+  "project_reference_groups": [
+    {"id": "SITE-01", "roles": ["initial_site_plan"], "availability": "private_not_in_repository", "source_identity_map": "owner_private_storage", "public_fixture_status": "specification_only"},
+    {"id": "ORTHO-01", "roles": ["pool_plan", "landscape_plan", "completed_project_photos"], "availability": "private_not_in_repository", "source_identity_map": "owner_private_storage", "public_fixture_status": "specification_only"},
+    {"id": "ORGANIC-01", "roles": ["pool_plan", "landscape_plan"], "availability": "private_not_in_repository", "source_identity_map": "owner_private_storage", "public_fixture_status": "specification_only"}
+  ]
+}
