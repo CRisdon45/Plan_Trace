@@ -80,3 +80,7 @@ Next: semantic material roles and a deterministic Graphic benchmark, then Norths
 ## Sixth package: explicit surface foundation
 
 Added optional versioned materials to closed objects, a selection material picker, reversible original/custom styling and shared flat Graphic rendering. Tablet assignment, exact Undo and restart persistence passed; 34 automated checks pass. See [scope, evidence and remaining visual work](SURFACE_MATERIAL_IMPLEMENTATION.md). This does not complete stage 4: original benchmark, display modes and line hierarchy remain next.
+
+## Paused checkpoint — 2026-09-10
+
+User requested stopping implementation and uploading current work. Preserved an editable courtyard example, plain paper background, constrained selection controls and PNG measurement-option plumbing. Fresh run: 35 tests passed and debug assembly succeeded. Tablet review of this latest checkpoint and the PNG measurement control remain unfinished. See [exact resume point](CHECKPOINT_2026-09-10.md).

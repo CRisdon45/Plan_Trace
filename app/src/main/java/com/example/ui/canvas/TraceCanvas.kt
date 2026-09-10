@@ -12,6 +12,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -690,6 +693,8 @@ fun TraceCanvas(
                     val src = android.graphics.Rect(0, 0, backgroundBitmap.width, backgroundBitmap.height)
                     val dst = RectF(0f, 0f, backgroundBitmap.width.toFloat(), backgroundBitmap.height.toFloat())
                     nativeCanvas.drawBitmap(backgroundBitmap, src, dst, bgPaint)
+                } else if (project.backgroundType == com.example.model.BackgroundType.BLANK_PAPER) {
+                    nativeCanvas.drawColor(0xFFFBFAF5.toInt())
                 } else {
                     // Draw clean architectural blueprint grid
                     drawArchitecturalGrid(nativeCanvas, 3200f, 2400f)
@@ -828,6 +833,8 @@ fun TraceCanvas(
         if (selectedElementId != null && activeTool == DrawingTool.SELECT) {
             val selectedEl = project.elements.find { it.id == selectedElementId }
             if (selectedEl != null) {
+                var actionBarWidth by remember { mutableStateOf(0) }
+                val actionDensity = LocalDensity.current
                 val bounds = selectedEl.boundingBox()
                 val screenCenter = worldToScreen(Point2D(bounds.centerX(), bounds.top))
 
@@ -835,7 +842,7 @@ fun TraceCanvas(
                     modifier = Modifier
                         .offset {
                             IntOffset(
-                                (screenCenter.x - 110.dp.value * 2.2f).roundToInt().coerceAtLeast(16),
+                                (screenCenter.x - actionBarWidth / 2f).roundToInt().coerceIn(16, (viewportSize.width - actionBarWidth - 16).coerceAtLeast(16)),
                                 (screenCenter.y - 58.dp.value * 2.5f).roundToInt().coerceAtLeast(16)
                             )
                         }
@@ -845,10 +852,13 @@ fun TraceCanvas(
                         color = MaterialTheme.colorScheme.surface,
                         tonalElevation = 8.dp,
                         shadowElevation = 8.dp,
-                        modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(24.dp))
+                        modifier = Modifier
+                            .widthIn(max = with(actionDensity) { (viewportSize.width - 32).coerceAtLeast(1).toDp() })
+                            .onSizeChanged { actionBarWidth = it.width }
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(24.dp))
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             // 1. Delete

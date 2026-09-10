@@ -84,7 +84,7 @@ object ExportManager {
             canvas.drawBitmap(backgroundBitmap, src, dst, bgPaint)
         } else {
             // Draw clean architectural tracing paper off-white
-            canvas.drawColor(Color.parseColor("#FBFBF8"))
+            canvas.drawColor(if (project.backgroundType == com.example.model.BackgroundType.BLANK_PAPER) 0xFFFBFAF5.toInt() else Color.parseColor("#FBFBF8"))
         }
 
         // Draw elements layer by layer
@@ -356,17 +356,18 @@ object ExportManager {
         backgroundBitmap: Bitmap?,
         includeBackground: Boolean = true,
         width: Int = 2048,
-        height: Int = 1536
+        height: Int = 1536,
+        showDimensions: Boolean = true
     ): File? = withContext(Dispatchers.IO) {
         try {
             val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
-            canvas.drawColor(Color.parseColor("#FBFBF8"))
+            canvas.drawColor(if (project.backgroundType == com.example.model.BackgroundType.BLANK_PAPER) 0xFFFBFAF5.toInt() else Color.parseColor("#FBFBF8"))
             val bounds = ExportGeometry.contentBounds(project, backgroundBitmap?.width, backgroundBitmap?.height)
             val fit = ExportGeometry.fit(bounds, RectF(0f, 0f, width.toFloat(), height.toFloat()))
             canvas.translate(fit.translateX, fit.translateY)
             canvas.scale(fit.scale, fit.scale)
-            renderProjectToCanvas(canvas, project, backgroundBitmap, includeBackground, width.toFloat(), height.toFloat())
+            renderProjectToCanvas(canvas, project, backgroundBitmap, includeBackground, width.toFloat(), height.toFloat(), showDimensions)
 
             val cacheDir = File(context.cacheDir, "exports")
             cacheDir.mkdirs()

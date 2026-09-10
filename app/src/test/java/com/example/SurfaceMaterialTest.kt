@@ -51,4 +51,15 @@ class SurfaceMaterialTest {
         assertFalse(PolylineElement(layerId = "base", points = listOf(Point2D(0f, 0f), Point2D(10f, 10f))).supportsSurface())
         assertTrue(rectangle().supportsSurface())
     }
+    @Test fun `editable example has valid layer ownership and an exact sized pool`() {
+        val project = LandscapeExample.create()
+        assertEquals(project.elements.size, project.elements.map { it.id }.toSet().size)
+        assertTrue(project.elements.all { el -> project.layers.any { it.id == el.layerId } })
+        val pool = project.elements.first { it.id == "pool" } as RectangleElement
+        assertEquals(400f, pool.width, 0f)
+        assertEquals(240f, pool.height, 0f)
+        assertEquals(project.elements, ProjectJsonConverter.deserializeElements(ProjectJsonConverter.serializeElements(project.elements)))
+        assertNotEquals(project.id, LandscapeExample.create().id)
+    }
+
 }

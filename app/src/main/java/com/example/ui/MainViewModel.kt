@@ -384,7 +384,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         null
                     }
                 }
-                BackgroundType.BLANK_GRID -> null
+                BackgroundType.BLANK_GRID, BackgroundType.BLANK_PAPER -> null
             } }
             if (_project.value.id != p.id || _project.value.pageKey != p.pageKey) return@launch
             _backgroundBitmap.value = bitmap
@@ -798,7 +798,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // Project management
     fun createNewProject(title: String, sampleKey: String = "sample_pool") {
-        val newProj = TraceProject(
+        val newProj = if (sampleKey == com.example.model.LandscapeExample.TEMPLATE_KEY) com.example.model.LandscapeExample.create(title) else TraceProject(
             title = if (title.isBlank()) "Untitled Plan Sketch" else title,
             backgroundType = BackgroundType.SAMPLE,
             backgroundResourceOrUri = sampleKey,
@@ -863,7 +863,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     context = context,
                     project = _project.value,
                     backgroundBitmap = _backgroundBitmap.value,
-                    includeBackground = options.includeBackground
+                    includeBackground = options.includeBackground,
+                    showDimensions = options.includeDimensions
                 )
             }
 

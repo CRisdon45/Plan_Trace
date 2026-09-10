@@ -263,7 +263,10 @@ fun PlanTraceApp(viewModel: MainViewModel) {
             projects = projectsList,
             onDismiss = { viewModel.setShowProjectsDialog(false) },
             onSelectProject = { viewModel.loadProject(it) },
-            onCreateNewProject = { title, sample -> viewModel.createNewProject(title, sample) },
+            onCreateNewProject = { title, sample ->
+                viewModel.createNewProject(title, sample)
+                if (sample == com.example.model.LandscapeExample.TEMPLATE_KEY) fitRequest++
+            },
             onDeleteProject = { viewModel.deleteProject(it) },
             onImportFile = {
                 filePickerLauncher.launch(arrayOf("application/pdf", "image/*"))

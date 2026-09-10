@@ -82,5 +82,6 @@ enum class BackgroundType {
     SAMPLE,
     IMAGE_URI,
     PDF_URI,
-    BLANK_GRID
+    BLANK_GRID,
+    BLANK_PAPER
 }
