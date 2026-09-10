@@ -1,35 +1,41 @@
 # Current state and next-session handoff
 
-Updated 2026-09-10 after the first connected pool/coping milestone. **Main contains this routing context, not the unfinished application changes.** Independent implementation and GitHub virtual-device testing are authorized while the physical tablet is unavailable. Preserve its interrupted test, app/data and signing key. Verify live refs and concurrent changes before working.
+Updated 2026-09-10 after radial-menu and responsive interaction verification. **Main contains this routing context, not the unfinished application changes.** Independent development and GitHub virtual-device testing remain authorized; the physical tablet's interrupted session, app, signing key and data remain untouched. Verify live refs and concurrent work before writing.
 
 ## Where to continue
 
-Active branch: **feat/project-geometry-seam**, PR #4 into feat/off-tablet-integrity. PR #3 targets feat/2d-foundation-northstar, and PR #2 targets main. No application PR was merged in this session.
+Active branch: **feat/project-geometry-seam**, PR #4 into feat/off-tablet-integrity. PR #3 targets feat/2d-foundation-northstar; PR #2 targets main. No application PR was merged in the radial review session.
 
-Read the [active checkpoint](https://github.com/CRisdon45/Plan_Trace/blob/feat/project-geometry-seam/docs/CURRENT_STATE.md). Saved documentation checkpoint: **f8e7bde4692a7dbeb04200154e4a3b39143af03f**. Tested application revision: **f0f1892f89d6113710172b54213e09e306c32043**. Later documentation changes are not new build/test claims. The active branch's decision record contains initial geometry/coping choices D13-D14; they are revisable technical choices, not new user requirements.
+Read the [active CURRENT_STATE](https://github.com/CRisdon45/Plan_Trace/blob/feat/project-geometry-seam/docs/CURRENT_STATE.md). Saved documentation checkpoint: **786f644e1ec12f7f50bc28d738d13f36178d7e1c**. Tested application revision: **27ebdb21c9027b29aa0c0104a2dca8e4a45094da**. Documentation commits do not create new application-validation claims. The active decision record includes revisable implementation choices D13-D16.
 
-## Latest implemented outcome
+## Current workflow
 
-Projects -> Design workspace · preview has one separately saved local draft with exact pool lines/arcs, direct vertex/curve/body editing, Undo/Redo, Delete/Undo, Fit and perimeter in feet. **New pools now include following coping.** Reshaping regenerates the band from the pool's saved width/generator intent; it is not a separate editable polygon. Width entry in inches commits on keyboard Done, without Apply/Accept. Unsupported crossing geometry, consumed inside arcs and bridged narrow recesses are rejected without replacing the saved design.
+Projects -> Design workspace · preview opens one separately saved draft with exact pool lines/arcs, connected coping, direct editing, Undo/Redo, feet-based perimeter and verified atomic saving. The existing renderer draws the canonical project's disposable projection, not another editable yard. Sampled coping validity is not construction approval or a complete takeoff engine.
 
-The local JTS-backed generator uses an explicit sampled approximation and guards, not an exact analytic topology proof or construction approval. No area takeoff, other-object clearance/deck exclusion or per-edge material treatment is claimed. The existing renderer displays flat water/stone; it is not the finished Northstar style.
+A two-level radial menu now supplies stable Draw/Edit/View/Assist/History/Select categories and short outer fans. Disabled actions keep their slots. Commands remains visible in responsive headers. The wheel shifts inward at edges without rotating directions; small-space/large-text fallback uses a matching list with Back/Close pinned above scrolling actions. This is tap-to-select, not continuous hold-and-flick. Stylus generic-event routing has synthetic software coverage, not physical S Pen certification.
 
-Format 2 saves coping intent and reads version-1 outlines unchanged. Old outlines require explicit attachment; no silent promotion. Later format-2 saves cannot be read by old format-1-only builds. Legacy Room projects are separate and unchanged. The opt-in draft uses serial verified atomic saves, but is not portable backup or multiple-project management. Undo history is session-local.
+Edit -> Size accepts feet, marked inches and fractions. Rectangles resize independently along their own axes with corner 1 fixed; other outlines currently scale uniformly by an overall X/Y span to preserve circular arcs. Coping width remains unchanged. Keyboard Done commits once; canceled/untouched values do not mutate geometry. Visible grid and one-foot vertex/movement snapping are independent preferences, not the full alignment/endpoint snap system.
 
 ## Verified evidence
 
-[Unit/build run 34523944344](https://github.com/CRisdon45/Plan_Trace/actions/runs/34523944344) at f0f1892: **111 tests, zero failures/errors/skips; debug assembly succeeded**. Downloaded XML totals matched the log. This is the previous 90 plus 21 new coping/document/output tests.
+[Unit/build run 34534238423](https://github.com/CRisdon45/Plan_Trace/actions/runs/34534238423), application 27ebdb2: **137 tests passed, zero failures/errors/skips; debug assembly succeeded**. Downloaded XML totals checked.
 
-[Actual Android run 34523944339](https://github.com/CRisdon45/Plan_Trace/actions/runs/34523944339) at the same revision: application/instrumentation builds and **two emulator scenarios passed**. They checked straight/curved pool reshaping with coping, unrelated objects, navigation, cancellation, Undo/Redo/Delete recovery, 16-inch width, rejection of a 48-inch band and crossing edit, saved reentry, force-stop/relaunch and activity recreation. Canonical files were byte-identical after restart, after waiting for verified Saved.
+[Android run 34534239074](https://github.com/CRisdon45/Plan_Trace/actions/runs/34534239074), same application: app/instrumentation builds and **five scenarios passed**. Coverage includes existing edit/restart flows, actual snapped drag and Undo, canceled/unchanged numeric entry, uniform freeform sizing, four-corner wheel access, disabled actions, portrait and 320 dp compact command access. Saved files were byte-identical across process restart at revision 12. Subsequent edit/Undo tests restored exact objects while correctly advancing the revision to 16.
 
-Native PNG and final recreated/rejection captures were inspected. An earlier green emulator run had a Pixel Launcher ANR overlay; the final reviewed captures were unobstructed, but no launcher root-cause fix was made. A real translation-stability defect was found and corrected by localizing geometry before sampling, with the strict test retained. KSP/AWT background exceptions and inherited service/deprecation warnings still exist despite successful builds. Do not equate green checks with an exception-free toolchain, clear screenshots or physical pen acceptance.
+Final radial, size-panel, portrait and compact screenshots were opened. Earlier passing tests missed a partly clipped compact Back control; the final fix pins it above the list and adds specific coverage. These are authentic app captures, not Northstar approval or pixel-golden synchronization. No cause-specific fix was made for the previously observed KSP/AWT tooling exception; service/deprecation warnings and that audit remain open.
 
-Scope, budgets, failures and artifact hashes: [coping implementation report](https://github.com/CRisdon45/Plan_Trace/blob/f8e7bde4692a7dbeb04200154e4a3b39143af03f/docs/COPING_IMPLEMENTATION.md). Earlier reports remain historical evidence.
+Detailed scope, failures, artifacts and hashes: [RADIAL_IMPLEMENTATION](https://github.com/CRisdon45/Plan_Trace/blob/786f644e1ec12f7f50bc28d738d13f36178d7e1c/docs/RADIAL_IMPLEMENTATION.md). Earlier implementation reports retain dated evidence, not competing resume instructions.
 
-## Next outcome and boundaries
+## Next bounded outcome: SITE-01
 
-Bring primary radial commands and exact pool-dimension editing into this connected workspace. Keep stable command directions, visible fallback access, deliberate commit, and the same command/Undo/save authority. Test software behavior virtually; physical S Pen/palm/hover/barrel-button feel remains pending. Connected shelves/steps and shared decking should reuse this model rather than independent marks.
+Bring source image/plan intake, explicit registration and known-distance calibration into this same workspace. Retain traced/assumed/verified confidence, distinguish protected existing site information from proposed geometry, and prove save/reopen/output without a preparatory Pool Studio session. Public tests use original synthetic inputs. This does not select a maps provider, certify survey accuracy, introduce runtime AI or authorize automatic migration of legacy drawings.
 
-Source/site registration, arbitrary outline creation, tangent assistance, associative dimensions, alternatives, portable recovery, full landscape scope and Northstar appearance remain unfinished. New-screen export/share was not included in the emulator scenarios; final PDF, portrait/handedness, pinch synthesis and hardware performance remain unverified. Fixed output frames and system-bar contrast are follow-ups.
+Do not spend the next milestone merely expanding the wheel. Arbitrary outlines, attached steps/shelves, shared surfaces, alternatives, multi-project/portable recovery, full landscape scope and live Northstar presentation remain unfinished and should follow actual project workflows.
 
-No tablet installation, original-app replacement, data clearing, release, installable APK publication, permissions/visibility change or 3D work occurred. CI uses disposable virtual devices. Private client originals and unapproved Northstar images remain outside public Git, issues, logs and artifacts. No runtime AI feature is introduced; the inherited runtime-service audit and exact Estimator interchange remain separate work. Update this routing file and the active checkpoint with real evidence at the next meaningful outcome.
+## Limits and safety
+
+The current workspace is one local draft with session-only Undo. Format 2 is unchanged by radial work; it reads earlier format-1 outlines without implicit promotion, but format-1-only builds cannot read newer saves. Legacy Room plans are separate. Tests wait for verified Saved before force-stop; unfinished writes are not guaranteed to survive termination.
+
+Physical S Pen/palm/barrel feel, continuous flick, full accessibility/handedness, pinch synthesis, hardware performance, new-screen export/share, final PDF/fixed-frame output and Northstar quality remain pending. Portrait/narrow software checks do not substitute for these.
+
+No physical installation, original-data clearing, signing-key replacement, application merge, release/APK publication, permission change, framework restart or 3D work occurred. Private client plans/photos and unapproved reference images remain outside public Git, PRs, logs and artifacts. No runtime AI feature; inherited service cleanup and Estimator interchange remain separate work. Update this routing file and the active handoff at the next meaningful checkpoint.
