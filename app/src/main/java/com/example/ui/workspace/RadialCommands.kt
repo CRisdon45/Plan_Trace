@@ -6,7 +6,7 @@ import kotlin.math.*
 enum class RadialCategory(val label: String) { DRAW("Draw"), EDIT("Edit"), VIEW("View"), ASSIST("Assist"), HISTORY("History"), SELECT("Select") }
 enum class RadialAction(val label: String) {
     POOL("Pool"), CURVED("Curved"), PAVING("Paving"), SIZE("Size"), COPING("Coping"), DELETE("Delete"),
-    FIT("Fit"), GRID("Grid"), TOUCH("Touch edit"), SNAP("1 ft snap"), UNDO("Undo"), REDO("Redo"), NEXT("Next"), CLEAR("Clear")
+    FIT("Fit"), GRID("Grid"), TOUCH("Touch edit"), SNAP("1 ft snap"), UNDO("Undo"), REDO("Redo"), NEXT("Next"), CLEAR("Clear"), SITE("Site image")
 }
 data class RadialAvailability(val hasDocument: Boolean, val hasSelection: Boolean, val editable: Boolean,
     val hasCopingTarget: Boolean, val canUndo: Boolean, val canRedo: Boolean, val hasObjects: Boolean,
@@ -26,7 +26,7 @@ object RadialCommands {
     fun actions(c: RadialCategory): List<RadialAction> = when(c) {
         RadialCategory.DRAW -> listOf(RadialAction.POOL,RadialAction.CURVED,RadialAction.PAVING)
         RadialCategory.EDIT -> listOf(RadialAction.SIZE,RadialAction.COPING,RadialAction.DELETE)
-        RadialCategory.VIEW -> listOf(RadialAction.FIT,RadialAction.GRID)
+        RadialCategory.VIEW -> listOf(RadialAction.FIT,RadialAction.GRID,RadialAction.SITE)
         RadialCategory.ASSIST -> listOf(RadialAction.TOUCH,RadialAction.SNAP)
         RadialCategory.HISTORY -> listOf(RadialAction.UNDO,RadialAction.REDO)
         RadialCategory.SELECT -> listOf(RadialAction.NEXT,RadialAction.CLEAR)
@@ -46,6 +46,8 @@ object RadialGeometry {
     fun childAngle(c:RadialCategory,index:Int): Double {
         val count=RadialCommands.actions(c).size
         require(index in 0 until count)
+        // Preserve the existing Fit/Grid directions when adding source setup.
+        if(c==RadialCategory.VIEW) return angle(c)+listOf(-15.0,15.0,45.0)[index]
         return angle(c)+(index-(count-1)/2.0)*30.0
     }
     fun point(degrees: Double,radius: Double): Pair<Double,Double> {

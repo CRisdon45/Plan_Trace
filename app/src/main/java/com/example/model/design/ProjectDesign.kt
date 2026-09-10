@@ -25,7 +25,7 @@ data class DesignObject(
 }
 
 /** Storage-neutral project authority. No PDF page owns these objects or their metric coordinates. */
-class ProjectDesign(val id: String, objects: List<DesignObject> = emptyList(), val revision: Long = 0) {
+class ProjectDesign(val id: String, objects: List<DesignObject> = emptyList(), val revision: Long = 0, val siteImage: SiteImage? = null) {
     val objects: List<DesignObject> = java.util.Collections.unmodifiableList(objects.toList())
     init {
         require(id.isNotBlank() && revision >= 0)
@@ -35,16 +35,17 @@ class ProjectDesign(val id: String, objects: List<DesignObject> = emptyList(), v
     }
     fun objectById(id: String): DesignObject = objects.singleOrNull { it.id == id }
         ?: throw IllegalArgumentException("Unknown design object: $id")
-    internal fun revised(objects: List<DesignObject>): ProjectDesign {
+    internal fun revised(objects: List<DesignObject>, siteImage: SiteImage? = this.siteImage): ProjectDesign {
         require(revision < Long.MAX_VALUE) { "Revision overflow" }
-        return ProjectDesign(id, objects, revision + 1)
+        return ProjectDesign(id, objects, revision + 1, siteImage)
     }
     override fun equals(other: Any?): Boolean = other is ProjectDesign &&
-        id == other.id && revision == other.revision && objects == other.objects
-    override fun hashCode(): Int = 31 * (31 * id.hashCode() + objects.hashCode()) + revision.hashCode()
+        id == other.id && revision == other.revision && objects == other.objects && siteImage == other.siteImage
+    override fun hashCode(): Int = 31 * (31 * id.hashCode() + objects.hashCode()) + revision.hashCode() + (siteImage?.hashCode() ?: 0)
 }
 
 sealed interface DesignCommand {
+    data class SetSiteImage(val value: SiteImage?, val expected: SiteImage?) : DesignCommand
     data class Add(val value: DesignObject) : DesignCommand
     data class Remove(val objectId: String) : DesignCommand
     data class Translate(val objectId: String, val dxMetres: Double, val dyMetres: Double) : DesignCommand
@@ -58,6 +59,10 @@ sealed interface DesignCommand {
 /** Pure command path. It either returns a complete next state or throws without changing the input. */
 object DesignCommands {
     fun apply(document: ProjectDesign, command: DesignCommand): ProjectDesign {
+        if (command is DesignCommand.SetSiteImage) {
+            require(document.siteImage == command.expected) { "Source changed while this operation was open. Start again" }
+            return if (document.siteImage == command.value) document else document.revised(document.objects, command.value)
+        }
         if (command is DesignCommand.Add) {
             require(document.objects.none { it.id == command.value.id }) { "Duplicate design object ID" }
             return document.revised(document.objects + command.value)
@@ -116,7 +121,7 @@ class DesignSession(initial: ProjectDesign, private val historyLimit: Int = 128)
     }
     fun undo(): ProjectDesign {
         if (past.isEmpty()) return document
-        val restored = document.revised(past.last().objects) // validate before touching history
+        val restored = document.revised(past.last().objects, past.last().siteImage) // validate before touching history
         future.addLast(document)
         past.removeLast()
         document = restored
@@ -124,7 +129,7 @@ class DesignSession(initial: ProjectDesign, private val historyLimit: Int = 128)
     }
     fun redo(): ProjectDesign {
         if (future.isEmpty()) return document
-        val restored = document.revised(future.last().objects)
+        val restored = document.revised(future.last().objects, future.last().siteImage)
         past.addLast(document)
         future.removeLast()
         document = restored

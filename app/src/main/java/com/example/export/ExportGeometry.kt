@@ -10,8 +10,8 @@ import kotlin.math.pow
 
 /** One coordinate system for the underlay, marks, and all output formats. */
 object ExportGeometry {
-    fun contentBounds(project: TraceProject, backgroundWidth: Int?, backgroundHeight: Int?): RectF {
-        var bounds: RectF? = if (backgroundWidth != null && backgroundHeight != null) {
+    fun contentBounds(project: TraceProject, backgroundWidth: Int?, backgroundHeight: Int?, registeredBackground: RectF? = null): RectF {
+        var bounds: RectF? = if (registeredBackground != null) RectF(registeredBackground) else if (backgroundWidth != null && backgroundHeight != null) {
             RectF(0f, 0f, backgroundWidth.toFloat(), backgroundHeight.toFloat())
         } else null
         val visibleLayers = project.layers.filter { it.isVisible }.map { it.id }.toSet()

@@ -76,9 +76,21 @@ run_case compactCommands com.example.RadialWorkflowDeviceTest
 device shell am force-stop "$package"
 device exec-out run-as "$package" cat files/project-design/workspace.json > emulator-evidence/saved-after-radial-review.json
 
+# Source-image cases reuse the existing synthetic design without clearing user-style state.
+device shell wm size 1600x1000
+device shell wm density 240
+run_case siteImportCalibrateAndMove com.example.SiteWorkspaceDeviceTest
+device shell am force-stop "$package"
+device exec-out run-as "$package" cat files/project-design/workspace.json > emulator-evidence/site-before-restart.json
+run_case siteReopenAndExport com.example.SiteWorkspaceDeviceTest
+device shell am force-stop "$package"
+device exec-out run-as "$package" cat files/project-design/workspace.json > emulator-evidence/site-after-restart.json
+cmp emulator-evidence/site-before-restart.json emulator-evidence/site-after-restart.json
+
 {
   echo "Source: ${GITHUB_SHA:-local}"
   echo 'Completed: existing edit/save/restart scenarios, real grid-snapped drag, canceled size entry, freeform uniform sizing, four-corner wheel access, disabled actions, portrait and 320dp compact fallback.'
+  echo 'Additional: owned raster intake callback, two reference taps, preset scale, source-only move/cancel/remove/Undo, restart and actual PNG/PDF output. External picker UI NOT automated.'
   echo 'Display cases: landscape 1600x1000@240, portrait 1000x1600@240, compact 800x1400@400.'
   echo "API: $(device shell getprop ro.build.version.sdk | tr -d '\r')"
   echo "ABI: $(device shell getprop ro.product.cpu.abi | tr -d '\r')"

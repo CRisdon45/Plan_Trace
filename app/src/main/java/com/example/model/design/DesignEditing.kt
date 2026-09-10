@@ -38,7 +38,8 @@ data class DesignViewport(val pixelsPerMetre: Double, val offsetX: Double, val o
     companion object {
         fun fit(document: ProjectDesign, width: Double, height: Double): DesignViewport {
             require(width > 0 && height > 0)
-            val points = document.objects.flatMap { it.copingFootprint?.outerBoundary ?: it.boundary.sample(0.01) }
+            val points = document.objects.flatMap { it.copingFootprint?.outerBoundary ?: it.boundary.sample(0.01) } +
+                (document.siteImage?.takeIf { it.visible }?.corners() ?: emptyList())
             val minX = points.minOfOrNull { it.x } ?: 0.0
             val maxX = points.maxOfOrNull { it.x } ?: 8.0
             val minY = points.minOfOrNull { it.y } ?: 0.0

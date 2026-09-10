@@ -6,7 +6,7 @@ import org.json.JSONObject
 
 /** A separate, versioned document format. Does not reinterpret or migrate existing TraceProject data. */
 object DesignJsonCodec {
-    private const val VERSION = 2
+    private const val VERSION = 3
     fun encode(document: ProjectDesign): String = JSONObject().apply {
         put("format", "plan-trace-project-design")
         put("version", VERSION)
@@ -14,6 +14,17 @@ object DesignJsonCodec {
         put("yAxis", "up")
         put("id", document.id)
         put("revision", document.revision)
+        document.siteImage?.let { image ->
+            put("siteImage", JSONObject().apply {
+                put("sha256", image.asset.sha256); put("width", image.asset.width); put("height", image.asset.height)
+                put("x", image.topLeft.x); put("y", image.topLeft.y); put("metresPerPixel", image.metresPerPixel)
+                put("visible", image.visible)
+                image.calibration?.let { c -> put("calibration", JSONObject().apply {
+                    put("x1", c.first.x); put("y1", c.first.y); put("x2", c.second.x); put("y2", c.second.y)
+                    put("distanceMetres", c.distanceMetres)
+                }) }
+            })
+        }
         put("objects", JSONArray().apply {
             document.objects.forEach { item -> put(JSONObject().apply {
                 put("id", item.id); put("name", item.name); put("kind", item.kind.name)
@@ -70,6 +81,21 @@ object DesignJsonCodec {
                 } else null
             )
         }
-        return ProjectDesign(root.getString("id"), result, root.getLong("revision"))
+        val image = if (root.has("siteImage")) {
+            require(version >= 3) { "An older document cannot contain unrecognized source registration" }
+            val i = root.getJSONObject("siteImage")
+            require(i.get("width") is Int && i.get("height") is Int && i.get("visible") is Boolean)
+            fun numeric(o: JSONObject, name: String): Double {
+                require(o.get(name) is Number) { "Source coordinates must be numeric" }
+                return o.getDouble(name)
+            }
+            val calibration = if (i.has("calibration")) i.getJSONObject("calibration").let { c ->
+                ImageCalibration(ImagePoint(numeric(c,"x1"),numeric(c,"y1")),
+                    ImagePoint(numeric(c,"x2"),numeric(c,"y2")),numeric(c,"distanceMetres"))
+            } else null
+            SiteImage(SiteImageAsset(i.getString("sha256"), i.getInt("width"), i.getInt("height")),
+                DesignPoint(numeric(i,"x"), numeric(i,"y")), numeric(i,"metresPerPixel"), calibration, i.getBoolean("visible"))
+        } else null
+        return ProjectDesign(root.getString("id"), result, root.getLong("revision"), image)
     }
 }

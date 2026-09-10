@@ -1,6 +1,10 @@
 package com.example.ui.workspace
 
 import android.app.Application
+import android.graphics.Bitmap
+import android.net.Uri
+import com.example.data.SiteImageStore
+import kotlinx.coroutines.Job
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.DesignWorkspaceStore
@@ -15,6 +19,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
 
+enum class SiteTool { NONE, CALIBRATE, MOVE }
+
 data class WorkspaceState(
     val document: ProjectDesign? = null,
     val preview: ProjectDesign? = null,
@@ -26,13 +32,21 @@ data class WorkspaceState(
     val savedRevision: Long? = null,
     val canUndo: Boolean = false,
     val canRedo: Boolean = false,
-    val fitRequest: Int = 0
+    val fitRequest: Int = 0,
+    val siteBitmap: Bitmap? = null,
+    val siteError: String? = null,
+    val siteImporting: Boolean = false,
+    val siteTool: SiteTool = SiteTool.NONE,
+    val referencePoints: List<ImagePoint> = emptyList()
 ) {
     val shownDocument: ProjectDesign? get() = preview ?: document
     val saved: Boolean get() = document != null && savedRevision == document.revision && saveError == null
 }
 
 class DesignWorkspaceViewModel(application: Application) : AndroidViewModel(application) {
+    private val assets = SiteImageStore.inFiles(application.filesDir)
+    private var imageLoad: Job? = null
+    private var loadedAsset: String? = null
     private val store = DesignWorkspaceStore(DesignWorkspaceStore.fileIn(application.filesDir))
     private val _state = MutableStateFlow(WorkspaceState())
     val state = _state.asStateFlow()
@@ -47,6 +61,7 @@ class DesignWorkspaceViewModel(application: Application) : AndroidViewModel(appl
                 val doc = loaded ?: ProjectDesign(UUID.randomUUID().toString())
                 session = DesignSession(doc)
                 _state.value = WorkspaceState(document = doc, loading = false, savedRevision = loaded?.revision)
+                refreshSource()
             } catch (error: CancellationException) { throw error }
             catch (error: Exception) {
                 _state.value = WorkspaceState(loading = false,
@@ -65,6 +80,64 @@ class DesignWorkspaceViewModel(application: Application) : AndroidViewModel(appl
                 }
             }
         }
+    }
+    /** The system picker and synthetic import tests call this same bounded intake path. */
+    fun importSiteImage(uri: Uri) {
+        val before = session?.document ?: return
+        if (state.value.siteImporting) return
+        // Replacing a registered source is a separate operation. Remove/Undo is explicit in the panel.
+        if (before.siteImage != null) { feedback("Remove the current source first. Undo can restore it"); return }
+        _state.update { it.copy(siteImporting=true, message=null) }
+        viewModelScope.launch {
+            try {
+                val asset = withContext(Dispatchers.IO) { assets.ingest(getApplication(), uri) }
+                if (session?.document?.id == before.id && session?.document?.siteImage == null) {
+                    execute(DesignCommand.SetSiteImage(SiteImage.unscaled(asset), null)); fit()
+                    feedback("Source imported. Mark a known distance before relying on its scale")
+                } else feedback("The source changed during import. Existing work was preserved")
+            } catch (error: CancellationException) { throw error }
+            catch (error: Exception) { feedback("Source not imported: ${error.message.orEmpty().take(180)}") }
+            finally { _state.update { it.copy(siteImporting=false) } }
+        }
+    }
+    private fun refreshSource() {
+        val source = session?.document?.siteImage
+        if (source?.asset?.sha256 == loadedAsset && (source == null || state.value.siteBitmap != null)) return
+        imageLoad?.cancel(); loadedAsset = source?.asset?.sha256
+        _state.update { it.copy(siteBitmap=null,siteError=null) }
+        if (source == null) return
+        imageLoad = viewModelScope.launch {
+            try {
+                val bitmap = withContext(Dispatchers.IO) { assets.load(source.asset) }
+                if (session?.document?.siteImage?.asset == source.asset) _state.update { it.copy(siteBitmap=bitmap) }
+                else bitmap.recycle()
+            } catch (error: CancellationException) { throw error }
+            catch (error: Exception) { _state.update { it.copy(siteError=error.message.orEmpty().take(180)) } }
+        }
+    }
+    fun startSiteTool(tool: SiteTool) {
+        if (session?.document?.siteImage?.visible != true || state.value.siteBitmap == null) return
+        cancelPreview()
+        _state.update { it.copy(siteTool=tool, referencePoints=emptyList(), message=null) }
+    }
+    fun stopSiteTool() { cancelPreview(); _state.update { it.copy(siteTool=SiteTool.NONE,referencePoints=emptyList()) } }
+    fun markSiteReference(point: DesignPoint) {
+        val source = session?.document?.siteImage ?: return
+        if (state.value.siteTool != SiteTool.CALIBRATE) return
+        val pixel = source.toImage(point)
+        if (!source.contains(pixel)) { feedback("Choose a point inside the source image"); return }
+        val points = state.value.referencePoints + pixel
+        if (points.size==2 && points[0].distanceTo(points[1])<8.0) { feedback("Choose points farther apart"); return }
+        _state.update { it.copy(referencePoints=points,siteTool=if(points.size==2) SiteTool.NONE else SiteTool.CALIBRATE) }
+    }
+    fun calibrateSite(distanceMetres: Double) {
+        val source = session?.document?.siteImage ?: return
+        val points = state.value.referencePoints
+        if(points.size!=2) return
+        try {
+            execute(DesignCommand.SetSiteImage(source.calibrated(points[0],points[1],distanceMetres),source))
+            _state.update { it.copy(referencePoints=emptyList()) }; fit()
+        } catch (error: IllegalArgumentException) { feedback(error.message) }
     }
     fun select(id: String?) { cancelPreview(); _state.update { it.copy(selectedId = id, message = null) } }
     fun addOutline(curved: Boolean, kind: DesignObjectKind = DesignObjectKind.POOL) {
@@ -116,6 +189,7 @@ class DesignWorkspaceViewModel(application: Application) : AndroidViewModel(appl
         _state.update { it.copy(document = current.document, preview = null, message = null, saveError = null,
             canUndo = current.canUndo, canRedo = current.canRedo,
             selectedId = it.selectedId?.takeIf { id -> current.document.objects.any { obj -> obj.id == id } }) }
+        refreshSource()
         check(writes.trySend(current.document).isSuccess)
     }
     override fun onCleared() { writes.close(); super.onCleared() }

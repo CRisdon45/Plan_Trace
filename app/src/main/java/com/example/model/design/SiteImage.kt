@@ -11,7 +11,7 @@ data class ImagePoint(val x: Double, val y: Double) {
 data class SiteImageAsset(val sha256: String, val width: Int, val height: Int) {
     init {
         require(sha256.matches(Regex("[a-f0-9]{64}"))) { "Invalid image asset identity" }
-        require(width in 1..4096 && height in 1..4096 && width.toLong() * height <= 12_000_000) { "Image exceeds the supported pixel budget" }
+        require(width in 1..4096 && height in 1..4096 && width.toLong() * height <= 4_000_000) { "Image exceeds the supported pixel budget" }
     }
 }
 

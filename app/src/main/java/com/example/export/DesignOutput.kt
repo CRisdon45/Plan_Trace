@@ -1,6 +1,10 @@
 package com.example.export
 
 import android.content.Context
+import android.graphics.RectF
+import com.example.data.SiteImageStore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.example.model.*
 import com.example.model.design.*
 import java.io.File
@@ -12,7 +16,9 @@ data class DesignOutputSettings(
     val drawingUnitsPerMetre: Double = 100.0,
     val maxChordErrorMetres: Double = 0.001,
     val imperialLabels: Boolean = true,
-    val includeMeasurements: Boolean = true
+    val includeMeasurements: Boolean = true,
+    val includeSourceImage: Boolean = true,
+    val includeSourceNotice: Boolean = true
 ) {
     init {
         require(drawingUnitsPerMetre.isFinite() && drawingUnitsPerMetre in 1.0..10000.0)
@@ -61,22 +67,53 @@ object DesignOutput {
             }
             result
         }
+        val notice = document.siteImage?.takeIf { it.visible && settings.includeSourceImage && settings.includeSourceNotice }?.let { source ->
+            val r = sourceRect(source, settings)
+            listOf(TextElement(id = "site-source-notice", layerId = layer.id,
+                text = if (source.calibration == null) "SOURCE SCALE NOT SET - reference image only"
+                    else "Source scaled from reference distance - site accuracy unverified",
+                position = Point2D(r.left, r.top - 25f), fontSizeSp = 8f))
+        } ?: emptyList()
         return TraceProject(id = document.id, title = "Project geometry study", createdAt = 0L, updatedAt = document.revision,
             backgroundType = BackgroundType.BLANK_PAPER, backgroundResourceOrUri = "",
-            layers = listOf(layer), activeLayerId = layer.id, elements = elements,
+            layers = listOf(layer), activeLayerId = layer.id, elements = elements + notice,
             scaleCalibration = ScaleCalibration(true,
                 (settings.drawingUnitsPerMetre * if (settings.imperialLabels) 0.3048 else 1.0).toFloat(),
                 1f, if (settings.imperialLabels) "ft" else "m"))
     }
 
+    /** Upright source image registration expressed in the renderer's common drawing coordinates. */
+    fun sourceRect(source: SiteImage, settings: DesignOutputSettings = DesignOutputSettings()): RectF {
+        val a = source.corners()[0]; val b = source.corners()[1]
+        val coordinates = listOf(a.x-settings.origin.x, -(a.y-settings.origin.y), b.x-settings.origin.x, -(b.y-settings.origin.y))
+            .map { it * settings.drawingUnitsPerMetre }
+        require(coordinates.all { it.isFinite() && it.toFloat().isFinite() }) { "Source is outside the renderer range" }
+        require(coordinates.all { kotlin.math.abs(it.toFloat().toDouble()-it)/settings.drawingUnitsPerMetre <= settings.maxChordErrorMetres/2 }) {
+            "Source projection precision exceeded; choose a local origin"
+        }
+        return RectF(coordinates[0].toFloat(),coordinates[1].toFloat(),coordinates[2].toFloat(),coordinates[3].toFloat())
+    }
+
     suspend fun png(context: Context, document: ProjectDesign, width: Int = 1200, height: Int = 900,
-                    settings: DesignOutputSettings = DesignOutputSettings()): File? =
-        ExportManager.exportToPng(context, drawing(document, settings), null, includeBackground = false,
-            width = width, height = height, showDimensions = false)
+                    settings: DesignOutputSettings = DesignOutputSettings()): File? = withContext(Dispatchers.IO) {
+        val source = document.siteImage?.takeIf { it.visible && settings.includeSourceImage }
+        val bitmap = source?.let { SiteImageStore.inFiles(context.filesDir).load(it.asset) }
+        try {
+            ExportManager.exportToPng(context, drawing(document, settings), bitmap, includeBackground = bitmap != null,
+                width = width, height = height, showDimensions = false, registeredBackground = source?.let { sourceRect(it,settings) })
+        } finally { bitmap?.recycle() }
+    }
 
     suspend fun pdf(context: Context, document: ProjectDesign, options: PdfExportOptions = PdfExportOptions(),
-                    settings: DesignOutputSettings = DesignOutputSettings()): File? =
-        ExportManager.exportToPdf(context,
-            drawing(document, settings.copy(includeMeasurements = options.includeDimensions)), null,
-            options.copy(includeBackground = false, includeDimensions = false))
+                    settings: DesignOutputSettings = DesignOutputSettings()): File? = withContext(Dispatchers.IO) {
+        val applied = settings.copy(includeMeasurements=options.includeDimensions, includeSourceImage=options.includeBackground)
+        val source = document.siteImage?.takeIf { it.visible && applied.includeSourceImage }
+        val bitmap = source?.let { SiteImageStore.inFiles(context.filesDir).load(it.asset) }
+        try {
+            ExportManager.exportToPdf(context, drawing(document, applied), bitmap,
+                options.copy(includeBackground=bitmap!=null, includeDimensions=false,
+                    includeNorthArrow=options.includeNorthArrow && document.siteImage==null),
+                registeredBackground=source?.let { sourceRect(it,applied) })
+        } finally { bitmap?.recycle() }
+    }
 }
