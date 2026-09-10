@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [feat/project-geometry-seam]
-    paths: ['.github/workflows/source-snapshot.yml']
+    paths: ['.github/workflows/source-snapshot.yml', 'docs/CURRENT_STATE.md']
 permissions:
   contents: read
 jobs:
