@@ -15,6 +15,7 @@ import com.example.model.BackgroundType
 import com.example.model.DimensionMarkup
 import com.example.model.DrawingLayer
 import com.example.model.EllipseElement
+import com.example.model.EditHistory
 import com.example.model.FreehandPath
 import com.example.model.LayerBlendMode
 import com.example.model.LineElement
@@ -28,6 +29,8 @@ import com.example.model.TraceProject
 import com.example.model.VectorElement
 import com.example.engine.SnapSettings
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -55,6 +58,7 @@ enum class DrawingTool {
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = ProjectRepository(application)
+    private val pendingSaves = Channel<TraceProject>(Channel.UNLIMITED)
 
     private val _project = MutableStateFlow(TraceProject())
     val project: StateFlow<TraceProject> = _project.asStateFlow()
@@ -76,8 +80,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val strokeStyle: StateFlow<StrokeStyle> = _strokeStyle.asStateFlow()
 
     // Undo / Redo history
-    private val undoStack = mutableListOf<List<VectorElement>>()
-    private val redoStack = mutableListOf<List<VectorElement>>()
+    private val editHistory = EditHistory()
 
     private val _canUndo = MutableStateFlow(false)
     val canUndo: StateFlow<Boolean> = _canUndo.asStateFlow()
@@ -163,6 +166,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val current = _project.value.elements
         val targetLayer = _project.value.layers.find { it.id == targetLayerId } ?: return
         val el = current.find { it.id == elementId } ?: return
+        if (!canEditLayer(el.layerId) || !canEditLayer(targetLayerId)) return
         if (el.layerId == targetLayerId) return
 
         pushUndo(current)
@@ -265,7 +269,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateElement(updatedElement: VectorElement) {
+        if (_isCalibratingScale.value) return
         val current = _project.value.elements
+        val original = current.find { it.id == updatedElement.id } ?: return
+        if (original == updatedElement || !canEditLayer(original.layerId) || !canEditLayer(updatedElement.layerId)) return
         pushUndo(current)
         val updatedList = current.map { if (it.id == updatedElement.id) updatedElement else it }
         _project.value = _project.value.copy(elements = updatedList, updatedAt = System.currentTimeMillis())
@@ -274,6 +281,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun duplicateElement(id: String) {
         val element = _project.value.elements.find { it.id == id } ?: return
+        if (!canEditLayer(element.layerId)) return
         val duplicated = when (element) {
             is FreehandPath -> element.copy(id = UUID.randomUUID().toString(), points = element.points.map { Point2D(it.x + 30f, it.y + 30f) })
             is LineElement -> element.copy(id = UUID.randomUUID().toString(), start = Point2D(element.start.x + 30f, element.start.y + 30f), end = Point2D(element.end.x + 30f, element.end.y + 30f))
@@ -296,6 +304,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         viewModelScope.launch {
+            for (snapshot in pendingSaves) {
+                try {
+                    repository.saveProject(snapshot)
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Exception) {
+                    showToast("Could not save this edit. Please keep the app open and try again.")
+                }
+            }
+        }
+        viewModelScope.launch {
             repository.projectsFlow.collect { list ->
                 _projectsList.value = list
             }
@@ -308,8 +327,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun loadProject(p: TraceProject) {
         _project.value = p
-        undoStack.clear()
-        redoStack.clear()
+        editHistory.clear()
+        _selectedElementId.value = null
         updateUndoRedoStates()
         loadBackgroundForProject(p)
     }
@@ -379,6 +398,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addVectorElement(element: VectorElement) {
+        if (_isCalibratingScale.value || !canEditLayer(element.layerId)) return
         val currentElements = _project.value.elements
         pushUndo(currentElements)
         val updated = currentElements + element
@@ -389,51 +409,57 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun removeVectorElements(idsToRemove: Set<String>) {
         if (idsToRemove.isEmpty()) return
         val currentElements = _project.value.elements
+        val removable = currentElements.filter { it.id in idsToRemove && canEditLayer(it.layerId) }.map { it.id }.toSet()
+        if (_isCalibratingScale.value || removable.isEmpty()) return
         pushUndo(currentElements)
-        val updated = currentElements.filterNot { idsToRemove.contains(it.id) }
+        val updated = currentElements.filterNot { it.id in removable }
         _project.value = _project.value.copy(elements = updated, updatedAt = System.currentTimeMillis())
         saveProjectDebounced()
     }
 
-    private fun pushUndo(elements: List<VectorElement>) {
-        undoStack.add(elements)
-        redoStack.clear()
-        if (undoStack.size > 50) undoStack.removeAt(0)
+    private fun pushUndo(@Suppress("UNUSED_PARAMETER") elements: List<VectorElement> = _project.value.elements) {
+        editHistory.record(_project.value)
         updateUndoRedoStates()
     }
 
     fun undo() {
-        if (undoStack.isNotEmpty()) {
-            val previous = undoStack.removeAt(undoStack.lastIndex)
-            redoStack.add(_project.value.elements)
-            _project.value = _project.value.copy(elements = previous, updatedAt = System.currentTimeMillis())
-            updateUndoRedoStates()
-            saveProjectDebounced()
-        }
+        _project.value = editHistory.undo(_project.value)
+        _selectedElementId.value = null
+        updateUndoRedoStates()
+        saveProjectDebounced()
     }
 
     fun redo() {
-        if (redoStack.isNotEmpty()) {
-            val next = redoStack.removeAt(redoStack.lastIndex)
-            undoStack.add(_project.value.elements)
-            _project.value = _project.value.copy(elements = next, updatedAt = System.currentTimeMillis())
-            updateUndoRedoStates()
-            saveProjectDebounced()
-        }
+        _project.value = editHistory.redo(_project.value)
+        _selectedElementId.value = null
+        updateUndoRedoStates()
+        saveProjectDebounced()
     }
 
     private fun updateUndoRedoStates() {
-        _canUndo.value = undoStack.isNotEmpty()
-        _canRedo.value = redoStack.isNotEmpty()
+        _canUndo.value = editHistory.canUndo
+        _canRedo.value = editHistory.canRedo
     }
+
+    fun beginEditGesture() { editHistory.begin(_project.value) }
+    fun endEditGesture() { editHistory.commit(_project.value); updateUndoRedoStates(); saveProjectDebounced() }
+    fun cancelEditGesture() {
+        if (!editHistory.isGestureActive) return
+        _project.value = editHistory.cancel(_project.value)
+        updateUndoRedoStates()
+        saveProjectDebounced()
+    }
+    private fun canEditLayer(id: String): Boolean = _project.value.layers.any { it.id == id && !it.isLocked && it.isVisible }
 
     // Layer management
     fun setActiveLayer(layerId: String) {
+        if (_project.value.layers.none { it.id == layerId }) return
         _project.value = _project.value.copy(activeLayerId = layerId)
         saveProjectDebounced()
     }
 
     fun toggleLayerVisibility(layerId: String) {
+        pushUndo()
         val updated = _project.value.layers.map {
             if (it.id == layerId) it.copy(isVisible = !it.isVisible) else it
         }
@@ -442,6 +468,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun toggleLayerLock(layerId: String) {
+        pushUndo()
         val updated = _project.value.layers.map {
             if (it.id == layerId) it.copy(isLocked = !it.isLocked) else it
         }
@@ -450,6 +477,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setLayerOpacity(layerId: String, opacity: Float) {
+        if (!canEditLayer(layerId)) return
+        if (_project.value.layers.first { it.id == layerId }.opacity == opacity.coerceIn(0.1f, 1f)) return
+        pushUndo()
         val updated = _project.value.layers.map {
             if (it.id == layerId) it.copy(opacity = opacity.coerceIn(0.1f, 1f)) else it
         }
@@ -458,6 +488,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addLayer(name: String) {
+        pushUndo()
         val newLayer = DrawingLayer(
             id = UUID.randomUUID().toString(),
             name = if (name.isBlank()) "Layer ${_project.value.layers.size + 1}" else name
@@ -468,10 +499,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteLayer(layerId: String) {
+        if (!canEditLayer(layerId)) return
         if (_project.value.layers.size <= 1) {
             _toastMessage.value = "Cannot delete the only layer"
             return
         }
+        pushUndo()
         val updatedLayers = _project.value.layers.filterNot { it.id == layerId }
         val updatedElements = _project.value.elements.filterNot { it.layerId == layerId }
         val newActiveId = if (_project.value.activeLayerId == layerId) {
@@ -491,6 +524,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val layers = _project.value.layers.toMutableList()
         val index = layers.indexOfFirst { it.id == layerId }
         if (index > 0) {
+            pushUndo()
             val item = layers.removeAt(index)
             layers.add(index - 1, item)
             _project.value = _project.value.copy(layers = layers)
@@ -502,6 +536,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val layers = _project.value.layers.toMutableList()
         val index = layers.indexOfFirst { it.id == layerId }
         if (index in 0 until layers.size - 1) {
+            pushUndo()
             val item = layers.removeAt(index)
             layers.add(index + 1, item)
             _project.value = _project.value.copy(layers = layers)
@@ -511,6 +546,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun duplicateLayer(layerId: String) {
         val originalLayer = _project.value.layers.find { it.id == layerId } ?: return
+        pushUndo()
         val newId = UUID.randomUUID().toString()
         val newLayer = originalLayer.copy(
             id = newId,
@@ -544,7 +580,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun mergeLayerDown(layerId: String) {
         val layers = _project.value.layers
         val index = layers.indexOfFirst { it.id == layerId }
-        if (index < layers.size - 1) {
+        if (index >= 0 && index < layers.size - 1 && canEditLayer(layerId) && canEditLayer(layers[index + 1].id)) {
+            pushUndo()
             val targetLayer = layers[index + 1]
             val updatedElements = _project.value.elements.map {
                 if (it.layerId == layerId) {
@@ -571,6 +608,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun clearLayer(layerId: String) {
+        if (!canEditLayer(layerId)) return
         val currentElements = _project.value.elements
         pushUndo(currentElements)
         val updatedElements = currentElements.filterNot { it.layerId == layerId }
@@ -580,6 +618,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setLayerBlendMode(layerId: String, blendMode: LayerBlendMode) {
+        if (!canEditLayer(layerId)) return
+        pushUndo()
         val updated = _project.value.layers.map {
             if (it.id == layerId) it.copy(blendMode = blendMode) else it
         }
@@ -588,6 +628,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setLayerColorTag(layerId: String, colorTag: Long) {
+        if (!canEditLayer(layerId)) return
+        pushUndo()
         val updated = _project.value.layers.map {
             if (it.id == layerId) it.copy(colorTag = colorTag) else it
         }
@@ -596,6 +638,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addPresetLayers(names: List<String>) {
+        pushUndo()
         val colors = listOf(0xFF2563EB, 0xFF059669, 0xFFD97706, 0xFFDC2626, 0xFF7C3AED)
         val newLayers = names.mapIndexed { idx, name ->
             DrawingLayer(
@@ -623,7 +666,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun selectSamplePlan(sampleKey: String) {
         _project.value = _project.value.copy(
             backgroundType = BackgroundType.SAMPLE,
-            backgroundResourceOrUri = sampleKey
+            backgroundResourceOrUri = sampleKey,
+            scaleCalibration = ScaleCalibration()
         )
         loadBackgroundForProject(_project.value)
         saveProjectDebounced()
@@ -638,13 +682,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _project.value = _project.value.copy(
                     backgroundType = BackgroundType.PDF_URI,
                     backgroundResourceOrUri = uri.toString(),
+                    scaleCalibration = ScaleCalibration(),
                     pdfPageNumber = 0,
                     pdfTotalPages = totalPages
                 )
             } else {
                 _project.value = _project.value.copy(
                     backgroundType = BackgroundType.IMAGE_URI,
-                    backgroundResourceOrUri = uri.toString()
+                    backgroundResourceOrUri = uri.toString(),
+                    scaleCalibration = ScaleCalibration()
                 )
             }
             loadBackgroundForProject(_project.value)
@@ -658,6 +704,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (p.backgroundType == BackgroundType.PDF_URI && p.pdfPageNumber < p.pdfTotalPages - 1) {
             _project.value = p.copy(pdfPageNumber = p.pdfPageNumber + 1)
             loadBackgroundForProject(_project.value)
+            saveProjectDebounced()
         }
     }
 
@@ -666,6 +713,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (p.backgroundType == BackgroundType.PDF_URI && p.pdfPageNumber > 0) {
             _project.value = p.copy(pdfPageNumber = p.pdfPageNumber - 1)
             loadBackgroundForProject(_project.value)
+            saveProjectDebounced()
         }
     }
 
@@ -685,6 +733,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun applyScaleCalibration(realUnits: Float, unit: String) {
+        if (!realUnits.isFinite() || realUnits <= 0f) {
+            showToast("Enter a positive reference distance")
+            return
+        }
         val pts = _calibrationPoints.value
         if (pts != null) {
             val pixelDist = pts.first.distanceTo(pts.second)
@@ -715,7 +767,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             backgroundType = BackgroundType.SAMPLE,
             backgroundResourceOrUri = sampleKey,
             scaleCalibration = ScaleCalibration(
-                isCalibrated = true,
+                isCalibrated = false,
                 pixelDistance = 240f,
                 realWorldUnits = 20f,
                 unit = "ft"
@@ -745,16 +797,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun clearAllDrawings() {
-        pushUndo(_project.value.elements)
-        _project.value = _project.value.copy(elements = emptyList())
-        saveProjectDebounced()
-        _toastMessage.value = "Cleared all vector linework"
+        removeVectorElements(_project.value.elements.map { it.id }.toSet())
+        _toastMessage.value = "Cleared editable vector linework"
     }
 
     private fun saveProjectDebounced() {
-        viewModelScope.launch {
-            repository.saveProject(_project.value)
-        }
+        if (editHistory.isGestureActive) return
+        val snapshot = _project.value
+        pendingSaves.trySend(snapshot)
     }
 
     // Export operations
@@ -779,8 +829,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             if (file != null) {
                 val mimeType = if (asPdf) "application/pdf" else "image/png"
-                ExportManager.shareExportedFile(context, file, mimeType, _project.value.title)
-                _toastMessage.value = "Exported ${file.name}"
+                val shared = ExportManager.shareExportedFile(context, file, mimeType, _project.value.title)
+                _toastMessage.value = if (shared) "Ready to share ${file.name}" else "File created, but sharing could not open. Please try again."
             } else {
                 _toastMessage.value = "Export failed"
             }
@@ -809,8 +859,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             if (file != null) {
                 val mimeType = if (asPdf) "application/pdf" else "image/png"
-                ExportManager.shareExportedFile(context, file, mimeType, _project.value.title)
-                _toastMessage.value = "Exported ${file.name}"
+                val shared = ExportManager.shareExportedFile(context, file, mimeType, _project.value.title)
+                _toastMessage.value = if (shared) "Ready to share ${file.name}" else "File created, but sharing could not open. Please try again."
             } else {
                 _toastMessage.value = "Export failed"
             }

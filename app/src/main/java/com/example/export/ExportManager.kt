@@ -80,7 +80,7 @@ object ExportManager {
                 isFilterBitmap = true
             }
             val src = android.graphics.Rect(0, 0, backgroundBitmap.width, backgroundBitmap.height)
-            val dst = RectF(0f, 0f, width, height)
+            val dst = RectF(0f, 0f, backgroundBitmap.width.toFloat(), backgroundBitmap.height.toFloat())
             canvas.drawBitmap(backgroundBitmap, src, dst, bgPaint)
         } else {
             // Draw clean architectural tracing paper off-white
@@ -156,16 +156,12 @@ object ExportManager {
         }
 
         // Calculate scale to fit plan proportionally inside drawing area
-        val contentW = 2048f
-        val contentH = 1536f
-        val scaleX = drawingRect.width() / contentW
-        val scaleY = drawingRect.height() / contentH
-        val scale = min(scaleX, scaleY) * 0.96f
+        val bounds = ExportGeometry.contentBounds(project, backgroundBitmap?.width, backgroundBitmap?.height)
+        val insetDrawingRect = RectF(drawingRect).apply { inset(12f, 12f) }
+        val fit = ExportGeometry.fit(bounds, insetDrawingRect)
+        val scale = fit.scale
 
-        val offsetX = drawingRect.left + (drawingRect.width() - contentW * scale) / 2f
-        val offsetY = drawingRect.top + (drawingRect.height() - contentH * scale) / 2f
-
-        canvas.translate(offsetX, offsetY)
+        canvas.translate(fit.translateX, fit.translateY)
         canvas.scale(scale, scale)
 
         renderProjectToCanvas(
@@ -173,8 +169,8 @@ object ExportManager {
             project = project,
             backgroundBitmap = backgroundBitmap,
             includeBackground = options.includeBackground,
-            width = contentW,
-            height = contentH,
+            width = bounds.width(),
+            height = bounds.height(),
             showDimensions = options.includeDimensions
         )
         canvas.restore()
@@ -217,7 +213,8 @@ object ExportManager {
                     x = scaleBarLeft,
                     y = tbTop + 34f,
                     width = col1Right - scaleBarLeft - 16f,
-                    scaleCalibration = project.scaleCalibration
+                    scaleCalibration = project.scaleCalibration,
+                    pointsPerWorldPixel = scale
                 )
             }
 
@@ -308,11 +305,13 @@ object ExportManager {
         x: Float,
         y: Float,
         width: Float,
-        scaleCalibration: ScaleCalibration
+        scaleCalibration: ScaleCalibration,
+        pointsPerWorldPixel: Float
     ) {
         val barHeight = 6f
         val segments = 4
-        val segW = (width / segments).coerceIn(24f, 50f)
+        val bar = ExportGeometry.scaleBar(scaleCalibration, pointsPerWorldPixel, width) ?: return
+        val segW = bar.segmentPoints
         val totalBarW = segW * segments
 
         val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -344,14 +343,11 @@ object ExportManager {
 
         // Labels above ticks
         canvas.drawText("0", x, y - 3f, textPaint)
-        val unitStr = if (scaleCalibration.isCalibrated) scaleCalibration.unit else "u"
-        val stepVal = if (scaleCalibration.isCalibrated) {
-            (scaleCalibration.realWorldUnits / 2f).roundToInt().coerceAtLeast(1)
-        } else 5
-
-        canvas.drawText("${stepVal}", x + segW, y - 3f, textPaint)
-        canvas.drawText("${stepVal * 2}", x + segW * 2, y - 3f, textPaint)
-        canvas.drawText("${stepVal * 4} $unitStr", x + totalBarW, y - 3f, textPaint)
+        fun label(multiplier: Int) = java.math.BigDecimal((bar.segmentUnits * multiplier).toString())
+            .stripTrailingZeros().toPlainString()
+        canvas.drawText(label(1), x + segW, y - 3f, textPaint)
+        canvas.drawText(label(2), x + segW * 2, y - 3f, textPaint)
+        canvas.drawText("${label(4)} ${scaleCalibration.unit}", x + totalBarW, y - 3f, textPaint)
     }
 
     suspend fun exportToPng(
@@ -365,6 +361,11 @@ object ExportManager {
         try {
             val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
+            canvas.drawColor(Color.parseColor("#FBFBF8"))
+            val bounds = ExportGeometry.contentBounds(project, backgroundBitmap?.width, backgroundBitmap?.height)
+            val fit = ExportGeometry.fit(bounds, RectF(0f, 0f, width.toFloat(), height.toFloat()))
+            canvas.translate(fit.translateX, fit.translateY)
+            canvas.scale(fit.scale, fit.scale)
             renderProjectToCanvas(canvas, project, backgroundBitmap, includeBackground, width.toFloat(), height.toFloat())
 
             val cacheDir = File(context.cacheDir, "exports")
@@ -430,23 +431,32 @@ object ExportManager {
         }
     }
 
-    fun shareExportedFile(context: Context, file: File, mimeType: String, subject: String) {
-        try {
+    fun shareExportedFile(context: Context, file: File, mimeType: String, subject: String): Boolean {
+        return try {
             val uri = FileProvider.getUriForFile(
                 context,
                 "${context.packageName}.fileprovider",
                 file
             )
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = mimeType
-                putExtra(Intent.EXTRA_STREAM, uri)
-                putExtra(Intent.EXTRA_SUBJECT, subject)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            context.startActivity(Intent.createChooser(intent, "Share $subject"))
+            val chooser = createShareChooser(uri, mimeType, subject)
+            context.startActivity(chooser)
+            true
         } catch (e: Exception) {
             e.printStackTrace()
-            null
+            false
+        }
+    }
+
+    internal fun createShareChooser(uri: android.net.Uri, mimeType: String, subject: String): Intent {
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = mimeType
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_SUBJECT, subject)
+            clipData = android.content.ClipData.newRawUri(subject, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        return Intent.createChooser(send, "Share $subject").apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
     }
 }

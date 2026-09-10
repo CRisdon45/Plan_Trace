@@ -9,6 +9,7 @@ import com.example.model.TraceProject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 
 class ProjectRepository(private val context: Context) {
@@ -40,7 +41,7 @@ class ProjectRepository(private val context: Context) {
                 backgroundType = BackgroundType.SAMPLE,
                 backgroundResourceOrUri = "sample_pool",
                 scaleCalibration = ScaleCalibration(
-                    isCalibrated = true,
+                    isCalibrated = false,
                     pixelDistance = 240f,
                     realWorldUnits = 20f,
                     unit = "ft"
@@ -49,9 +50,9 @@ class ProjectRepository(private val context: Context) {
             saveProject(initial)
             initial
         } else {
-            val list = dao.getAllProjects()
+            val list = dao.getAllProjects().first()
             // take first or create default
-            val entity = dao.getProjectById("default")
+            val entity = list.firstOrNull()
             entity?.let { ProjectJsonConverter.fromEntity(it) } ?: run {
                 val p = TraceProject(
                     title = "New Plan Sketch",

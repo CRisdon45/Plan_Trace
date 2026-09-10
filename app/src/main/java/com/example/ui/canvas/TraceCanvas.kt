@@ -110,6 +110,9 @@ fun TraceCanvas(
     snapSettings: SnapSettings = SnapSettings(),
     onElementCreated: (VectorElement) -> Unit,
     onElementUpdated: (VectorElement) -> Unit,
+    onEditGestureStarted: () -> Unit = {},
+    onEditGestureEnded: () -> Unit = {},
+    onEditGestureCancelled: () -> Unit = {},
     onElementsDeleted: (Set<String>) -> Unit,
     onElementDuplicated: (String) -> Unit,
     onElementSelected: (String?) -> Unit,
@@ -125,13 +128,14 @@ fun TraceCanvas(
     val coroutineScope = rememberCoroutineScope()
 
     // Transform State (Infinite Pan and Zoom)
-    var zoomScale by remember { mutableFloatStateOf(1.0f) }
-    var panOffset by remember { mutableStateOf(Offset(0f, 0f)) }
+    var zoomScale by remember(project.id, project.backgroundResourceOrUri) { mutableFloatStateOf(1.0f) }
+    var panOffset by remember(project.id, project.backgroundResourceOrUri) { mutableStateOf(Offset(0f, 0f)) }
 
     // Multi-touch Pan & Pinch Zoom tracking
     var prevCentroid by remember { mutableStateOf<Offset?>(null) }
     var prevSpan by remember { mutableFloatStateOf(0f) }
     var singlePanPrevPos by remember { mutableStateOf<Offset?>(null) }
+    var navigating by remember { mutableStateOf(false) }
 
     // Active Geometry Snap result
     var activeSnapResult by remember { mutableStateOf<SnapResult?>(null) }
@@ -214,14 +218,9 @@ fun TraceCanvas(
         modifier = modifier
             .fillMaxSize()
             .background(Color(0xFFF9F7F2))
-            // 2-finger pan & zoom gesture handler
-            .pointerInput(Unit) {
-                detectTransformGestures { _, pan, zoom, _ ->
-                    val newZoom = (zoomScale * zoom).coerceIn(0.20f, 30.0f)
-                    zoomScale = newZoom
-                    panOffset += pan
-                }
-            }
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()
+            // Input belongs to the canvas, not the parent of the action toolbar.
             // Stylus, barrel button, pressure & hold-to-straighten pointer filter
             .pointerInteropFilter { motionEvent ->
                 val pointerCount = motionEvent.pointerCount
@@ -229,6 +228,8 @@ fun TraceCanvas(
 
                 // If 2 or more fingers are down, allow pan/zoom and don't draw
                 if (pointerCount > 1) {
+                    onEditGestureCancelled()
+                    navigating = true
                     currentPoints.clear()
                     currentStartPoint = null
                     currentEndPoint = null
@@ -236,7 +237,19 @@ fun TraceCanvas(
                     isHoldLocked = false
                     holdTimerJob?.cancel()
                     eyedropperScreenPos = null
-                    return@pointerInteropFilter false
+                    val centroid = Offset((motionEvent.getX(0) + motionEvent.getX(1)) / 2f,
+                        (motionEvent.getY(0) + motionEvent.getY(1)) / 2f)
+                    val span = hypot(motionEvent.getX(1) - motionEvent.getX(0), motionEvent.getY(1) - motionEvent.getY(0))
+                    val previous = prevCentroid
+                    if (action == MotionEvent.ACTION_MOVE && previous != null && prevSpan > 0f) {
+                        val nextZoom = (zoomScale * span / prevSpan).coerceIn(.2f, 30f)
+                        panOffset = centroid - (previous - panOffset) * (nextZoom / zoomScale)
+                        zoomScale = nextZoom
+                    }
+                    prevCentroid = if (action == MotionEvent.ACTION_POINTER_UP) null else centroid
+                    prevSpan = if (action == MotionEvent.ACTION_POINTER_UP) 0f else span
+                    singlePanPrevPos = null
+                    return@pointerInteropFilter true
                 }
 
                 val toolType = motionEvent.getToolType(0)
@@ -279,17 +292,32 @@ fun TraceCanvas(
                 }
 
                 // If stylusOnlyMode is active and user touches with finger, pan/zoom instead of drawing
-                if (stylusOnlyMode && !isStylus) {
-                    return@pointerInteropFilter false
+                if (!isStylus && (stylusOnlyMode || navigating || activeTool == DrawingTool.PAN)) {
+                    val position = Offset(motionEvent.x, motionEvent.y)
+                    if (action == MotionEvent.ACTION_MOVE) {
+                        singlePanPrevPos?.let { panOffset += position - it }
+                    }
+                    singlePanPrevPos = if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) null else position
+                    if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                        navigating = false
+                        prevCentroid = null
+                        prevSpan = 0f
+                    }
+                    return@pointerInteropFilter true
                 }
 
                 val screenPos = Offset(motionEvent.x, motionEvent.y)
                 val pressure = motionEvent.getPressure(0).coerceIn(0.1f, 1.0f)
                 val worldPoint = screenToWorld(screenPos).copy(pressure = pressure)
-                val effectiveTool = if (isHardwareEraser) DrawingTool.ERASER else activeTool
+                val effectiveTool = when {
+                    isCalibratingScale -> DrawingTool.MEASURE
+                    isHardwareEraser -> DrawingTool.ERASER
+                    else -> activeTool
+                }
 
                 when (action) {
                     MotionEvent.ACTION_DOWN -> {
+                        onEditGestureStarted()
                         hoverScreenPos = null
                         isStylusHovering = false
                         snappedResult = null
@@ -472,6 +500,7 @@ fun TraceCanvas(
                             currentStartPoint = null
                             currentEndPoint = null
                             liveMeasurementText = null
+                            onEditGestureEnded()
                             return@pointerInteropFilter true
                         }
 
@@ -499,10 +528,12 @@ fun TraceCanvas(
                         snappedResult = null
                         isHoldLocked = false
                         liveMeasurementText = null
+                        onEditGestureEnded()
                         true
                     }
 
                     MotionEvent.ACTION_CANCEL -> {
+                        onEditGestureCancelled()
                         holdTimerJob?.cancel()
                         eyedropperScreenPos = null
                         currentPoints.clear()
@@ -517,8 +548,7 @@ fun TraceCanvas(
                     else -> false
                 }
             }
-    ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
+        ) {
             drawIntoCanvas { composeCanvas ->
                 val nativeCanvas = composeCanvas.nativeCanvas
 
