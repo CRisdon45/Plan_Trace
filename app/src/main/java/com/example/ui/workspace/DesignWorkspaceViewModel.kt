@@ -139,7 +139,7 @@ class DesignWorkspaceViewModel(application: Application) : AndroidViewModel(appl
             _state.update { it.copy(referencePoints=emptyList()) }; fit()
         } catch (error: IllegalArgumentException) { feedback(error.message) }
     }
-    fun select(id: String?) { cancelPreview(); _state.update { it.copy(selectedId = id, message = null) } }
+    fun select(id: String?) { stopSiteTool(); _state.update { it.copy(selectedId = id, message = null) } }
     fun addOutline(curved: Boolean, kind: DesignObjectKind = DesignObjectKind.POOL) {
         val doc = session?.document ?: return
         val value = DesignStartingShapes.create(curved, doc.objects.size, kind)
@@ -188,6 +188,7 @@ class DesignWorkspaceViewModel(application: Application) : AndroidViewModel(appl
         val current = session ?: return
         _state.update { it.copy(document = current.document, preview = null, message = null, saveError = null,
             canUndo = current.canUndo, canRedo = current.canRedo,
+            siteTool = SiteTool.NONE, referencePoints = emptyList(),
             selectedId = it.selectedId?.takeIf { id -> current.document.objects.any { obj -> obj.id == id } }) }
         refreshSource()
         check(writes.trySend(current.document).isSuccess)

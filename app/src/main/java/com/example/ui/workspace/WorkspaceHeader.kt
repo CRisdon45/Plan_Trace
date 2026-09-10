@@ -28,7 +28,7 @@ fun WorkspaceHeader(state: WorkspaceState, exportBusy: Boolean, onBack: () -> Un
         state.document?.revision == 0L -> "One local draft"
         else -> "Saving…"
     }
-    val canExport = state.document?.objects?.isNotEmpty() == true && state.preview == null && !exportBusy
+    val canExport = state.document?.let { it.objects.isNotEmpty() || it.siteImage != null } == true && state.preview == null && !exportBusy
     BoxWithConstraints(Modifier.fillMaxWidth().statusBarsPadding()) {
         val compact = maxWidth.value / LocalDensity.current.fontScale < 600f
         Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {

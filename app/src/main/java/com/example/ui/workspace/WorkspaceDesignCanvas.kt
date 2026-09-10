@@ -1,8 +1,5 @@
 package com.example.ui.workspace
 
-import android.content.Context
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import android.view.MotionEvent
 import com.example.MainActivity
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -10,24 +7,14 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.geometry.Rect
-import kotlin.math.floor
 import kotlin.math.ceil
 import android.view.ScaleGestureDetector
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -49,16 +36,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.engine.WatercolorRenderer
 import com.example.export.DesignOutput
 import com.example.export.DesignOutputSettings
-import com.example.export.ExportManager
 import com.example.model.PolylineElement
 import com.example.model.design.*
-import com.example.ui.components.ExportDialog
-import kotlinx.coroutines.launch
-import java.util.Locale
 import kotlin.math.hypot
 import kotlin.math.roundToInt
 
@@ -147,8 +129,9 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
     val projection = projectionResult.getOrNull()
     val selected = document.objects.firstOrNull { it.id == state.selectedId }
     val radius = 6f * density
-    Box(modifier.onSizeChanged { size = it }.onGloballyPositioned { windowBounds=it.boundsInWindow() }.clipToBounds().background(Color(0xFFFBFAF5))
-        .testTag("workspace-canvas").pointerInteropFilter { event ->
+    // Route design contacts only through the artwork layer. Overlay controls must receive their
+    // own touches rather than becoming source-move/calibration gestures on the parent Box.
+    val artworkInput = Modifier.pointerInteropFilter { event ->
             if(menuAnchor!=null || inspector!=null || !allowCommands) return@pointerInteropFilter false
             val x = event.x.toDouble(); val y = event.y.toDouble()
             lastPosition=Offset(event.x,event.y)
@@ -232,8 +215,10 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
                 MotionEvent.ACTION_CANCEL -> { model.cancelPreview(); pointer.clear() }
             }
             true
-        }) {
-        Canvas(Modifier.fillMaxSize()) {
+        }
+    Box(modifier.onSizeChanged { size = it }.onGloballyPositioned { windowBounds=it.boundsInWindow() }
+        .clipToBounds().background(Color(0xFFFBFAF5)).testTag("workspace-canvas")) {
+        Canvas(Modifier.fillMaxSize().then(artworkInput)) {
             document.siteImage?.takeIf { it.visible }?.let { source -> state.siteBitmap?.let { bitmap ->
                 val a=viewport.toScreen(source.corners()[0]);val b=viewport.toScreen(source.corners()[1])
                 drawIntoCanvas { canvas -> canvas.nativeCanvas.drawBitmap(bitmap,null,

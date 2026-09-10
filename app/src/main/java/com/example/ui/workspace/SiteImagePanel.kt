@@ -58,8 +58,8 @@ fun SiteImagePanel(state: WorkspaceState, model: DesignWorkspaceViewModel, onImp
                     }
                     Text("The first mark stays in place. Existing design dimensions do not change.",style=MaterialTheme.typography.labelSmall)
                 }
-                OutlinedButton(onClick={onTool(SiteTool.CALIBRATE)},enabled=state.siteBitmap!=null,modifier=Modifier.testTag("site-calibrate")) { Text("Mark a known distance") }
-                OutlinedButton(onClick={onTool(SiteTool.MOVE)},enabled=state.siteBitmap!=null,modifier=Modifier.testTag("site-move")) { Text("Move source only") }
+                OutlinedButton(onClick={onTool(SiteTool.CALIBRATE)},enabled=state.siteBitmap!=null && source.visible,modifier=Modifier.testTag("site-calibrate")) { Text("Mark a known distance") }
+                OutlinedButton(onClick={onTool(SiteTool.MOVE)},enabled=state.siteBitmap!=null && source.visible,modifier=Modifier.testTag("site-move")) { Text("Move source only") }
                 TextButton(onClick={model.execute(DesignCommand.SetSiteImage(source.copy(visible=!source.visible),source))},modifier=Modifier.testTag("site-visibility")) { Text(if(source.visible) "Hide source" else "Show source") }
                 TextButton(onClick={model.stopSiteTool();model.execute(DesignCommand.SetSiteImage(null,source))},modifier=Modifier.testTag("site-remove")) { Text("Remove source · Undo restores it") }
             }

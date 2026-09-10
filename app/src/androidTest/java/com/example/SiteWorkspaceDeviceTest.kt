@@ -79,6 +79,15 @@ class SiteWorkspaceDeviceTest {
             val screen=view.toScreen(imported.siteImage!!.toWorld(p))
             ui.onNodeWithTag("workspace-canvas").performTouchInput { click(Offset(screen.x.toFloat(),screen.y.toFloat())) }
         }
+        tap(ImagePoint(250.0,650.0))
+        // Undo during reference picking must cancel the transient mode, not reinterpret stale pixels.
+        ui.onNodeWithTag("workspace-undo").performClick()
+        assertNull(saved().siteImage)
+        assertEquals(SiteTool.NONE,model.state.value.siteTool)
+        assertTrue(model.state.value.referencePoints.isEmpty())
+        ui.onNodeWithTag("workspace-redo").performClick()
+        saved();ui.waitUntil(10000) { model.state.value.siteBitmap!=null }
+        command("view","site");ui.onNodeWithTag("site-calibrate").performScrollTo().performClick()
         tap(ImagePoint(250.0,650.0));tap(ImagePoint(850.0,650.0))
         ui.onNodeWithTag("site-distance-40").performScrollTo().performClick()
         val scaled=saved();assertEquals(original.objects,scaled.objects)
@@ -95,9 +104,15 @@ class SiteWorkspaceDeviceTest {
         val beforeCancel=saved()
         ui.onNodeWithTag("workspace-canvas").performTouchInput { down(center);moveBy(Offset(30f,10f));cancel() }
         assertEquals(beforeCancel,saved());ui.onNodeWithTag("site-tool-cancel").performClick()
+        ui.runOnIdle { assertEquals(SiteTool.NONE,model.state.value.siteTool) }
         ui.onNodeWithTag("site-remove").performScrollTo().performClick();assertNull(saved().siteImage)
         ui.onNodeWithTag("site-close").performScrollTo().performClick();ui.onNodeWithTag("workspace-undo").performClick()
         val restored=saved();assertEquals(moved.siteImage,restored.siteImage)
+        ui.waitUntil(10000) { model.state.value.siteBitmap!=null }
+        command("view","site");ui.onNodeWithTag("site-move").performScrollTo().performClick()
+        ui.onNodeWithTag("workspace-back").performClick()
+        open();assertEquals(restored,saved())
+        ui.runOnIdle { assertEquals(SiteTool.NONE,model.state.value.siteTool) }
         ui.waitUntil(10000) { model.state.value.siteBitmap!=null }
         command("view","fit");capture("site-registered-workspace")
         File(evidence,"site-expected.json").writeText(DesignJsonCodec.encode(restored))

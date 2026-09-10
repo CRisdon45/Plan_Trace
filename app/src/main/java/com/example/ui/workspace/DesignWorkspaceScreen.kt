@@ -3,19 +3,7 @@ package com.example.ui.workspace
 import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import android.view.MotionEvent
-import com.example.MainActivity
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.geometry.Rect
-import kotlin.math.floor
-import kotlin.math.ceil
-import android.view.ScaleGestureDetector
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
@@ -30,37 +18,20 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.input.pointer.pointerInteropFilter
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.engine.WatercolorRenderer
 import com.example.export.DesignOutput
 import com.example.export.DesignOutputSettings
 import com.example.export.ExportManager
-import com.example.model.PolylineElement
 import com.example.model.design.*
 import com.example.ui.components.ExportDialog
 import kotlinx.coroutines.launch
 import java.util.Locale
-import kotlin.math.hypot
-import kotlin.math.roundToInt
 
 /** Opt-in draft workspace in the real application; no duplicate renderer or legacy-data migration. */
 @Composable
@@ -114,10 +85,10 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
             if (event == Lifecycle.Event.ON_PAUSE) { model.stopSiteTool();inspector=null }
         }
         lifecycle.lifecycle.addObserver(observer)
-        onDispose { lifecycle.lifecycle.removeObserver(observer); model.cancelPreview() }
+        onDispose { lifecycle.lifecycle.removeObserver(observer); model.stopSiteTool() }
     }
     fun close() {
-        model.cancelPreview()
+        model.stopSiteTool()
         if (state.document == null || state.saved || state.document!!.revision == 0L) onBack()
         else leaveUnsaved = true
     }
@@ -217,4 +188,3 @@ internal fun CopingWidthControl(obj: DesignObject, model: DesignWorkspaceViewMod
         }
     }
 }
-

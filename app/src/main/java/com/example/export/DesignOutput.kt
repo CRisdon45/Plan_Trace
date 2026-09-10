@@ -75,7 +75,7 @@ object DesignOutput {
                 position = Point2D(r.left, r.top - 25f), fontSizeSp = 8f))
         } ?: emptyList()
         return TraceProject(id = document.id, title = "Project geometry study", createdAt = 0L, updatedAt = document.revision,
-            backgroundType = BackgroundType.BLANK_PAPER, backgroundResourceOrUri = "",
+            backgroundType = BackgroundType.BLANK_PAPER, backgroundResourceOrUri = "", backgroundOpacity = 1f,
             layers = listOf(layer), activeLayerId = layer.id, elements = elements + notice,
             scaleCalibration = ScaleCalibration(true,
                 (settings.drawingUnitsPerMetre * if (settings.imperialLabels) 0.3048 else 1.0).toFloat(),
