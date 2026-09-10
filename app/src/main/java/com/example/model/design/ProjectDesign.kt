@@ -12,12 +12,16 @@ data class DesignObject(
     val boundary: DesignBoundary,
     val locked: Boolean = false,
     val confidence: GeometryConfidence = GeometryConfidence.DESIGNED,
-    val sourceReference: String? = null
+    val sourceReference: String? = null,
+    val coping: CopingSpec? = null
 ) {
     init {
         require(id.isNotBlank() && name.isNotBlank())
         require(sourceReference == null || sourceReference.isNotBlank())
+        require(coping == null || kind == DesignObjectKind.POOL || kind == DesignObjectKind.SPA) { "Coping belongs to a pool or spa" }
     }
+    /** Cached per immutable object; recomputed after an edit or decode, never saved as duplicate geometry. */
+    val copingFootprint: CopingFootprint? by lazy { coping?.let { PoolCoping.derive(boundary, it) } }
 }
 
 /** Storage-neutral project authority. No PDF page owns these objects or their metric coordinates. */
@@ -27,6 +31,7 @@ class ProjectDesign(val id: String, objects: List<DesignObject> = emptyList(), v
         require(id.isNotBlank() && revision >= 0)
         require(objects.size <= 512) { "Initial design object budget exceeded" }
         require(objects.map { it.id }.distinct().size == objects.size) { "Duplicate design object ID" }
+        objects.forEach { it.copingFootprint } // Reject the whole next state before history or saving is changed.
     }
     fun objectById(id: String): DesignObject = objects.singleOrNull { it.id == id }
         ?: throw IllegalArgumentException("Unknown design object: $id")
@@ -46,6 +51,7 @@ sealed interface DesignCommand {
     data class MoveVertex(val objectId: String, val vertexId: String, val point: DesignPoint) : DesignCommand
     data class ChangeBulge(val objectId: String, val edgeId: String, val bulge: Double) : DesignCommand
     data class ReplaceBoundary(val objectId: String, val boundary: DesignBoundary) : DesignCommand
+    data class SetCoping(val objectId: String, val spec: CopingSpec) : DesignCommand
 }
 
 /** Pure command path. It either returns a complete next state or throws without changing the input. */
@@ -61,11 +67,16 @@ object DesignCommands {
             is DesignCommand.MoveVertex -> command.objectId
             is DesignCommand.ChangeBulge -> command.objectId
             is DesignCommand.ReplaceBoundary -> command.objectId
+            is DesignCommand.SetCoping -> command.objectId
             else -> error("Unsupported command")
         }
         val current = document.objectById(id)
         require(!current.locked) { "Design object is locked: $id" }
         if (command is DesignCommand.Remove) return document.revised(document.objects.filterNot { it.id == id })
+        if (command is DesignCommand.SetCoping) {
+            if (command.spec == current.coping) return document
+            return document.revised(document.objects.map { if (it.id == id) it.copy(coping = command.spec) else it })
+        }
         val boundary = when (command) {
             is DesignCommand.Translate -> {
                 require(command.dxMetres.isFinite() && command.dyMetres.isFinite())

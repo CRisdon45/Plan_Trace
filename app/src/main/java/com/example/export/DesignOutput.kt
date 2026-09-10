@@ -6,7 +6,7 @@ import com.example.model.design.*
 import java.io.File
 import java.util.Locale
 
-/** Explicit metric-to-drawing projection. Samples are output-only, never saved back into the authority. */
+/** Explicit metric-to-drawing projection; sampled output is never saved back into authority. */
 data class DesignOutputSettings(
     val origin: DesignPoint = DesignPoint(0.0, 0.0),
     val drawingUnitsPerMetre: Double = 100.0,
@@ -21,36 +21,43 @@ data class DesignOutputSettings(
 }
 
 object DesignOutput {
-    /**
-     * Disposable read-only projection for the EXISTING canvas/export renderer, not another renderer
-     * or an editable copy of the project. Use DesignSession for edits and DesignJsonCodec for storage.
-     * Automatic chord-based dimensions must be disabled: generated labels use analytic perimeter.
-     */
+    /** Same display/export path for the pool and its derived coping. No independent editable band. */
     fun drawing(document: ProjectDesign, settings: DesignOutputSettings = DesignOutputSettings()): TraceProject {
         val layer = DrawingLayer(id = "project-design-projection", name = "Project design (output)", isLocked = true)
-        val elements = document.objects.flatMap { obj ->
-            val points = obj.boundary.sample(settings.maxChordErrorMetres / 2.0).map { point ->
-                val wx = (point.x - settings.origin.x) * settings.drawingUnitsPerMetre
-                val wy = -(point.y - settings.origin.y) * settings.drawingUnitsPerMetre
-                val x = wx.toFloat()
-                val y = wy.toFloat()
-                require(x.isFinite() && y.isFinite()) { "Design exceeds the renderer's coordinate range" }
-                val conversionError = kotlin.math.hypot(x.toDouble() - wx, y.toDouble() - wy) / settings.drawingUnitsPerMetre
-                require(conversionError <= settings.maxChordErrorMetres / 2.0) {
-                    "Projection precision budget exceeded; choose an origin near the design"
-                }
-                Point2D(x, y)
+        fun projected(points: List<DesignPoint>): List<Point2D> = points.map { point ->
+            val wx = (point.x - settings.origin.x) * settings.drawingUnitsPerMetre
+            val wy = -(point.y - settings.origin.y) * settings.drawingUnitsPerMetre
+            val x = wx.toFloat(); val y = wy.toFloat()
+            require(x.isFinite() && y.isFinite()) { "Design exceeds the renderer's coordinate range" }
+            require(kotlin.math.hypot(x.toDouble() - wx, y.toDouble() - wy) / settings.drawingUnitsPerMetre <= settings.maxChordErrorMetres / 2) {
+                "Projection precision budget exceeded; choose an origin near the design"
             }
-            val outline = PolylineElement(id = "${obj.id}:outline", layerId = layer.id,
-                points = points, isClosed = true, strokeWidth = 2f)
-            // No filled surface/area promise until topology and holes are validated.
-            val result = mutableListOf<VectorElement>(outline)
+            Point2D(x, y)
+        }
+        val elements = document.objects.flatMap { obj ->
+            val footprint = obj.copingFootprint
+            require(footprint == null || settings.maxChordErrorMetres >= 2 * PoolCoping.CHORD_ERROR_METRES) {
+                "Requested output tolerance is finer than the coping generator supports"
+            }
+            val points = projected(obj.boundary.sample(settings.maxChordErrorMetres / 2.0))
+            val result = mutableListOf<VectorElement>()
+            if (footprint != null) {
+                // Opaque water covers the interior of the opaque outer field in this object's group.
+                // SurfaceMaterial's existing renderer draws exact sampled boundaries without wash bleed.
+                result.add(PolylineElement(id = "${obj.id}:coping-outer", layerId = layer.id,
+                    points = projected(footprint.outerBoundary), isClosed = true,
+                    strokeWidth = 1.3f, material = SurfaceMaterial.PAVING))
+            }
+            result.add(PolylineElement(id = "${obj.id}:outline", layerId = layer.id,
+                points = points, isClosed = true, strokeWidth = 2f,
+                material = if (footprint != null) SurfaceMaterial.WATER else null))
             if (settings.includeMeasurements) {
                 val units = if (settings.imperialLabels) "ft" else "m"
                 val length = obj.boundary.perimeterMetres / if (settings.imperialLabels) 0.3048 else 1.0
+                val copingLabel = obj.coping?.let { String.format(Locale.US, "\nCoping %.2f in", it.widthInches) }.orEmpty()
                 result.add(TextElement(id = "${obj.id}:measurement", layerId = layer.id,
-                    text = String.format(Locale.US, "%s\nPerimeter %.2f %s", obj.name, length, units),
-                    position = Point2D(points.minOf { it.x }, points.minOf { it.y } - 45f), fontSizeSp = 9f))
+                    text = String.format(Locale.US, "%s\nPerimeter %.2f %s", obj.name, length, units) + copingLabel,
+                    position = Point2D(points.minOf { it.x }, points.minOf { it.y } - 90f), fontSizeSp = 9f))
             }
             result
         }

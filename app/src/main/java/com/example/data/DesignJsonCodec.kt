@@ -6,7 +6,7 @@ import org.json.JSONObject
 
 /** A separate, versioned document format. Does not reinterpret or migrate existing TraceProject data. */
 object DesignJsonCodec {
-    private const val VERSION = 1
+    private const val VERSION = 2
     fun encode(document: ProjectDesign): String = JSONObject().apply {
         put("format", "plan-trace-project-design")
         put("version", VERSION)
@@ -19,6 +19,9 @@ object DesignJsonCodec {
                 put("id", item.id); put("name", item.name); put("kind", item.kind.name)
                 put("locked", item.locked); put("confidence", item.confidence.name)
                 item.sourceReference?.let { put("sourceReference", it) }
+                item.coping?.let { spec ->
+                    put("coping", JSONObject().put("widthMetres", spec.widthMetres).put("generatorVersion", spec.generatorVersion))
+                }
                 put("nodes", JSONArray().apply {
                     item.boundary.nodes.forEach { node -> put(JSONObject().apply {
                         put("vertexId", node.vertexId); put("edgeId", node.edgeId)
@@ -34,11 +37,12 @@ object DesignJsonCodec {
         require(json.length <= 2_000_000) { "Design document exceeds the initial decode budget" }
         val root = JSONObject(json)
         require(root.getString("format") == "plan-trace-project-design") { "Not a project-design document" }
-        require(root.get("version") is Int && root.getInt("version") == VERSION) { "Unsupported design version" }
+        require(root.get("version") is Int && root.getInt("version") in 1..VERSION) { "Unsupported design version" }
         require(root.getString("coordinateUnit") == "metre" && root.getString("yAxis") == "up") {
             "Unsupported coordinate system"
         }
         require(root.get("revision") is Int || root.get("revision") is Long) { "Revision must be an integer" }
+        val version = root.getInt("version")
         val objects = root.getJSONArray("objects")
         require(objects.length() <= 512)
         val result = (0 until objects.length()).map { i ->
@@ -57,7 +61,13 @@ object DesignJsonCodec {
                 }),
                 locked = obj.getBoolean("locked"),
                 confidence = GeometryConfidence.valueOf(obj.getString("confidence")),
-                sourceReference = if (obj.has("sourceReference")) obj.getString("sourceReference") else null
+                sourceReference = if (obj.has("sourceReference")) obj.getString("sourceReference") else null,
+                coping = if (obj.has("coping")) {
+                    require(version >= 2) { "Version 1 cannot contain unrecognized coping intent" }
+                    val spec = obj.getJSONObject("coping")
+                    require(spec.get("widthMetres") is Number && spec.get("generatorVersion") is Int) { "Invalid coping specification" }
+                    CopingSpec(spec.getDouble("widthMetres"), spec.getInt("generatorVersion"))
+                } else null
             )
         }
         return ProjectDesign(root.getString("id"), result, root.getLong("revision"))

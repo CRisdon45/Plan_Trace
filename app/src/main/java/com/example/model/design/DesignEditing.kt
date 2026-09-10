@@ -18,7 +18,8 @@ object DesignStartingShapes {
             BoundaryNode("vertex-$i", p, "edge-$i", bulges[i])
         }).translated((index % 3) * 9.0, -(index / 3) * 7.0)
         val label = if (kind == DesignObjectKind.PAVING) "Paving" else if (curved) "Curved pool" else "Pool"
-        return DesignObject(UUID.randomUUID().toString(), "$label ${index + 1}", kind, boundary)
+        return DesignObject(UUID.randomUUID().toString(), "$label ${index + 1}", kind, boundary,
+            coping = if (kind == DesignObjectKind.POOL || kind == DesignObjectKind.SPA) CopingSpec() else null)
     }
 }
 
@@ -37,7 +38,7 @@ data class DesignViewport(val pixelsPerMetre: Double, val offsetX: Double, val o
     companion object {
         fun fit(document: ProjectDesign, width: Double, height: Double): DesignViewport {
             require(width > 0 && height > 0)
-            val points = document.objects.flatMap { it.boundary.sample(0.01) }
+            val points = document.objects.flatMap { it.copingFootprint?.outerBoundary ?: it.boundary.sample(0.01) }
             val minX = points.minOfOrNull { it.x } ?: 0.0
             val maxX = points.maxOfOrNull { it.x } ?: 8.0
             val minY = points.minOfOrNull { it.y } ?: 0.0
