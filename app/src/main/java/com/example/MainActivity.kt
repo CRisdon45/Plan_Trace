@@ -26,6 +26,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.key
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.example.ui.workspace.DesignWorkspaceScreen
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -69,6 +71,11 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun PlanTraceApp(viewModel: MainViewModel) {
+    var designWorkspace by rememberSaveable { mutableStateOf(false) }
+    if (designWorkspace) {
+        DesignWorkspaceScreen(onBack = { designWorkspace = false })
+        return
+    }
     var fitRequest by remember { mutableStateOf(0) }
     var editingNote by remember { mutableStateOf<com.example.model.TextElement?>(null) }
     val project by viewModel.project.collectAsState()
@@ -270,6 +277,10 @@ fun PlanTraceApp(viewModel: MainViewModel) {
             onDeleteProject = { viewModel.deleteProject(it) },
             onImportFile = {
                 filePickerLauncher.launch(arrayOf("application/pdf", "image/*"))
+            },
+            onOpenDesignWorkspace = {
+                viewModel.setShowProjectsDialog(false)
+                designWorkspace = true
             }
         )
     }
