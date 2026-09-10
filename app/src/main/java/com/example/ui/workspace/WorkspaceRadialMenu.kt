@@ -45,19 +45,28 @@ fun WorkspaceRadialMenu(anchor: Offset, bounds: IntSize, availability: RadialAva
     BackHandler { back() }
     if(compact) {
         Box(Modifier.fillMaxSize().testTag("workspace-radial").pointerInput(Unit) { detectTapGestures { onDismiss() } }) {
-            Surface(Modifier.align(Alignment.Center).widthIn(max=320.dp).fillMaxWidth().padding(12.dp),
+            Surface(Modifier.align(Alignment.Center).widthIn(max=320.dp).fillMaxWidth().padding(12.dp)
+                .testTag("radial-compact-panel"),
                 tonalElevation=4.dp,shadowElevation=4.dp,shape=MaterialTheme.shapes.large) {
-                Column(Modifier.verticalScroll(rememberScrollState()).padding(12.dp)) {
-                    Text("Commands",style=MaterialTheme.typography.titleMedium)
-                    if(expanded==null) RadialCategory.values().forEach { c ->
-                        TextButton(onClick={expanded=c},modifier=Modifier.fillMaxWidth().testTag("radial-category-${c.name.lowercase()}")) { Text(c.label) }
-                    } else RadialCommands.actions(expanded!!).forEach { a ->
-                        TextButton(onClick={choose(RadialHit.Action(a))},enabled=availability.enabled(a),
-                            modifier=Modifier.fillMaxWidth().testTag("radial-action-${a.name.lowercase()}")) {
-                            Text(a.label + (availability.checked(a)?.let { if(it) " · On" else " · Off" } ?: ""))
+                Column(Modifier.padding(12.dp)) {
+                    // Keep the exit/back control outside the scrolling actions. In a short canvas
+                    // it must not disappear below the last row or need a scroll to become reachable.
+                    Row(Modifier.fillMaxWidth(), verticalAlignment=Alignment.CenterVertically) {
+                        Text("Commands", Modifier.weight(1f), style=MaterialTheme.typography.titleMedium)
+                        TextButton(onClick={back()}, modifier=Modifier.testTag("radial-centre")) {
+                            Text(if(expanded!=null) "Back" else "Close")
                         }
                     }
-                    TextButton(onClick={back()},modifier=Modifier.testTag("radial-centre")) { Text(if(expanded!=null) "Back" else "Close") }
+                    Column(Modifier.weight(1f, fill=false).verticalScroll(rememberScrollState())) {
+                        if(expanded==null) RadialCategory.values().forEach { c ->
+                            TextButton(onClick={expanded=c},modifier=Modifier.fillMaxWidth().testTag("radial-category-${c.name.lowercase()}")) { Text(c.label) }
+                        } else RadialCommands.actions(expanded!!).forEach { a ->
+                            TextButton(onClick={choose(RadialHit.Action(a))},enabled=availability.enabled(a),
+                                modifier=Modifier.fillMaxWidth().testTag("radial-action-${a.name.lowercase()}")) {
+                                Text(a.label + (availability.checked(a)?.let { if(it) " · On" else " · Off" } ?: ""))
+                            }
+                        }
+                    }
                 }
             }
         }

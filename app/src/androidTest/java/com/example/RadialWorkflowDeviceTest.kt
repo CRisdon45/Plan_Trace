@@ -126,8 +126,15 @@ class RadialWorkflowDeviceTest {
         open(); val before = saved()
         ui.onNodeWithTag("workspace-object-0").performClick()
         expand("edit")
-        if (compact) ui.onNodeWithText("Size").assertExists()
-        else ui.onNodeWithContentDescription("Size").assertExists()
+        if (compact) {
+            ui.onNodeWithText("Size").assertExists()
+            ui.onNodeWithTag("radial-centre").assertIsDisplayed()
+            val back = ui.onNodeWithTag("radial-centre").fetchSemanticsNode().boundsInRoot
+            val panel = ui.onNodeWithTag("radial-compact-panel").fetchSemanticsNode().boundsInRoot
+            val action = ui.onNodeWithTag("radial-action-size").fetchSemanticsNode().boundsInRoot
+            assertTrue("Back must stay above the action list", back.bottom <= action.top)
+            assertTrue("Back must fit wholly inside the panel", back.top >= panel.top && back.bottom <= panel.bottom)
+        } else ui.onNodeWithContentDescription("Size").assertExists()
         capture(name)
         tap("radial-action-size")
         ui.onNodeWithTag("workspace-size-panel").assertExists()

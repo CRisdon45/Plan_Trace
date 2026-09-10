@@ -102,6 +102,18 @@ class RadialMenuUiTest {
         ui.onNodeWithTag("radial-category-edit").assertExists()
         ui.runOnIdle { assertEquals(0, dismissals); assertTrue(actions.isEmpty()); assertEquals(0, underneath) }
     }
+    @Test fun `compact navigation is pinned above the scrolling actions on a short canvas`() {
+        menu(width = 300, height = 220)
+        val topBefore = ui.onNodeWithTag("radial-centre").fetchSemanticsNode().boundsInRoot
+        ui.onNodeWithTag("radial-category-select").performScrollTo()
+        ui.onNodeWithTag("radial-centre").assertIsDisplayed()
+        val topAfter = ui.onNodeWithTag("radial-centre").fetchSemanticsNode().boundsInRoot
+        assertEquals(topBefore, topAfter)
+        ui.onNodeWithTag("radial-category-select").performClick()
+        ui.onNodeWithTag("radial-centre").assertIsDisplayed().performClick()
+        ui.onNodeWithTag("radial-category-draw").performScrollTo().assertIsDisplayed()
+        ui.runOnIdle { assertTrue(actions.isEmpty()); assertEquals(0, dismissals) }
+    }
     private fun header(width: Int, fontScale: Float) {
         ui.setContent {
             val d = LocalDensity.current.density
