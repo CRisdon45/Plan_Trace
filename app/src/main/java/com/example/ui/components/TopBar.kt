@@ -58,6 +58,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.BackgroundType
+import com.example.ui.DrawingTool
 import com.example.model.TraceProject
 
 @Composable
@@ -83,7 +84,9 @@ fun TopBar(
     onPrevPdfPage: () -> Unit,
     onNextPdfPage: () -> Unit,
     onEditTitle: () -> Unit,
-    onFitDrawing: () -> Unit
+    onFitDrawing: () -> Unit,
+    barrelTool: DrawingTool,
+    onSetBarrelTool: (DrawingTool) -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
@@ -375,6 +378,10 @@ fun TopBar(
                                 onSelectSample("sample_deck")
                             }
                         )
+                        DropdownMenuItem(text = { Text("Pen button: Select" + if (barrelTool == DrawingTool.SELECT) " (active)" else "") },
+                            onClick = { showMenu = false; onSetBarrelTool(DrawingTool.SELECT) })
+                        DropdownMenuItem(text = { Text("Pen button: Erase objects" + if (barrelTool == DrawingTool.ERASER) " (active)" else "") },
+                            onClick = { showMenu = false; onSetBarrelTool(DrawingTool.ERASER) })
                         DropdownMenuItem(text = { Text("Fit drawing") }, onClick = { showMenu = false; onFitDrawing() })
                         DropdownMenuItem(
                             text = { Text("Clear All Linework") },

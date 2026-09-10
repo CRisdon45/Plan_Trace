@@ -83,6 +83,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _strokeStyle = MutableStateFlow(runCatching { StrokeStyle.valueOf(toolPreferences.getString("style", "INK")!!) }.getOrDefault(StrokeStyle.INK))
     val strokeStyle: StateFlow<StrokeStyle> = _strokeStyle.asStateFlow()
 
+    private val _barrelTool = MutableStateFlow(if (toolPreferences.getString("barrelTool", "SELECT") == "ERASER") DrawingTool.ERASER else DrawingTool.SELECT)
+    val barrelTool: StateFlow<DrawingTool> = _barrelTool.asStateFlow()
+    fun setBarrelTool(tool: DrawingTool) {
+        if (tool != DrawingTool.SELECT && tool != DrawingTool.ERASER) return
+        _barrelTool.value = tool
+        toolPreferences.edit().putString("barrelTool", tool.name).apply()
+        showToast(if (tool == DrawingTool.SELECT) "Hold the pen button before touching to select" else "Hold the pen button before touching to erase objects")
+    }
+
     // Undo / Redo history
     private val pageHistories = mutableMapOf<String, EditHistory>()
     private val editHistory: EditHistory get() = pageHistories.getOrPut(_project.value.pageKey) { EditHistory() }

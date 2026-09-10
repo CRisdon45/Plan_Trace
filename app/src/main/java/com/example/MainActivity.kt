@@ -33,7 +33,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.dp
 import com.example.ui.MainViewModel
-import com.example.ui.canvas.RadialPalette
 import com.example.ui.canvas.TraceCanvas
 import com.example.ui.components.ArchitecturalToolbar
 import com.example.ui.components.EditTitleDialog
@@ -49,6 +48,13 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
 
     private val viewModel: MainViewModel by viewModels()
+
+    override fun dispatchTouchEvent(event: android.view.MotionEvent): Boolean {
+        // Preserve system rejection before Compose converts the pointer event.
+        val cancellation = com.example.ui.input.cancellationForCompose(event)
+            ?: return super.dispatchTouchEvent(event)
+        return try { super.dispatchTouchEvent(cancellation) } finally { cancellation.recycle() }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,6 +74,7 @@ fun PlanTraceApp(viewModel: MainViewModel) {
     val project by viewModel.project.collectAsState()
     val projectsList by viewModel.projectsList.collectAsState()
     val activeTool by viewModel.activeTool.collectAsState()
+    val barrelTool by viewModel.barrelTool.collectAsState()
     val strokeColor by viewModel.strokeColor.collectAsState()
     val strokeWidth by viewModel.strokeWidth.collectAsState()
     val strokeStyle by viewModel.strokeStyle.collectAsState()
@@ -88,10 +95,6 @@ fun PlanTraceApp(viewModel: MainViewModel) {
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-
-    // S Pen radial menu state
-    var showRadialMenu by remember { mutableStateOf(false) }
-    var radialMenuPosition by remember { mutableStateOf(Offset(200f, 200f)) }
 
     // Edit Title state
     var showEditTitle by remember { mutableStateOf(false) }
@@ -148,7 +151,9 @@ fun PlanTraceApp(viewModel: MainViewModel) {
                     onPrevPdfPage = { viewModel.prevPdfPage() },
                     onNextPdfPage = { viewModel.nextPdfPage() },
                     onEditTitle = { showEditTitle = true },
-                    onFitDrawing = { viewModel.cancelScaleCalibration(); fitRequest++ }
+                    onFitDrawing = { viewModel.cancelScaleCalibration(); fitRequest++ },
+                    barrelTool = barrelTool,
+                    onSetBarrelTool = { viewModel.setBarrelTool(it) }
                 )
             }
         }
@@ -162,6 +167,7 @@ fun PlanTraceApp(viewModel: MainViewModel) {
             key(project.id, project.pageKey) {
             TraceCanvas(
                 fitRequest = fitRequest,
+                barrelTool = barrelTool,
                 modifier = Modifier.fillMaxSize(),
                 project = project,
                 backgroundBitmap = backgroundBitmap,
@@ -188,14 +194,6 @@ fun PlanTraceApp(viewModel: MainViewModel) {
                     if (project.layers.any { it.id == note.layerId && !it.isLocked && it.isVisible }) editingNote = note
                     else viewModel.showToast("Unlock this layer to edit its note")
                 },
-                onShowRadialPalette = { offset ->
-                    radialMenuPosition = offset
-                    showRadialMenu = true
-                },
-                onHideRadialPalette = {
-                    showRadialMenu = false
-                },
-                onQuickUndo = { viewModel.undo() },
                 onFeedbackMessage = { viewModel.showToast(it) }
             )
             }
@@ -215,14 +213,7 @@ fun PlanTraceApp(viewModel: MainViewModel) {
                 onSelectStyle = { viewModel.setStrokeStyle(it) }
             )
 
-            // S Pen Radial Palette (triggered by barrel button or quick tool gesture)
-            RadialPalette(
-                visible = showRadialMenu,
-                position = radialMenuPosition,
-                activeTool = activeTool,
-                onSelectTool = { viewModel.setTool(it) },
-                onDismiss = { showRadialMenu = false }
-            )
+
         }
     }
 

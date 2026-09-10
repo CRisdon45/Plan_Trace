@@ -63,6 +63,9 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalWindowInfo
+import com.example.ui.input.PenContact
+import com.example.ui.input.routePenPointer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import com.example.export.ExportGeometry
@@ -108,6 +111,7 @@ import kotlin.math.sin
 fun TraceCanvas(
     modifier: Modifier = Modifier,
     fitRequest: Int = 0,
+    barrelTool: DrawingTool = DrawingTool.SELECT,
     project: TraceProject,
     backgroundBitmap: Bitmap?,
     activeTool: DrawingTool,
@@ -132,9 +136,6 @@ fun TraceCanvas(
     onCalibrationSegmentDrawn: (Point2D, Point2D) -> Unit,
     onTextRequested: (Point2D) -> Unit,
     onTextEditRequested: (TextElement) -> Unit = {},
-    onShowRadialPalette: (Offset) -> Unit,
-    onHideRadialPalette: () -> Unit,
-    onQuickUndo: () -> Unit = {},
     onFeedbackMessage: (String) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -193,8 +194,10 @@ fun TraceCanvas(
     var isHoldLocked by remember { mutableStateOf(false) }
 
     // Barrel button state & double-click tracking for Quick Undo
-    var isBarrelButtonPressed by remember { mutableStateOf(false) }
-    var lastBarrelClickTime by remember { mutableStateOf(0L) }
+    val penContact = remember { PenContact() }
+    var contactTool by remember { mutableStateOf<DrawingTool?>(null) }
+    var temporaryTool by remember { mutableStateOf<DrawingTool?>(null) }
+    var suppressRemainingFingers by remember { mutableStateOf(false) }
 
     // Selection Dragging State
     var dragStartWorldPoint by remember { mutableStateOf<Point2D?>(null) }
@@ -207,6 +210,33 @@ fun TraceCanvas(
 
     // Live measurement readout
     var liveMeasurementText by remember { mutableStateOf<String?>(null) }
+
+    fun cancelContact() {
+        penContact.end()
+        contactTool = null
+        temporaryTool = null
+        onEditGestureCancelled()
+        currentPoints.clear()
+        currentStartPoint = null
+        currentEndPoint = null
+        rectangleResize = null
+        dragStartWorldPoint = null
+        snappedResult = null
+        isHoldLocked = false
+        holdTimerJob?.cancel()
+        liveMeasurementText = null
+        eyedropperScreenPos = null
+    }
+    val windowInfo = LocalWindowInfo.current
+    LaunchedEffect(windowInfo.isWindowFocused) {
+        if (!windowInfo.isWindowFocused) {
+            cancelContact()
+            suppressRemainingFingers = false
+            navigating = false
+            prevCentroid = null
+            singlePanPrevPos = null
+        }
+    }
 
     LaunchedEffect(fitRequest, viewportSize, backgroundBitmap) {
         if (fitRequest > 0 && viewportSize.width > toolDockWidth + fitPadding * 2 && viewportSize.height > fitPadding * 2) {
@@ -277,11 +307,23 @@ fun TraceCanvas(
             // Stylus, barrel button, pressure & hold-to-straighten pointer filter
             .pointerInteropFilter { motionEvent ->
                 val pointerCount = motionEvent.pointerCount
-                val action = motionEvent.actionMasked
+                val route = routePenPointer(motionEvent)
+                if (route.ignore) return@pointerInteropFilter true
+                val action = route.action
+                val pointerIndex = route.index
+                if (route.canceled) {
+                    cancelContact()
+                    suppressRemainingFingers = pointerCount > 1
+                    return@pointerInteropFilter true
+                }
+                if (!route.isStylus && suppressRemainingFingers) {
+                    if (action == MotionEvent.ACTION_UP) suppressRemainingFingers = false
+                    return@pointerInteropFilter true
+                }
 
                 // If 2 or more fingers are down, allow pan/zoom and don't draw
-                if (pointerCount > 1) {
-                    onEditGestureCancelled()
+                if (pointerCount > 1 && !route.isStylus) {
+                    cancelContact()
                     navigating = true
                     currentPoints.clear()
                     currentStartPoint = null
@@ -305,7 +347,7 @@ fun TraceCanvas(
                     return@pointerInteropFilter true
                 }
 
-                val toolType = motionEvent.getToolType(0)
+                val toolType = motionEvent.getToolType(pointerIndex)
                 val isStylus = toolType == MotionEvent.TOOL_TYPE_STYLUS || toolType == MotionEvent.TOOL_TYPE_ERASER
                 val isHardwareEraser = toolType == MotionEvent.TOOL_TYPE_ERASER
                 val buttonState = motionEvent.buttonState
@@ -323,25 +365,9 @@ fun TraceCanvas(
                     return@pointerInteropFilter true
                 }
 
-                // S Pen Barrel button: single press opens radial menu, double-click triggers Quick Undo
                 val barrelActive = isStylus && (buttonState and MotionEvent.BUTTON_STYLUS_PRIMARY != 0)
-                if (barrelActive) {
-                    if (!isBarrelButtonPressed) {
-                        isBarrelButtonPressed = true
-                        val now = System.currentTimeMillis()
-                        if (now - lastBarrelClickTime in 50..380) {
-                            onQuickUndo()
-                            onFeedbackMessage("S Pen: Quick Undo")
-                            lastBarrelClickTime = 0L
-                            onHideRadialPalette()
-                        } else {
-                            lastBarrelClickTime = now
-                            onShowRadialPalette(Offset(motionEvent.x, motionEvent.y))
-                        }
-                    }
-                } else if (isBarrelButtonPressed) {
-                    isBarrelButtonPressed = false
-                    onHideRadialPalette()
+                if (action == MotionEvent.ACTION_BUTTON_PRESS || action == MotionEvent.ACTION_BUTTON_RELEASE) {
+                    return@pointerInteropFilter true
                 }
 
                 // If stylusOnlyMode is active and user touches with finger, pan/zoom instead of drawing
@@ -359,13 +385,23 @@ fun TraceCanvas(
                     return@pointerInteropFilter true
                 }
 
-                val screenPos = Offset(motionEvent.x, motionEvent.y)
-                val pressure = motionEvent.getPressure(0).coerceIn(0.1f, 1.0f)
+                val screenPos = Offset(motionEvent.getX(pointerIndex), motionEvent.getY(pointerIndex))
+                val pressure = motionEvent.getPressure(pointerIndex).coerceIn(0.1f, 1.0f)
                 val worldPoint = screenToWorld(screenPos).copy(pressure = pressure)
-                val effectiveTool = when {
-                    isCalibratingScale -> DrawingTool.MEASURE
-                    isHardwareEraser -> DrawingTool.ERASER
-                    else -> activeTool
+                if (action == MotionEvent.ACTION_DOWN) {
+                    cancelContact()
+                    navigating = false
+                    prevCentroid = null
+                    singlePanPrevPos = null
+                    contactTool = penContact.begin(activeTool, barrelActive, isHardwareEraser, isCalibratingScale, barrelTool)
+                    temporaryTool = contactTool.takeIf { barrelActive && !isCalibratingScale }
+                }
+                val effectiveTool = penContact.current(activeTool)
+                if (action == MotionEvent.ACTION_UP) {
+                    penContact.end()
+                    contactTool = null
+                    temporaryTool = null
+                    suppressRemainingFingers = isStylus && pointerCount > 1
                 }
 
                 when (action) {
@@ -412,7 +448,8 @@ fun TraceCanvas(
                             rectangleResize = selected?.takeIf { rectangle -> project.layers.any { it.id == rectangle.layerId && it.isVisible && !it.isLocked } }
                                 ?.let { RectangleResize.hit(it, worldPoint, zoomScale) }
                             if (rectangleResize != null) return@pointerInteropFilter true
-                            val hit = project.elements.asReversed().firstOrNull { it.isPointInside(worldPoint) }
+                            val hit = project.elements.asReversed().firstOrNull { element ->
+                                project.layers.any { it.id == element.layerId && it.isVisible && !it.isLocked } && element.isPointInside(worldPoint) }
                             onElementSelected(hit?.id)
                             dragStartWorldPoint = worldPoint
                             return@pointerInteropFilter true
@@ -691,12 +728,12 @@ fun TraceCanvas(
                 if (snappedResult != null) {
                     // Snapped clean geometry preview (Hold-to-Straighten)
                     renderSnappedResultPreview(nativeCanvas, snappedResult!!, strokeColor, strokeWidth, strokeStyle)
-                } else if (currentPoints.size > 1 && activeTool == DrawingTool.PEN) {
+                } else if (currentPoints.size > 1 && (contactTool ?: activeTool) == DrawingTool.PEN) {
                     renderCurrentFreehand(nativeCanvas, currentPoints, strokeColor, strokeWidth, strokeStyle)
                 } else if (currentStartPoint != null && currentEndPoint != null) {
                     renderActiveShapePreview(
                         canvas = nativeCanvas,
-                        tool = activeTool,
+                        tool = contactTool ?: activeTool,
                         start = currentStartPoint!!,
                         end = currentEndPoint!!,
                         color = strokeColor,
@@ -707,6 +744,12 @@ fun TraceCanvas(
                 }
 
                 nativeCanvas.restore()
+            }
+        }
+
+        temporaryTool?.let { tool ->
+            Surface(Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp), shape = RoundedCornerShape(12.dp), tonalElevation = 4.dp) {
+                Text(if (tool == DrawingTool.ERASER) "Pen button: Erase objects" else "Pen button: Select", Modifier.padding(12.dp))
             }
         }
 
