@@ -1,7 +1,6 @@
 {
   "name": "Plan Trace",
-  "description": "Digital tracing paper for architectural and construction plans with S Pen stylus inking, vector geometry, layers, scale calibration, and PDF export.",
+  "description": "Personal pen-first pool and landscape client-design workspace in development. Deterministic, local-first 2D editing and presentation; no runtime AI.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": []
 }
-
