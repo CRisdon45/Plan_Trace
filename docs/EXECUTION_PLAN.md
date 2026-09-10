@@ -9,7 +9,7 @@ September 9, 2026. Authorized to proceed with implementation and verification wi
 | 0 | Reproducible source/build baseline; preserve existing projects | Local build, commit/build identity, source/APK discrepancy recorded | In progress |
 | 1 | Trustworthy 2D core | QA regressions for calibration, locks, layer/history integrity, share and world/output alignment | In progress |
 | 2 | Complete document and editing workflow | Per-page state, exact shape editing, notes, overlay input, clear path completion | In progress |
-| 3 | Calm tablet UI and excellent S Pen | Responsive docks, persistent settings, fit view, physical barrel/palm tests | Planned |
+| 3 | Calm tablet UI and excellent S Pen | Responsive docks, persistent settings, fit view, physical barrel/palm tests | In progress |
 | 4 | Deterministic semantic Graphic renderer | Versioned roles/styles, token-driven linework/fills/water, original benchmark | Planned |
 | 5 | Northstar presentation renderer | Designed plants, consistent shadows, stable wash, faithful sheet exports | Planned |
 | 6 | Premium job completion | Options/versions, symbols, linked quantities, presentation/templates, portable backup | Planned |
@@ -64,3 +64,9 @@ Next priority is migration-safe page-specific document state, followed by respon
 Added migration-safe source/sheet ownership of drawings, layers, active layer, scale and underlay settings; separate per-sheet session Undo/Redo; stale-background protection and off-main-thread decoding. Existing records survived the tablet database upgrade field-for-field. Two distinct PDF sheets retained their own objects, units and active layers through navigation, Undo/Redo and restart. Returning to the prior image restored its original eight objects. Current-sheet PDF output was inspected. **23 tests passed.** See [page document implementation and evidence](PAGE_DOCUMENTS_IMPLEMENTATION.md).
 
 Next: fix clipped layer actions and narrow-screen controls, retain input preferences, then implement and physically validate the pen modifier contract. Source relinking/copy-between-sheets and multi-sheet export remain document-workflow follow-ups.
+
+## Fourth package completed: tablet controls
+
+Reflowed the top bar for portrait/narrow widths, repaired layer-name/action clipping with accessible controls and a layer menu, retained drawing preferences across restart, and added Fit drawing. Actual tablet checks covered lock, duplicate/Undo, a long layer name, saved Select/S Pen/colour/width/style/dimension settings, portrait layout and geometry-preserving Fit in both orientations. **23 tests passed.** See [tablet controls implementation and evidence](TABLET_CONTROLS_IMPLEMENTATION.md).
+
+Next executable work is the S Pen modifier state machine: hold to temporarily select, restore the drawing tool after pen-up, respect locks and prevent accidental marks on button transitions. Physical device-button verification and palm behavior must be distinguished from synthetic event tests. Semantic visual rendering follows this interaction foundation.

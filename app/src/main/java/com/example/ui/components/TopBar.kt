@@ -1,5 +1,10 @@
 package com.example.ui.components
 
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -77,26 +82,15 @@ fun TopBar(
     onImportFile: () -> Unit,
     onPrevPdfPage: () -> Unit,
     onNextPdfPage: () -> Unit,
-    onEditTitle: () -> Unit
+    onEditTitle: () -> Unit,
+    onFitDrawing: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
-        tonalElevation = 4.dp
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            // Left: Project title & project manager button
+    @Composable fun ProjectHeading(modifier: Modifier = Modifier) {
+// Left: Project title & project manager button
             Row(
+                modifier = modifier,
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -113,6 +107,7 @@ fun TopBar(
 
                 Row(
                     modifier = Modifier
+                        .weight(1f)
                         .clip(RoundedCornerShape(8.dp))
                         .clickable(onClick = onEditTitle)
                         .padding(horizontal = 6.dp, vertical = 4.dp),
@@ -122,7 +117,9 @@ fun TopBar(
                         text = project.title,
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                         color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
@@ -163,8 +160,9 @@ fun TopBar(
                     }
                 }
             }
-
-            // Center: Undo / Redo & Scale Calibration Pill
+    }
+    @Composable fun EditingActions() {
+// Center: Undo / Redo & Scale Calibration Pill
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -242,7 +240,7 @@ fun TopBar(
                         )
                         Text(
                             text = if (project.scaleCalibration.isCalibrated) {
-                                "Scale: ${project.scaleCalibration.realWorldUnits.toInt()} ${project.scaleCalibration.unit} (${project.scaleCalibration.pixelDistance.toInt()}px)"
+                                "Scale: ${project.scaleCalibration.realWorldUnits.toString().removeSuffix(".0")} ${project.scaleCalibration.unit} (${project.scaleCalibration.pixelDistance.toInt()}px)"
                             } else {
                                 "Set Scale ⌖"
                             },
@@ -273,7 +271,8 @@ fun TopBar(
                     }
                 }
             }
-
+    }
+    @Composable fun FileActions() {
             // Right: Layers, Stylus Mode, Export, Overflow Menu
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -376,6 +375,7 @@ fun TopBar(
                                 onSelectSample("sample_deck")
                             }
                         )
+                        DropdownMenuItem(text = { Text("Fit drawing") }, onClick = { showMenu = false; onFitDrawing() })
                         DropdownMenuItem(
                             text = { Text("Clear All Linework") },
                             onClick = {
@@ -384,6 +384,29 @@ fun TopBar(
                             },
                             leadingIcon = { Icon(Icons.Default.DeleteSweep, contentDescription = null) }
                         )
+                    }
+                }
+            }
+    }
+    Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f), tonalElevation = 4.dp) {
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+            val compact = maxWidth < 1000.dp
+            val narrow = maxWidth < 600.dp
+            Column {
+                if (compact) {
+                    Row(Modifier.fillMaxWidth().height(56.dp), verticalAlignment = Alignment.CenterVertically) {
+                        ProjectHeading(Modifier.weight(1f))
+                        if (!narrow) FileActions()
+                    }
+                    Row(Modifier.fillMaxWidth().height(56.dp).horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
+                        EditingActions()
+                    }
+                    if (narrow) Row(Modifier.fillMaxWidth().height(56.dp).horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) { FileActions() }
+                } else {
+                    Row(Modifier.fillMaxWidth().height(56.dp), verticalAlignment = Alignment.CenterVertically) {
+                        ProjectHeading(Modifier.weight(1f))
+                        EditingActions()
+                        FileActions()
                     }
                 }
             }

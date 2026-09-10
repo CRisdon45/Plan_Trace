@@ -7,7 +7,7 @@ The repository now includes the Gradle 9.4.1 wrapper launchers and wrapper JAR. 
 On Windows PowerShell:
 
 ```powershell
-.\gradlew.bat :app:testDebugUnitTest --tests com.example.PlanIntegrityTest --tests com.example.ExampleRobolectricTest :app:assembleDebug
+.\gradlew.bat :app:testDebugUnitTest --tests com.example.PlanIntegrityTest --tests com.example.ExampleRobolectricTest --tests com.example.PageDocumentsTest :app:assembleDebug
 ```
 
 The APK is `app/build/outputs/apk/debug/app-debug.apk`. Debug builds use `com.aistudio.plantrace.jzkrwq.dev`, display **Plan Trace Dev**, and have a `-foundation-dev` version suffix. They install beside the original application and do not share its database. Release identity remains unchanged. This is deliberate while reconciling the original APK with the available source.
@@ -27,7 +27,7 @@ Use disposable QA projects in Plan Trace Dev. Do not uninstall the original app 
 7. Export PNG and PDF. The Android chooser must open; no message needs to be sent. Inspect the actual generated files for underlay/annotation alignment and graphic scale accuracy.
 8. Force-stop/reopen. Compare project, geometry and calibration. Test finger pan/zoom separately from drawing.
 
-This is a development milestone, not a premium release certification. Physical S Pen behavior, per-page markup, exact editing beyond rectangles, portrait layout and the Northstar renderer remain subsequent work.
+This is a development milestone, not a premium release certification. Page isolation and tablet controls were subsequently verified; see PAGE_DOCUMENTS_IMPLEMENTATION.md and TABLET_CONTROLS_IMPLEMENTATION.md. Physical S Pen behavior, exact editing beyond rectangles and the Northstar renderer remain subsequent work.
 
 
 9. Set a rectangle to a known width/height in calibrated units. Drag a corner; verify the opposite corner stays fixed and one Undo restores exact bounds.

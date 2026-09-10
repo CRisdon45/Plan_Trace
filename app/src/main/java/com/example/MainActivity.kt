@@ -63,6 +63,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun PlanTraceApp(viewModel: MainViewModel) {
+    var fitRequest by remember { mutableStateOf(0) }
     var editingNote by remember { mutableStateOf<com.example.model.TextElement?>(null) }
     val project by viewModel.project.collectAsState()
     val projectsList by viewModel.projectsList.collectAsState()
@@ -146,7 +147,8 @@ fun PlanTraceApp(viewModel: MainViewModel) {
                     },
                     onPrevPdfPage = { viewModel.prevPdfPage() },
                     onNextPdfPage = { viewModel.nextPdfPage() },
-                    onEditTitle = { showEditTitle = true }
+                    onEditTitle = { showEditTitle = true },
+                    onFitDrawing = { viewModel.cancelScaleCalibration(); fitRequest++ }
                 )
             }
         }
@@ -159,6 +161,7 @@ fun PlanTraceApp(viewModel: MainViewModel) {
             // Main Canvas (Infinite Pan and Zoom, S Pen pressure & inking)
             key(project.id, project.pageKey) {
             TraceCanvas(
+                fitRequest = fitRequest,
                 modifier = Modifier.fillMaxSize(),
                 project = project,
                 backgroundBitmap = backgroundBitmap,

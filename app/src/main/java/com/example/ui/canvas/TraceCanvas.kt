@@ -62,6 +62,10 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.pointerInteropFilter
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntSize
+import com.example.export.ExportGeometry
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
@@ -103,6 +107,7 @@ import kotlin.math.sin
 @Composable
 fun TraceCanvas(
     modifier: Modifier = Modifier,
+    fitRequest: Int = 0,
     project: TraceProject,
     backgroundBitmap: Bitmap?,
     activeTool: DrawingTool,
@@ -135,6 +140,9 @@ fun TraceCanvas(
     val coroutineScope = rememberCoroutineScope()
 
     // Transform State (Infinite Pan and Zoom)
+    var viewportSize by remember { mutableStateOf(IntSize.Zero) }
+    val fitPadding = with(LocalDensity.current) { 24.dp.toPx() }
+    val toolDockWidth = with(LocalDensity.current) { 86.dp.toPx() }
     var zoomScale by remember(project.id, project.pageKey) { mutableFloatStateOf(1.0f) }
     var panOffset by remember(project.id, project.pageKey) { mutableStateOf(Offset(0f, 0f)) }
 
@@ -200,6 +208,21 @@ fun TraceCanvas(
     // Live measurement readout
     var liveMeasurementText by remember { mutableStateOf<String?>(null) }
 
+    LaunchedEffect(fitRequest, viewportSize, backgroundBitmap) {
+        if (fitRequest > 0 && viewportSize.width > toolDockWidth + fitPadding * 2 && viewportSize.height > fitPadding * 2) {
+            onEditGestureCancelled()
+            currentPoints.clear()
+            currentStartPoint = null
+            currentEndPoint = null
+            rectangleResize = null
+            val bounds = ExportGeometry.contentBounds(project, backgroundBitmap?.width, backgroundBitmap?.height)
+            val fit = ExportGeometry.fit(bounds, RectF(toolDockWidth + fitPadding, fitPadding,
+                viewportSize.width - fitPadding, viewportSize.height - fitPadding))
+            zoomScale = fit.scale
+            panOffset = Offset(fit.translateX, fit.translateY)
+        }
+    }
+
     // Coordinate transforms
     fun screenToWorld(screen: Offset): Point2D {
         val wx = (screen.x - panOffset.x) / zoomScale
@@ -249,7 +272,7 @@ fun TraceCanvas(
             .fillMaxSize()
             .background(Color(0xFFF9F7F2))
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()
+        Canvas(modifier = Modifier.fillMaxSize().onSizeChanged { viewportSize = it }
             // Input belongs to the canvas, not the parent of the action toolbar.
             // Stylus, barrel button, pressure & hold-to-straighten pointer filter
             .pointerInteropFilter { motionEvent ->
@@ -272,7 +295,7 @@ fun TraceCanvas(
                     val span = hypot(motionEvent.getX(1) - motionEvent.getX(0), motionEvent.getY(1) - motionEvent.getY(0))
                     val previous = prevCentroid
                     if (action == MotionEvent.ACTION_MOVE && previous != null && prevSpan > 0f) {
-                        val nextZoom = (zoomScale * span / prevSpan).coerceIn(.2f, 30f)
+                        val nextZoom = (zoomScale * span / prevSpan).coerceIn(.01f, 30f)
                         panOffset = centroid - (previous - panOffset) * (nextZoom / zoomScale)
                         zoomScale = nextZoom
                     }

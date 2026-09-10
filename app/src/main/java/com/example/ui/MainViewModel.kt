@@ -68,17 +68,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _projectsList = MutableStateFlow<List<TraceProject>>(emptyList())
     val projectsList: StateFlow<List<TraceProject>> = _projectsList.asStateFlow()
 
+    private val toolPreferences = application.getSharedPreferences("drawing_preferences", Application.MODE_PRIVATE)
+
     // Tool state
-    private val _activeTool = MutableStateFlow(DrawingTool.PEN)
+    private val _activeTool = MutableStateFlow(runCatching { DrawingTool.valueOf(toolPreferences.getString("tool", "PEN")!!) }.getOrDefault(DrawingTool.PEN))
     val activeTool: StateFlow<DrawingTool> = _activeTool.asStateFlow()
 
-    private val _strokeColor = MutableStateFlow(0xFF0F172A) // Drafting Charcoal Black
+    private val _strokeColor = MutableStateFlow(toolPreferences.getLong("color", 0xFF0F172A)) // Drafting Charcoal Black
     val strokeColor: StateFlow<Long> = _strokeColor.asStateFlow()
 
-    private val _strokeWidth = MutableStateFlow(3.5f)
+    private val _strokeWidth = MutableStateFlow(toolPreferences.getFloat("width", 3.5f).takeIf { it.isFinite() && it > 0f } ?: 3.5f)
     val strokeWidth: StateFlow<Float> = _strokeWidth.asStateFlow()
 
-    private val _strokeStyle = MutableStateFlow(StrokeStyle.INK)
+    private val _strokeStyle = MutableStateFlow(runCatching { StrokeStyle.valueOf(toolPreferences.getString("style", "INK")!!) }.getOrDefault(StrokeStyle.INK))
     val strokeStyle: StateFlow<StrokeStyle> = _strokeStyle.asStateFlow()
 
     // Undo / Redo history
@@ -124,7 +126,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val toastMessage: StateFlow<String?> = _toastMessage.asStateFlow()
 
     // Stylus palm rejection mode
-    private val _stylusOnlyMode = MutableStateFlow(false)
+    private val _stylusOnlyMode = MutableStateFlow(toolPreferences.getBoolean("stylusOnly", false))
     val stylusOnlyMode: StateFlow<Boolean> = _stylusOnlyMode.asStateFlow()
 
     // Object selection state
@@ -261,11 +263,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // Show persistent dimensions on calibrated plans
-    private val _showDimensions = MutableStateFlow(true)
+    private val _showDimensions = MutableStateFlow(toolPreferences.getBoolean("dimensions", true))
     val showDimensions: StateFlow<Boolean> = _showDimensions.asStateFlow()
 
     fun toggleShowDimensions() {
         _showDimensions.value = !_showDimensions.value
+        toolPreferences.edit().putBoolean("dimensions", _showDimensions.value).apply()
     }
 
     fun selectElement(id: String?) {
@@ -302,6 +305,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun sampleColor(color: Long) {
         _strokeColor.value = color
+        toolPreferences.edit().putLong("color", color).apply()
         val hex = String.format("#%06X", (0xFFFFFF and color.toInt()))
         showToast("Eyedropper: sampled $hex")
     }
@@ -383,6 +387,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setTool(tool: DrawingTool) {
         _activeTool.value = tool
+        if (tool != DrawingTool.MEASURE) toolPreferences.edit().putString("tool", tool.name).apply()
         if (tool != DrawingTool.MEASURE) {
             _isCalibratingScale.value = false
         }
@@ -390,18 +395,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setStrokeColor(color: Long) {
         _strokeColor.value = color
+        toolPreferences.edit().putLong("color", color).apply()
     }
 
     fun setStrokeWidth(width: Float) {
+        if (!width.isFinite() || width <= 0f) return
         _strokeWidth.value = width
+        toolPreferences.edit().putFloat("width", width).apply()
     }
 
     fun setStrokeStyle(style: StrokeStyle) {
         _strokeStyle.value = style
+        toolPreferences.edit().putString("style", style.name).apply()
     }
 
     fun toggleStylusOnlyMode() {
         _stylusOnlyMode.value = !_stylusOnlyMode.value
+        toolPreferences.edit().putBoolean("stylusOnly", _stylusOnlyMode.value).apply()
         _toastMessage.value = if (_stylusOnlyMode.value) {
             "S Pen Mode: Stylus draws, fingers pan & zoom"
         } else {
