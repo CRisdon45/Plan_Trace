@@ -16,6 +16,7 @@ Recorded 2026-09-10 from the owner's clarification and delegated direction revie
 | D10 | Owner requirement | Keep the repo public for now; the owner cites compute availability as the reason. Do not change visibility, billing, sharing or repository permissions. Keep client/company originals, identifying derivatives and unapproved art out of public Git, issues, PRs, logs and artifacts. |
 | D11 | Provisional technical boundary | Supply versioned objects/quantities to the Estimator rather than embedding a second pricing catalog in the renderer. Exact interchange and the relationship to other repositories remain open. No merger or framework migration is authorized by this boundary. |
 | D12 | Working method | Maintain a small current context package and authentic end-to-end evidence. Completed prose, mockups, test counts and synthetic pen input are not substitutes for working features, visual acceptance or physical tablet trials. |
+| D13 | Initial technical choice, revisable | The first project-geometry seam uses double-precision metres/y-up, stable edge IDs and exact line/circular-arc segments with versioned JSON. Existing page drawings are not migrated. Output still defaults to imperial labels. This is a bounded implementation seam, not an owner requirement to use metric UI, a finished persistence architecture or a commitment to exclude future spline types. See PROJECT_GEOMETRY_IMPLEMENTATION.md. |
 
 ## How decisions change
 
