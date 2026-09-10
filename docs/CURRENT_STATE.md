@@ -1,33 +1,35 @@
 # Current state and next-session handoff
 
-Updated 2026-09-10. **This default-branch checkpoint routes to the active application work; main does not contain that unfinished code.** Verify live refs, PRs and local changes before editing. The owner authorized continued implementation without tablet access. Physical-device acceptance remains pending, not a global implementation block.
+Updated 2026-09-10. **Main carries this routing checkpoint, not the unfinished application changes.** The owner authorized continued implementation without physical tablet access and virtual testing through GitHub. Check live refs, PRs and local work before changing anything.
 
-## Active work and preserved baseline
+## Where to continue
 
-Current implementation is `feat/project-geometry-seam`, **PR #4 into `feat/off-tablet-integrity`**. It is stacked above PR #3's export/measurement fixes into `feat/2d-foundation-northstar`, which is PR #2 into main. None of these application PRs was merged during the geometry session. The foundation/tablet application and its interrupted test session were not changed.
+Active implementation is **`feat/project-geometry-seam`, PR #4 into `feat/off-tablet-integrity`**. PR #3 targets `feat/2d-foundation-northstar`, and PR #2 targets main. None of these application PRs was merged in the workspace session. The original tablet/foundation application, its data/signing key and interrupted test were not changed.
 
-Start implementation by reading the [active branch checkpoint](https://github.com/CRisdon45/Plan_Trace/blob/feat/project-geometry-seam/docs/CURRENT_STATE.md). Its current saved context is commit `7a1d01e62053148fdbe75ecfff750d4434e662a7`; the tested application revision is `0d18c20e6dbef82948d27400dc3803fb3a53b9dd`. Later documentation commits are not new build/test claims. Product requirements remain in PRODUCT_VISION.md and DECISIONS.md; the active branch records an initial, revisable geometry-representation decision D13.
+Read the [active checkpoint](https://github.com/CRisdon45/Plan_Trace/blob/feat/project-geometry-seam/docs/CURRENT_STATE.md). Saved context is `2a8ff72e3a046aedc3bdeb386d80e5d84e5f8c30`. Application refinement `b4fb724cba3f48d18c394df0e54fbec92a6e8a66` passed the unit/build suite. Revision `b01cec4698262086a07fecc11b2696dc4cdfed20` has identical app/test sources with a repaired emulator script and passed actual Android scenarios. The context commit changes documentation only.
 
-## Latest verified outcome
+## Latest outcome
 
-The new project-owned geometry core contains exact line/circular-arc boundaries, stable object/vertex/edge identities, preview/commands/Undo/Redo, lock guards, strict versioned JSON and error-bounded projections through the existing native renderer/PNG exporter. It preserves unrelated objects and analytically derived perimeter labels. Internal metres do not change the required feet/inches workflow; output labels default to imperial.
+**Projects -> Design workspace · preview** now opens one independently saved local draft inside the real app. Add straight or concave/convex pool outlines and paving outlines, select and drag vertices/curve handles/boundaries, Undo/Redo, Delete/Undo, Fit and see perimeter in feet. It edits canonical ProjectDesign geometry and uses the existing renderer, not a separate illustration implementation. Explicit Touch edit permits touch authoring; fingers otherwise navigate.
 
-[Run 34512772848](https://github.com/CRisdon45/Plan_Trace/actions/runs/34512772848) at `0d18c20` completed **78 tests, zero failures/errors/skips, and successful debug assembly**. Downloaded XML totals matched the job log. This is the previous 49 tests plus 29 new geometry/session/serialization/output tests. Initial geometry run 34512053545 passed 76 tests. The earlier export patch's 49-test evidence remains in OFF_TABLET_IMPLEMENTATION.md.
+Serial atomic file writes save exact canonical JSON in a location separate from the old Room projects. Saved means the current revision was written and read back successfully. Stale/conflicting writes and corrupt input do not silently overwrite/reset the draft. Legacy projects were not migrated. One draft is not project-gallery integration or portable backup; Undo history is session-local, and restart evidence covers completed saves, not a process killed before saving finishes.
 
-Two authentic synthetic PNGs were inspected for outline integrity, not Northstar quality. Their label-on/off framing differs because the legacy exporter auto-fits each content extent; fixed output-frame control is still needed. The initial geometry run repeated the KSP/AWT background exception, while the final retrieved log did not. No cause-specific fix was made; the tooling follow-up and existing service/deprecation warnings remain.
+## Verified evidence
 
-Detailed scope, checks, artifact hashes and limits: [pinned geometry implementation report](https://github.com/CRisdon45/Plan_Trace/blob/7a1d01e62053148fdbe75ecfff750d4434e662a7/docs/PROJECT_GEOMETRY_IMPLEMENTATION.md).
+[Unit/build run 34518645007](https://github.com/CRisdon45/Plan_Trace/actions/runs/34518645007): **90 tests passed, zero failures/errors/skips, debug assembly succeeded**. Downloaded XML totals were checked.
 
-## What is NOT finished
+[Virtual Android run 34518920691](https://github.com/CRisdon45/Plan_Trace/actions/runs/34518920691): app/instrumentation builds and **two separately invoked scenario tests passed**. API35 x86_64 at 1600x1000 / density240 exercised creation, finger navigation, vertex/curve edits, cancellation, Undo/Redo/Delete recovery, saved-screen reentry, force-stop/relaunch and activity recreation. Canonical files after verified Saved were byte-identical before/after process restart.
 
-These are compiled/tested core APIs, not a new everyday pool-drawing UI. The authority is not yet wired into ordinary canvas editing, Room/autosave, integrated backup/recovery or source registration. No legacy project was migrated. Self-intersection/topology validation, holes, surface Booleans, valid coping offsets, attached shelf/step relationships and tangent constraint solving remain unfinished. Signed area is algebraic only, not a takeoff quantity; the new output is outline-only.
+Actual screenshots were opened for screen/outline integrity. They are not settled-frame pixel goldens or Northstar acceptance. System-bar icon contrast after recreation and screenshot synchronization remain polish follow-ups. The first AVD startup failed before app tests; explicit device paths and bounded diagnostics repaired the harness. KSP/AWT background exceptions still appeared during the successful emulator build; root cause and inherited service/deprecation warnings remain tracked.
 
-Primary radial interaction, live Northstar appearance and the complete three project benchmarks remain targets. New-path PDF visual acceptance and all actual-tablet checks remain pending. No runtime AI or 3D work was introduced. The existing runtime-service dependency audit is separate, still open work.
+Detailed evidence, artifact hashes and scope: [workspace implementation report](https://github.com/CRisdon45/Plan_Trace/blob/2a8ff72e3a046aedc3bdeb386d80e5d84e5f8c30/docs/WORKSPACE_IMPLEMENTATION.md). Earlier geometry/export reports remain historical evidence, not current capability summaries.
 
-## Next bounded outcome
+## Next bounded outcome and remaining limits
 
-On the active branch, connect the authority to one small **actual on-canvas editing and safe persistence workflow**, using both straight and concave/convex synthetic shapes. Keep preview, commit, Undo, save/reopen and output on the same authority. Do not grow a disconnected geometry demo or save the disposable legacy-format drawing projection as the authoritative yard. Introduce topology/offset work before claiming valid filled surfaces or takeoffs, scoped to that real workflow.
+Use this actual editing/save flow to establish a valid pool-boundary and following-coping operation with straight and concave cases, explicit invalid-result handling, one Undo and preserved intent on reopen. Keep exact numeric manipulation and primary radial commands close to that workflow instead of expanding a generic toolbar or isolated geometry laboratory.
 
-When the tablet is available, finish the interrupted session on its known build before deliberately changing versions. Preserve installed apps, keys and data. No uninstall or storage clearing to work around signing differences. CI builds use disposable keys and are not published as installable replacements.
+Topology/offset validity must precede filled surfaces and takeoff area. Current signed area is algebraic only. Source/site registration, arbitrary outline creation, attached shelves/steps, shared surfaces, associative dimensions, multi-project recovery, primary radial menus and live Northstar appearance remain unfinished. The new-screen export/share action is wired but was not included in the emulator scenarios. Physical S Pen/palm/barrel behavior, pinch synthesis, portrait/handedness, hardware performance and final output visual acceptance remain pending.
 
-Private client plans/photos and Northstar pixels stay outside public Git, PRs, logs and artifacts. The new fixtures are original synthetic geometry, not copied or redacted client projects. Repository visibility/permissions remain unchanged. Keep 3D paused, preserve the personal client-design goal, and update the active checkpoint plus this routing file when the work branch or verified outcome changes.
+Finish the interrupted physical tablet test on its known build before deliberately changing versions. No uninstall, data clearing or signing-key replacement. CI creates only disposable emulator installs and does not publish APK replacements. Private client plans/photos and unapproved Northstar pixels stay out of public Git, PRs, logs and artifacts. The fixtures/screens are original synthetic work. No runtime AI or 3D work was introduced; 3D stays paused, and the inherited runtime-service audit remains separate work. Repository visibility and permissions are unchanged.
+
+Keep this routing file and the active checkpoint current when branches or verified outcomes change. Preserve concurrent work and the personal client-design goal.
