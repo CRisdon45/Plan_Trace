@@ -91,6 +91,9 @@ data class FreehandPath(
         for (i in 0 until points.size - 1) {
             totalLen += points[i].distanceTo(points[i + 1])
         }
+        // Match the implicit closing segment used by rendering and hit testing.
+        // An explicitly repeated first point contributes zero, so it is not doubled.
+        if (isClosed && points.size > 2) totalLen += points.last().distanceTo(points.first())
         return scale.formatMeasurement(totalLen)
     }
 }
@@ -175,6 +178,8 @@ data class PolylineElement(
         for (i in 0 until points.size - 1) {
             total += points[i].distanceTo(points[i + 1])
         }
+        // Closing a path adds an edge without duplicating its first stored vertex.
+        if (isClosed && points.size > 2) total += points.last().distanceTo(points.first())
         return scale.formatMeasurement(total)
     }
 }
