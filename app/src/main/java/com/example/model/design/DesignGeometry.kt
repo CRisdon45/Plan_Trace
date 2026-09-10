@@ -101,7 +101,8 @@ class DesignBoundary(nodes: List<BoundaryNode>) {
         require(nodes.size in 2..4096) { "A boundary needs 2..4096 nodes" }
         require(nodes.map { it.vertexId }.distinct().size == nodes.size) { "Duplicate vertex ID" }
         require(nodes.map { it.edgeId }.distinct().size == nodes.size) { "Duplicate edge ID" }
-        edges().forEach { require(it.lengthMetres.isFinite()) }
+        edges().forEach { require(it.lengthMetres.isFinite() && (it.radiusMetres?.isFinite() != false)) }
+        require(perimeterMetres.isFinite() && signedAreaSquareMetres.isFinite()) { "Boundary metrics overflow" }
         require(nodes.size > 2 || nodes.all { it.bulge != 0.0 }) { "Two-node boundary requires two arcs" }
     }
     fun edges(): List<BoundaryEdge> = nodes.mapIndexed { i, node -> BoundaryEdge(node, nodes[(i + 1) % nodes.size].point) }

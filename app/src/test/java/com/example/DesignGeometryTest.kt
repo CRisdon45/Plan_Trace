@@ -99,6 +99,9 @@ class DesignGeometryTest {
         assertThrows(IllegalArgumentException::class.java) { DesignFixtures.circle().sample(Double.NaN) }
         assertThrows(IllegalArgumentException::class.java) { DesignFixtures.circle().edges()[0].pointAt(2.0) }
     }
+    @Test fun `finite input with overflowing derived metrics is rejected`() {
+        assertThrows(IllegalArgumentException::class.java) { DesignFixtures.circle(1e160) }
+    }
     @Test fun `boundary defensively owns its nodes and rejects duplicate IDs`() {
         val input = DesignFixtures.rectangle().nodes.toMutableList()
         val owned = DesignBoundary(input)

@@ -10,6 +10,7 @@ import com.example.export.DesignOutputSettings
 import com.example.model.*
 import com.example.model.design.*
 import kotlinx.coroutines.runBlocking
+import java.io.File
 import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
@@ -64,6 +65,13 @@ class DesignDocumentOutputTest {
         assertEquals(Point2D(-400f,600f), (imperial.elements.first() as PolylineElement).points.first())
         assertEquals(json, DesignJsonCodec.encode(doc))
     }
+    @Test fun `distant coordinates require an appropriate projection origin instead of losing precision`() {
+        val doc = ProjectDesign("distant", listOf(DesignObject("pool", "Distant", DesignObjectKind.POOL,
+            DesignFixtures.circle().translated(1e8, 1e8))))
+        assertThrows(IllegalArgumentException::class.java) { DesignOutput.drawing(doc) }
+        val drawing = DesignOutput.drawing(doc, DesignOutputSettings(origin=DesignPoint(1e8,1e8)))
+        assertTrue(drawing.elements.isNotEmpty())
+    }
     @Test fun `curve tessellation tolerance never changes authoritative perimeter labels`() {
         val doc = ProjectDesign("circle", listOf(DesignObject("pool", "Circle", DesignObjectKind.POOL, DesignFixtures.circle())))
         val coarse = DesignOutput.drawing(doc, DesignOutputSettings(maxChordErrorMetres=0.1))
@@ -86,5 +94,10 @@ class DesignDocumentOutputTest {
         assertEquals(800, bitmap.width); assertEquals(600, bitmap.height); bitmap.recycle()
         val without = DesignOutput.png(context, reopened, 800, 600, DesignOutputSettings(includeMeasurements=false))!!.readBytes()
         assertFalse(first.contentEquals(without))
+        // Synthetic fixtures only. Preserve authentic renderer output for review, never a mockup.
+        val evidence = File("build/reports/design-geometry").apply { mkdirs() }
+        File(evidence, "curved-study-measurements.png").writeBytes(first)
+        File(evidence, "curved-study-outline.png").writeBytes(without)
+        File(evidence, "canonical-design.json").writeText(saved)
     }
 }

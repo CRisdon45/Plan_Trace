@@ -96,6 +96,7 @@ jobs:
           path: |
             app/build/test-results/testDebugUnitTest/
             app/build/reports/tests/testDebugUnitTest/
+            app/build/reports/design-geometry/
           if-no-files-found: warn
           retention-days: 7
       # No installation, release signing, deployment, private fixtures or APK upload.

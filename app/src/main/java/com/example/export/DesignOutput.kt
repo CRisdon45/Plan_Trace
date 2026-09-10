@@ -29,10 +29,16 @@ object DesignOutput {
     fun drawing(document: ProjectDesign, settings: DesignOutputSettings = DesignOutputSettings()): TraceProject {
         val layer = DrawingLayer(id = "project-design-projection", name = "Project design (output)", isLocked = true)
         val elements = document.objects.flatMap { obj ->
-            val points = obj.boundary.sample(settings.maxChordErrorMetres).map { point ->
-                val x = ((point.x - settings.origin.x) * settings.drawingUnitsPerMetre).toFloat()
-                val y = (-(point.y - settings.origin.y) * settings.drawingUnitsPerMetre).toFloat()
+            val points = obj.boundary.sample(settings.maxChordErrorMetres / 2.0).map { point ->
+                val wx = (point.x - settings.origin.x) * settings.drawingUnitsPerMetre
+                val wy = -(point.y - settings.origin.y) * settings.drawingUnitsPerMetre
+                val x = wx.toFloat()
+                val y = wy.toFloat()
                 require(x.isFinite() && y.isFinite()) { "Design exceeds the renderer's coordinate range" }
+                val conversionError = kotlin.math.hypot(x.toDouble() - wx, y.toDouble() - wy) / settings.drawingUnitsPerMetre
+                require(conversionError <= settings.maxChordErrorMetres / 2.0) {
+                    "Projection precision budget exceeded; choose an origin near the design"
+                }
                 Point2D(x, y)
             }
             val outline = PolylineElement(id = "${obj.id}:outline", layerId = layer.id,
