@@ -165,6 +165,7 @@ object ProjectJsonConverter {
             obj.put("strokeWidth", el.strokeWidth.toDouble())
             obj.put("style", el.style.name)
             obj.put("alpha", el.alpha.toDouble())
+            el.material?.let { obj.put("material", it.name); obj.put("materialVersion", 1) }
 
             when (el) {
                 is FreehandPath -> {
@@ -251,6 +252,7 @@ object ProjectJsonConverter {
                 } catch (e: Exception) {
                     StrokeStyle.INK
                 }
+                val material = if (obj.optInt("materialVersion", 1) == 1) com.example.model.SurfaceMaterial.entries.firstOrNull { it.name == obj.optString("material") } else null
                 val alpha = obj.optDouble("alpha", 1.0).toFloat()
 
                 when (type) {
@@ -272,6 +274,7 @@ object ProjectJsonConverter {
                         list.add(
                             FreehandPath(
                                 id = id,
+                                material = material,
                                 layerId = layerId,
                                 points = pts,
                                 strokeColor = strokeColor,
@@ -289,6 +292,7 @@ object ProjectJsonConverter {
                         list.add(
                             LineElement(
                                 id = id,
+                                material = material,
                                 layerId = layerId,
                                 start = start,
                                 end = end,
@@ -318,6 +322,7 @@ object ProjectJsonConverter {
                         list.add(
                             PolylineElement(
                                 id = id,
+                                material = material,
                                 layerId = layerId,
                                 points = pts,
                                 isClosed = isClosed,
@@ -333,6 +338,7 @@ object ProjectJsonConverter {
                         list.add(
                             RectangleElement(
                                 id = id,
+                                material = material,
                                 layerId = layerId,
                                 left = obj.getDouble("left").toFloat(),
                                 top = obj.getDouble("top").toFloat(),
@@ -351,6 +357,7 @@ object ProjectJsonConverter {
                         list.add(
                             EllipseElement(
                                 id = id,
+                                material = material,
                                 layerId = layerId,
                                 centerX = obj.getDouble("centerX").toFloat(),
                                 centerY = obj.getDouble("centerY").toFloat(),
@@ -370,6 +377,7 @@ object ProjectJsonConverter {
                         list.add(
                             TextElement(
                                 id = id,
+                                material = material,
                                 layerId = layerId,
                                 text = obj.optString("text", ""),
                                 position = pos,
@@ -387,6 +395,7 @@ object ProjectJsonConverter {
                         list.add(
                             DimensionMarkup(
                                 id = id,
+                                material = material,
                                 layerId = layerId,
                                 start = start,
                                 end = end,

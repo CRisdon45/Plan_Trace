@@ -14,6 +14,7 @@ sealed interface VectorElement {
     val strokeWidth: Float
     val style: StrokeStyle
     val alpha: Float
+    val material: SurfaceMaterial?
 
     fun distanceToPoint(point: Point2D): Float
     fun isPointInside(point: Point2D): Boolean = distanceToPoint(point) <= 24f
@@ -32,6 +33,7 @@ data class FreehandPath(
     override val strokeWidth: Float = 3f,
     override val style: StrokeStyle = StrokeStyle.INK,
     override val alpha: Float = 1f,
+    override val material: SurfaceMaterial? = null,
     val isClosed: Boolean = false,
     val fillColor: Long? = null
 ) : VectorElement {
@@ -102,6 +104,7 @@ data class LineElement(
     override val strokeWidth: Float = 3f,
     override val style: StrokeStyle = StrokeStyle.INK,
     override val alpha: Float = 1f,
+    override val material: SurfaceMaterial? = null,
     val showDimension: Boolean = true
 ) : VectorElement {
     override fun distanceToPoint(point: Point2D): Float =
@@ -135,6 +138,7 @@ data class PolylineElement(
     override val strokeWidth: Float = 3f,
     override val style: StrokeStyle = StrokeStyle.INK,
     override val alpha: Float = 1f,
+    override val material: SurfaceMaterial? = null,
     val fillColor: Long? = null
 ) : VectorElement {
     override fun distanceToPoint(point: Point2D): Float {
@@ -186,6 +190,7 @@ data class RectangleElement(
     override val strokeWidth: Float = 3f,
     override val style: StrokeStyle = StrokeStyle.INK,
     override val alpha: Float = 1f,
+    override val material: SurfaceMaterial? = null,
     val isFilled: Boolean = false,
     val fillColor: Long = 0x3338BDF8 // Default pool azure wash
 ) : VectorElement {
@@ -251,6 +256,7 @@ data class EllipseElement(
     override val strokeWidth: Float = 3f,
     override val style: StrokeStyle = StrokeStyle.INK,
     override val alpha: Float = 1f,
+    override val material: SurfaceMaterial? = null,
     val isFilled: Boolean = false,
     val fillColor: Long = 0x3338BDF8 // Default pool azure wash
 ) : VectorElement {
@@ -302,7 +308,8 @@ data class TextElement(
     override val strokeColor: Long = 0xFF1E293B,
     override val strokeWidth: Float = 1f,
     override val style: StrokeStyle = StrokeStyle.INK,
-    override val alpha: Float = 1f
+    override val alpha: Float = 1f,
+    override val material: SurfaceMaterial? = null
 ) : VectorElement {
     override fun distanceToPoint(point: Point2D): Float = point.distanceTo(position)
     override fun boundingBox(): RectF {
@@ -331,7 +338,8 @@ data class DimensionMarkup(
     override val strokeColor: Long = 0xFFDC2626, // Distinct red/crimson dimensioning
     override val strokeWidth: Float = 2f,
     override val style: StrokeStyle = StrokeStyle.INK,
-    override val alpha: Float = 1f
+    override val alpha: Float = 1f,
+    override val material: SurfaceMaterial? = null
 ) : VectorElement {
     override fun distanceToPoint(point: Point2D): Float =
         pointToSegmentDistance(point, start, end)

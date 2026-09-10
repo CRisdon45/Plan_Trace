@@ -20,6 +20,8 @@ import com.example.model.ScaleCalibration
 import com.example.model.StrokeStyle
 import com.example.model.TextElement
 import com.example.model.VectorElement
+import com.example.model.supportsSurface
+import com.example.model.withMaterial
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -41,6 +43,35 @@ object WatercolorRenderer {
         showDimensions: Boolean = true,
         isSelected: Boolean = false
     ) {
+        val material = element.material
+        if (material != null && element.supportsSurface()) {
+            val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = material.fill.toInt()
+                alpha = (element.alpha * layerAlpha * 255).toInt().coerceIn(0, 255)
+                style = Paint.Style.FILL
+            }
+            val outline = when (element) {
+                is RectangleElement -> {
+                    canvas.drawRect(element.boundingBox(), fillPaint)
+                    element.copy(isFilled = false, material = null, strokeColor = material.outline, style = StrokeStyle.INK)
+                }
+                is EllipseElement -> {
+                    canvas.drawOval(element.boundingBox(), fillPaint)
+                    element.copy(isFilled = false, material = null, strokeColor = material.outline, style = StrokeStyle.INK)
+                }
+                is FreehandPath -> {
+                    drawSurfacePolygon(canvas, element.points, fillPaint)
+                    PolylineElement(id = element.id, layerId = element.layerId, points = element.points, isClosed = true, strokeColor = material.outline, strokeWidth = element.strokeWidth, alpha = element.alpha)
+                }
+                is PolylineElement -> {
+                    drawSurfacePolygon(canvas, element.points, fillPaint)
+                    element.copy(fillColor = null, material = null, strokeColor = material.outline, style = StrokeStyle.INK)
+                }
+                else -> element.withMaterial(null)
+            }
+            render(canvas, outline, layerAlpha, scale, showDimensions, isSelected)
+            return
+        }
         val totalAlpha = (element.alpha * layerAlpha * 255).toInt().coerceIn(0, 255)
         val baseColor = element.strokeColor.toInt()
         val colorWithAlpha = Color.argb(
@@ -211,6 +242,15 @@ object WatercolorRenderer {
     /**
      * Simulates dynamic watercolor wash for arbitrary paths with organic edge pooling
      */
+    private fun drawSurfacePolygon(canvas: Canvas, points: List<Point2D>, paint: Paint) {
+        val path = Path().apply {
+            moveTo(points.first().x, points.first().y)
+            points.drop(1).forEach { lineTo(it.x, it.y) }
+            close()
+        }
+        canvas.drawPath(path, paint)
+    }
+
     private fun drawWatercolorPathFill(
         canvas: Canvas,
         path: Path,

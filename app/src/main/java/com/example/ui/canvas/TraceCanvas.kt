@@ -36,6 +36,11 @@ import androidx.compose.material.icons.filled.FormatColorFill
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Straighten
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import com.example.model.SurfaceMaterial
+import com.example.model.supportsSurface
+import com.example.model.withMaterial
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -865,13 +870,31 @@ fun TraceCanvas(
                             IconButton(onClick = { onElementDuplicated(selectedElementId) }) {
                                 Icon(Icons.Default.ContentCopy, contentDescription = "Duplicate", tint = MaterialTheme.colorScheme.primary)
                             }
+                            if (selectedEl.supportsSurface()) {
+                                var materialMenu by remember(selectedEl.id) { mutableStateOf(false) }
+                                Box {
+                                    TextButton(onClick = { materialMenu = true }) {
+                                        Text(selectedEl.material?.label ?: "Material")
+                                    }
+                                    DropdownMenu(expanded = materialMenu, onDismissRequest = { materialMenu = false }) {
+                                        DropdownMenuItem(text = { Text("Original style") }, onClick = {
+                                            onElementUpdated(selectedEl.withMaterial(null)); materialMenu = false
+                                        })
+                                        SurfaceMaterial.entries.forEach { material ->
+                                            DropdownMenuItem(text = { Text(material.label) }, onClick = {
+                                                onElementUpdated(selectedEl.withMaterial(material)); materialMenu = false
+                                            })
+                                        }
+                                    }
+                                }
+                            }
                             // 3. Recolor
-                            IconButton(onClick = { onElementUpdated(selectedEl.withStrokeColor(strokeColor)) }) {
+                            IconButton(onClick = { onElementUpdated(selectedEl.withMaterial(null).withStrokeColor(strokeColor)) }) {
                                 Icon(Icons.Default.Palette, contentDescription = "Recolor", tint = Color(strokeColor))
                             }
                             // 4. Watercolor Wash Infill
                             IconButton(onClick = {
-                                val updated = selectedEl.withFillColor(strokeColor)
+                                val updated = selectedEl.withMaterial(null).withFillColor(strokeColor)
                                 onElementUpdated(updated)
                             }) {
                                 Icon(Icons.Default.FormatColorFill, contentDescription = "Watercolor Wash", tint = MaterialTheme.colorScheme.secondary)

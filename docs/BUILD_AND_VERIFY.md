@@ -7,7 +7,7 @@ The repository now includes the Gradle 9.4.1 wrapper launchers and wrapper JAR. 
 On Windows PowerShell:
 
 ```powershell
-.\gradlew.bat :app:testDebugUnitTest --tests com.example.PlanIntegrityTest --tests com.example.ExampleRobolectricTest --tests com.example.PageDocumentsTest --tests com.example.PenContactTest :app:assembleDebug
+.\gradlew.bat :app:testDebugUnitTest --tests com.example.PlanIntegrityTest --tests com.example.ExampleRobolectricTest --tests com.example.PageDocumentsTest --tests com.example.PenContactTest --tests com.example.SurfaceMaterialTest :app:assembleDebug
 ```
 
 The APK is `app/build/outputs/apk/debug/app-debug.apk`. Debug builds use `com.aistudio.plantrace.jzkrwq.dev`, display **Plan Trace Dev**, and have a `-foundation-dev` version suffix. They install beside the original application and do not share its database. Release identity remains unchanged. This is deliberate while reconciling the original APK with the available source.
