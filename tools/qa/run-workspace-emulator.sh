@@ -2,6 +2,11 @@
 set -euo pipefail
 mkdir -p emulator-evidence
 export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+# Pin both SDK-tool and emulator lookup directories; their defaults can differ.
+export ANDROID_USER_HOME="${RUNNER_TEMP:-/tmp}/plantrace-android/.android"
+export ANDROID_EMULATOR_HOME="$ANDROID_USER_HOME"
+export ANDROID_AVD_HOME="$ANDROID_USER_HOME/avd"
+mkdir -p "$ANDROID_AVD_HOME"
 package=com.aistudio.plantrace.jzkrwq.dev
 serial=emulator-5554
 function device() { timeout 30 adb -s "$serial" "$@"; }
@@ -16,9 +21,17 @@ function finish() {
 }
 trap finish EXIT
 # AVD is created in this disposable runner only. Never target a USB device.
-printf 'no\n' | avdmanager create avd --force --name plantrace_workspace_ci --package 'system-images;android-35;google_apis;x86_64'
+printf 'no\n' | timeout 90 avdmanager create avd --force --name plantrace_workspace_ci \
+  --path "$ANDROID_AVD_HOME/plantrace_workspace_ci.avd" --package 'system-images;android-35;google_apis;x86_64'
+test -s "$ANDROID_AVD_HOME/plantrace_workspace_ci.avd/config.ini"
+printf 'avd.ini.encoding=UTF-8\npath=%s\ntarget=android-35\n' "$ANDROID_AVD_HOME/plantrace_workspace_ci.avd" > "$ANDROID_AVD_HOME/plantrace_workspace_ci.ini"
+timeout 30 emulator -list-avds | tee emulator-evidence/available-avds.txt
+grep -Fxq plantrace_workspace_ci emulator-evidence/available-avds.txt
 emulator -avd plantrace_workspace_ci -port 5554 -no-window -no-audio -no-boot-anim -no-snapshot \
   -gpu swiftshader_indirect -memory 2048 -cores 2 -accel on > emulator-evidence/emulator.log 2>&1 &
+emulator_pid=$!
+sleep 2
+kill -0 "$emulator_pid" || { cat emulator-evidence/emulator.log; exit 1; }
 timeout 180 adb -s "$serial" wait-for-device
 booted=false
 for n in $(seq 1 120); do
