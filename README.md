@@ -8,7 +8,7 @@ The goal is to keep up with an experienced designer: create the site, compose th
 
 Read [AGENTS.md](AGENTS.md), [current state and next outcome](docs/CURRENT_STATE.md), and [product direction](docs/PRODUCT_VISION.md). Then open only the contracts/evidence relevant to the task. The repository, not an unavailable conversation, carries the working context.
 
-**Application work is on `feat/2d-foundation-northstar` (PR #2).** The default `main` branch receives this context package without merging the unfinished 2D application code. Verify live branches and the current-state file before making changes. Old perspective/Filament branches are not the current roadmap.
+**Use [CURRENT_STATE.md](docs/CURRENT_STATE.md) to find the active implementation branch, stacked pull requests and tested application revision.** The default main branch carries the context/routing package without necessarily containing unfinished application code. Verify live refs before making changes; do not choose a work branch from an old report or assume the tablet build matches the latest code. Old perspective/Filament branches are not the current roadmap.
 
 ## Where each kind of information belongs
 
