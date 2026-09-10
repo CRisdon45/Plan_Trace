@@ -1,27 +1,31 @@
 # Outcome roadmap
 
-Revised 2026-09-10. This is the order of intended outcomes, not an instruction to ignore the current session's scope. [CURRENT_STATE.md](CURRENT_STATE.md) owns status, authorization and the immediate resume point. The superseded stage list/work log is linked in [HISTORY.md](HISTORY.md).
+Revised 2026-09-10. [CURRENT_STATE.md](CURRENT_STATE.md) owns the live checkpoint and branch routing. These are acceptance goals, not a requirement to stop all development when one device is unavailable. Historical stages/work logs are indexed in HISTORY.md.
 
 | Gate | Outcome | Required evidence |
 | --- | --- | --- |
-| Q0 | Trust the existing application checkpoint | Isolated development build, relevant automated checks, latest example on the physical tablet, accessible PNG measurement control, actual PNG/PDF review with measurements on/off, save/reopen and Undo checks. Preserve original app/data. |
-| Q1 | Establish a coherent design seam | Small project-owned geometry/relationship contract, safe treatment of existing per-page data, synthetic straight and concave/convex cases, source/derived quantity distinction, and a documented recovery/migration approach before stored data changes. |
-| Q2 | Own the starting site | SITE-01 from imported imagery/plan or measured outline through calibration, editable house/patio/walls, design, reopen and output, without a preliminary Pool Studio step. Verify radial access and physical input alongside this work. |
-| Q3 | Revise both kinds of full-yard design | Incremental ORTHO-01 and ORGANIC-01 workflows through the real editing/rendering paths: connected pool/coping/features, shared surfaces, retained anchors, related quantities and a representative Northstar level while working. |
-| Q4 | Complete the meeting and handoff | Reusable adjustable assemblies, coherent planting/material scope, alternatives, client presentation, portable project recovery and faithful output/handoff. Compare full workflow effort with the owner's existing process. |
+| Q0 | Trust the existing application checkpoint | Isolated build and relevant automated checks, latest example on the physical tablet, accessible PNG measurement control, actual PNG/PDF review with measurements on/off, save/reopen and Undo checks. Preserve original app/data. |
+| Q1 | Establish a coherent design seam | Small project-owned geometry/relationship contract, safe treatment of existing per-page data, synthetic straight and concave/convex cases, source/derived quantity distinction, and a recovery/migration approach before stored data changes. |
+| Q2 | Own the starting site | SITE-01 through import or measured outline, calibration, editable house/patio/walls, design, reopen and output without a preliminary Pool Studio step. Verify radial access and physical input alongside this work. |
+| Q3 | Revise both kinds of full-yard design | Incremental ORTHO-01 and ORGANIC-01 workflows through real editing/rendering paths: connected pool/coping/features, shared surfaces, retained anchors, related quantities and representative live Northstar quality. |
+| Q4 | Complete the meeting and handoff | Reusable adjustable assemblies, planting/material scope, alternatives, presentation, portable recovery and faithful output/handoff. Compare total workflow effort with the owner's practiced process. |
 
-Q1-Q3 are short end-to-end slices, not a requirement to finish an enormous model layer before touching the canvas. Curves, radial interaction, visible quality and recovery should influence early decisions. Do not complete a generic editor, then bolt on pools, then postpone all style and workflow proof.
+## Parallel progress while tablet acceptance is pending
+
+The owner explicitly resumed implementation without tablet access on 2026-09-10. Complete independently verifiable repairs and small Q1 slices on an isolated branch while preserving the known tablet baseline. Track device/visual checks as pending acceptance, not passed tests and not a blanket code-work blocker. A change that depends on physical input or visual judgment must still be reviewed on the real device before claiming that part accepted.
+
+Q1-Q3 are short end-to-end slices, not a demand to finish an enormous model layer before touching the canvas. Curves, radial interaction, visual quality and recovery should influence early decisions. Do not finish a generic editor first and then bolt on pools or defer all presentation quality.
 
 ## Evidence contract
 
-A package demonstrates a user outcome using the application's real command and renderer paths. Record source revision, fixture/version, build identity, relevant tests, actual canvas/export evidence and remaining limitations. A future automated replay should exercise those same paths, not a parallel polished demo.
+Demonstrate a user outcome through the application's actual edit and renderer paths. Record source revision, fixture/version, build identity, test results, actual output evidence and remaining limits. Any automated replay must use the same paths, not a separate polished demonstration.
 
-Use distinct evidence labels: automated, synthetic runtime, physical-device, visual review, owner-accepted, or not run. A passing build is not pen certification. A mockup is not a rendered feature. A missing compiler/device/reference is a limitation, not a pass. No test or performance number is invented to fill a report.
+Distinguish automated, synthetic runtime, physical-device, visual-review and owner-accepted evidence. A successful build is not pen certification; a mockup is not a rendered feature. Missing tools/devices/references are disclosed limits, not passes. Record build-log exceptions even when the tasks pass, and avoid inventing metrics.
 
-Close discovered integrity defects when they block the next outcome, including source relinking/recovery, trustworthy dimensions/perimeters and atomic edits. Trace inherited runtime AI/service dependencies and remove unused ones as an explicitly tested implementation change. Root metadata cleanup alone does not complete that audit.
+Repair integrity defects that block the next outcome, including source access/recovery, truthful dimensions/perimeters and atomic related edits. Trace inherited runtime AI/service dependencies as a separate tested change. Metadata cleanup is not the dependency audit.
 
-## Stop expanding when the result is not proven
+## Keep the next step bounded
 
-Before multiplying tools, demonstrate create -> edit -> undo -> save -> reopen -> export for representative cases. Keep both shape families in the feedback loop. Test boundaries such as a narrow concave offset or a split edge with attachments, not just happy-path rectangles.
+Prove create -> edit -> undo -> save -> reopen -> export on representative cases before multiplying tools. Keep both shape families in the loop, including narrow concave offsets, split edges with attachments and conflicting anchors. Preserve user data and avoid speculative production migrations while the model is being established.
 
-Performance budgets and time-saving targets follow a measured tablet/workflow baseline. Do not add SaaS features, production-engineering automation, 3D or a framework restart to make a milestone look bigger. Revisit a technical proposal when evidence supports a simpler path while preserving the accepted product constraints.
+Performance budgets and time-saving targets follow measured tablet/workflow baselines. Do not add SaaS overhead, automated engineering, 3D or a framework restart to inflate a milestone. Improve technical proposals when evidence supports a simpler solution without silently reversing owner requirements.

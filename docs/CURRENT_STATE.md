@@ -1,42 +1,45 @@
 # Current state and next-session handoff
 
-Updated: 2026-09-10, off-tablet implementation resumed. This is the mutable handoff, not an append-only chronology.
+Updated: 2026-09-10, off-tablet implementation checkpoint. This is the current handoff, not an append-only chronology. Verify live branch heads and PRs before changing anything.
 
-## Scope and branches
+## Scope and where to work
 
-The owner authorized continuing implementation here while physical tablet testing is unavailable and was already in progress elsewhere. **Do not treat the incomplete tablet gate as a prohibition on independently verifiable work. Do not mark that gate passed.** Preserve the tablet's installed build, projects and ongoing test session.
+**Implementation has resumed at the owner's explicit request while tablet testing is unavailable and was already in progress elsewhere.** The pending physical-device gate is not a blanket prohibition on independently verifiable development. It is also not a passed gate. Preserve the interrupted tablet session, its installed build and all project data.
 
-Repository: CRisdon45/Plan_Trace, intentionally public. `main` contains the shared direction documents, not the unfinished 2D application. The integrated 2D baseline remains `feat/2d-foundation-northstar` at `5367dbe698a0f7f9f42101fff74bbfbcdb746084` (application code baseline `3fc0491`).
+Repository: `CRisdon45/Plan_Trace`, intentionally public. `main` carries current direction/handoff documents without the unfinished application code. The integrated 2D foundation is `feat/2d-foundation-northstar` (PR #2), with application code still based on `3fc0491`; the context checkpoint before this session was `5367dbe`.
 
-**Parallel implementation branch: `feat/off-tablet-integrity`, based on that exact baseline.** This isolates new changes from the branch/build being tablet-tested. Check live refs, open PRs and local work before merging. Nothing in this session authorizes installing, clearing data or replacing the tablet build.
+**Current implementation work: `feat/off-tablet-integrity`, PR #3 into `feat/2d-foundation-northstar`.** It was branched from `5367dbe` to avoid mixing changes with the tablet baseline. PR #3 is not an installation or a release. Main/foundation updates in this session are documentation-only; new application code stays on the parallel branch until deliberately integrated. Old perspective/Filament and audit branches are not the next implementation target.
 
-## Latest work
+## What was completed off-tablet
 
-- Added a separate Android 2D integrity workflow: full unit-test suite and debug assembly on GitHub, read-only repository permission, no private fixtures, no deployment or APK upload. Its ephemeral CI signing key must not replace an existing locally signed app.
-- Moved measurement and source-underlay controls into the shared PDF/PNG section. Each toggle is one labeled touch/accessibility target; choices use saved state and persist across format changes/recreation.
-- Corrected implicit closing-edge length for closed freehand/polyline measurements without changing stored vertices, IDs or schema. Open/degenerate chains retain their meanings. This is not a curve kernel or complete quantity engine.
-- Added regression tests for closed/open/concave paths, repeated vertices and calibration, export-dialog interaction/restoration/cancellation, and the actual PNG renderer/file path with measurement annotations on/off.
+Shared PDF/PNG measurement and source-underlay controls now use labeled whole-row switches and saved state. The choices survive format switching and saved-state recreation. Closed freehand/polyline measurements now include the implicit final edge, without modifying vertices, IDs, stored data or schema. This fixes chain-length labels; it is not a freeform curve engine or complete takeoff system.
 
-## Verification status
+A GitHub workflow runs the full unit-test suite and debug assembly using synthetic test data, read-only repository permission and an ephemeral CI debug key. It publishes test reports only, not an APK or a deployment. Never use its disposable signing key to replace the existing tablet application's key.
 
-The new GitHub workflow at commit `d9ef977f1b08c957240061bbb1022d690d7e8b98` completed the **unchanged application baseline's** full unit-test and debug-assembly step successfully (run 34496770033). That is new automated evidence, distinct from the older 35-test checkpoint report.
+## Evidence and limitations
 
-The implementation changes described above still require their own completed CI run and results review. Do not infer that they passed from the baseline run. The local session cannot fetch build dependencies, so the Android build runs on GitHub rather than a local stand-in.
+| Revision / scope | Actual result |
+| --- | --- |
+| `d9ef977f1b08c957240061bbb1022d690d7e8b98`, unchanged application baseline plus CI | Run 34496770033: 37 tests, zero failures/errors/skips; debug assembly succeeded. This full suite includes two tests absent from the prior focused 35-test report. |
+| `e7e75e895ecf1c2863945088c5502ee58b04cdff`, implementation and 12 new regressions | Run 34497580131: 49 tests, zero failures/errors/skips; debug assembly succeeded. Seven path tests, four Compose dialog tests and one actual PNG file/renderer test were added. |
+| Physical tablet / visual acceptance | Not run in this session. The latest courtyard example, real pen/palm/button behavior, physical reachability and final PNG/PDF appearance remain pending. |
 
-Physical S Pen/button/palm testing, latest-example tablet composition, export visual acceptance and real saved-project recovery remain pending. No tablet access or installation occurred. No runtime AI dependency cleanup, project-model migration, radial interaction implementation, complete benchmark fixture or Northstar renderer is claimed by this patch.
+The implementation run also logged a KSP/AWT background-thread NullPointerException despite successful tasks/tests. It is recorded for toolchain follow-up, not certified harmless or hidden behind a clean-log claim. Existing Google-services/deprecation warnings remain. Read [OFF_TABLET_IMPLEMENTATION.md](OFF_TABLET_IMPLEMENTATION.md) for pinned run links, exact checks and unresolved limits. Later documentation-only commits do not create a new application-validation claim.
 
-## Next outcomes
+## Next outcome
 
-Finish and inspect this branch's automated results, review the exact diff, and preserve a reviewable PR into the 2D foundation branch. Q0's accessible PNG control can be completed independently; its hardware and visual checks remain explicit acceptance debt.
+Keep PR #3 reviewable and reconcile any concurrent work before integration. The next independent implementation slice can begin Q1: establish a small project-owned geometry/relationship seam and original synthetic straight/concave-curved cases, without migrating live user data or creating a second demonstration-only renderer. Keep the scope small enough to exercise the actual editing, persistence and rendering paths. Model the project once, while preserving existing page-local sketches and their calibration.
 
-When tablet access resumes, finish the interrupted test session on its original known build before deliberately switching versions. Check the updated dialog's reachability/state and inspect actual PNG/PDF outputs with automatic measurements on/off. Synthetic/native renderer tests do not establish physical usability or visual quality.
+Q0's shared measurement-control defect has automated coverage now. Its remaining tablet and visual checks stay explicit acceptance debt, not a reason to halt unrelated geometry tests. When the tablet is available, finish the interrupted session on its known build first, then deliberately test the newer version and compare its actual PNG/PDF outputs with automatic measurements on/off. No uninstall or data clearing.
 
-Independent follow-on work can establish Q1's small project-owned geometry seam and original synthetic straight/curved cases without touching the device or migrating live user data. Keep site creation, connected coping, true dimensions, recovery and radial-first interaction in the early end-to-end work. Follow EXECUTION_PLAN.md, not superseded generic-editor priorities.
+## Remaining product gaps
 
-## Existing gaps and references
+The example still uses separate pool/coping/steps/labels; the new contract's connected project authority is not implemented. Per-page drawing storage remains the current model. Calibration/underlay history, source relinking, portable backups, associative dimensions, exact editing beyond rectangles, lasso, full-project handoff, primary radial interaction and Northstar rendering remain unfinished.
 
-The current example still uses separate pool/coping/steps/labels. Per-page drawing storage has not yet become the project-owned authority in the target contract. Calibration/underlay history, source relinking, portable backups, associative dimensions, exact editing beyond rectangles, lasso and full-project handoff remain unfinished. The inherited runtime AI/service dependency audit is separate from the already-completed root metadata cleanup.
+The inherited runtime AI/service dependency audit is separate from the prior root metadata cleanup and was not done in this patch. No runtime AI is an accepted requirement; do not treat leftover scaffolding as approval to use it. 3D remains paused. Exact interchange with Estimator/Design-Platform is still a technical decision, not a repository merger.
 
-Private project originals and Northstar pixels remain outside this public repo; see REFERENCES.md and its manifest. Public benchmark cases remain specifications, not reconstructed client jobs. Exact Estimator/Design-Platform interchange is still open. 3D remains paused.
+Private project originals and Northstar image pixels remain outside this public repo. Public benchmark descriptions are still specifications, not recreated client projects. See REFERENCES.md and its manifest. Do not infer access to absent private files or claim visual parity without reference review.
 
-Older application evidence: [checkpoint at 3fc0491](https://github.com/CRisdon45/Plan_Trace/blob/3fc0491f4c1a86eb802825d4e57fff7b1a6f55b7/docs/CHECKPOINT_2026-09-10.md) and HISTORY.md. At each meaningful checkpoint replace the current result/next outcome, record what actually ran and link detailed evidence. Preserve concurrent changes and review all public diffs/artifacts for private material.
+## Maintain the checkpoint
+
+At each meaningful checkpoint replace the current status/next outcome, record the application revision and checks that actually ran, and link detailed evidence. Keep baseline and parallel-work branches distinguishable; documentation presence is not application parity. Preserve concurrent edits, original user data and the public/private boundary. Historical implementation reports are indexed in HISTORY.md and do not override current scope.
