@@ -1,6 +1,15 @@
 package com.example.ui.workspace
 
+import android.content.Context
 import android.view.MotionEvent
+import com.example.MainActivity
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.geometry.Rect
+import kotlin.math.floor
+import kotlin.math.ceil
 import android.view.ScaleGestureDetector
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
@@ -55,7 +64,39 @@ import kotlin.math.roundToInt
 @Composable
 fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = viewModel()) {
     val state by model.state.collectAsState()
-    var touchEdit by rememberSaveable { mutableStateOf(false) }
+    val preferences = LocalContext.current.getSharedPreferences("workspace-view", Context.MODE_PRIVATE)
+    var touchEdit by rememberSaveable { mutableStateOf(preferences.getBoolean("touch", false)) }
+    var showGrid by rememberSaveable { mutableStateOf(preferences.getBoolean("grid", false)) }
+    var gridSnap by rememberSaveable { mutableStateOf(preferences.getBoolean("snap", false)) }
+    var commandRequest by remember { mutableStateOf(0) }
+    var inspector by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(touchEdit, showGrid, gridSnap) {
+        preferences.edit().putBoolean("touch",touchEdit).putBoolean("grid",showGrid).putBoolean("snap",gridSnap).apply()
+    }
+    LaunchedEffect(state.selectedId) { inspector=null }
+    fun command(action: RadialAction) {
+        val doc=model.state.value.document ?: return
+        val selected=doc.objects.firstOrNull { it.id==model.state.value.selectedId }
+        when(action) {
+            RadialAction.POOL -> model.addOutline(false)
+            RadialAction.CURVED -> model.addOutline(true)
+            RadialAction.PAVING -> model.addOutline(false,DesignObjectKind.PAVING)
+            RadialAction.SIZE -> if(selected!=null && !selected.locked) inspector="size"
+            RadialAction.COPING -> if(selected!=null && !selected.locked) inspector="coping"
+            RadialAction.DELETE -> selected?.let { model.execute(DesignCommand.Remove(it.id)) }
+            RadialAction.FIT -> model.fit()
+            RadialAction.GRID -> showGrid=!showGrid
+            RadialAction.TOUCH -> { model.cancelPreview();touchEdit=!touchEdit }
+            RadialAction.SNAP -> gridSnap=!gridSnap
+            RadialAction.UNDO -> model.undo()
+            RadialAction.REDO -> model.redo()
+            RadialAction.CLEAR -> model.select(null)
+            RadialAction.NEXT -> if(doc.objects.isNotEmpty()) {
+                val index=doc.objects.indexOfFirst { it.id==selected?.id }
+                model.select(doc.objects[(index+1)%doc.objects.size].id)
+            }
+        }
+    }
     var exporting by remember { mutableStateOf(false) }
     var leaveUnsaved by remember { mutableStateOf(false) }
     var exportBusy by remember { mutableStateOf(false) }
@@ -64,7 +105,7 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
     val lifecycle = LocalLifecycleOwner.current
     DisposableEffect(lifecycle, model) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_PAUSE) model.cancelPreview()
+            if (event == Lifecycle.Event.ON_PAUSE) { model.cancelPreview();inspector=null }
         }
         lifecycle.lifecycle.addObserver(observer)
         onDispose { lifecycle.lifecycle.removeObserver(observer); model.cancelPreview() }
@@ -81,7 +122,10 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = { close() }, modifier = Modifier.testTag("workspace-back")) { Text("Back to plans") }
                 Text("Design workspace", style = MaterialTheme.typography.titleMedium)
-                Text("Preview", style = MaterialTheme.typography.labelMedium)
+                OutlinedButton(onClick = { inspector=null;commandRequest++ }, enabled=state.document!=null,
+                    modifier=Modifier.testTag("workspace-commands")) { Text("Commands") }
+                TextButton(onClick=model::undo,enabled=state.canUndo && state.preview==null,modifier=Modifier.testTag("workspace-undo")) { Text("Undo") }
+                TextButton(onClick=model::redo,enabled=state.canRedo && state.preview==null,modifier=Modifier.testTag("workspace-redo")) { Text("Redo") }
                 val saveText = when {
                     state.loading -> "Opening…"
                     state.loadError != null -> "Could not open"
@@ -95,23 +139,7 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
                 TextButton(onClick = { exporting = true }, enabled = state.document?.objects?.isNotEmpty() == true &&
                     state.preview == null && !exportBusy, modifier = Modifier.testTag("workspace-export")) { Text("Export") }
             }
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                val ready = state.document != null && state.preview == null
-                OutlinedButton(onClick = { model.addOutline(false) }, enabled = ready, modifier = Modifier.testTag("workspace-add-pool")) { Text("Pool + coping") }
-                OutlinedButton(onClick = { model.addOutline(true) }, enabled = ready, modifier = Modifier.testTag("workspace-add-curved")) { Text("Curved pool") }
-                OutlinedButton(onClick = { model.addOutline(false, DesignObjectKind.PAVING) }, enabled = ready,
-                    modifier = Modifier.testTag("workspace-add-paving")) { Text("Paving outline") }
-                TextButton(onClick = model::undo, enabled = state.canUndo && state.preview == null, modifier = Modifier.testTag("workspace-undo")) { Text("Undo") }
-                TextButton(onClick = model::redo, enabled = state.canRedo && state.preview == null, modifier = Modifier.testTag("workspace-redo")) { Text("Redo") }
-                TextButton(onClick = {
-                    state.selectedId?.let { model.execute(DesignCommand.Remove(it)) }
-                }, enabled = ready && state.document?.objects?.any { it.id == state.selectedId && !it.locked } == true,
-                    modifier = Modifier.testTag("workspace-delete")) { Text("Delete") }
-                TextButton(onClick = model::fit, modifier = Modifier.testTag("workspace-fit")) { Text("Fit") }
-                FilterChip(selected = touchEdit, onClick = { model.cancelPreview(); touchEdit = !touchEdit },
-                    label = { Text("Touch edit") }, modifier = Modifier.testTag("workspace-touch-edit"))
-            }
+
         }
     }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).navigationBarsPadding()) {
@@ -132,15 +160,15 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
                             label = { Text(obj.name) }, modifier = Modifier.testTag("workspace-object-$index"))
                     }
                 }
-                WorkspaceCanvas(state, model, touchEdit, Modifier.weight(1f).fillMaxWidth())
+                WorkspaceCanvas(state, model, touchEdit, showGrid, gridSnap, commandRequest, inspector,
+                    !exporting && !leaveUnsaved, { inspector=null }, ::command,
+                    Modifier.weight(1f).fillMaxWidth())
                 val selected = doc.objects.firstOrNull { it.id == state.selectedId }
-                if (selected != null && (selected.kind == DesignObjectKind.POOL || selected.kind == DesignObjectKind.SPA)) {
-                    CopingWidthControl(selected, model, state.preview == null)
-                }
+
                 Text(selected?.let { String.format(Locale.US, "%s · perimeter %.2f ft", it.name, it.boundary.perimeterMetres / 0.3048) }
                     ?: "Add an outline, then select its edge to edit.", style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("workspace-selection"))
-                Text(state.message ?: "Drag round handles for vertices, amber handles for curves. Pen edits; fingers pan unless Touch edit is on.",
+                Text(state.message ?: "Commands opens the tool wheel. " + (if(touchEdit) "Touch editing on. " else "Pen edits; fingers navigate. ") + (if(gridSnap) "1 ft snap: vertices and moves." else "Round handles reshape; amber handles change curves."),
                     style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
                 Text("Coping follows the pool. Surface checks are resolution-limited; steps, site clearances and Northstar styling are still in development.",
                     style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -215,27 +243,64 @@ private class PointerSession {
     var downY = 0.0
     var blockedEdit = false
     var moved = false
+    var buttonLatched = false
     fun clear() { target = null; document = null; down = null; startView = null; blockedEdit = false; moved = false }
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-private fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewModel, touchEdit: Boolean, modifier: Modifier) {
+private fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewModel, touchEdit: Boolean,
+    showGrid: Boolean, gridSnap: Boolean, commandRequest: Int, inspector: String?, allowCommands: Boolean,
+    onCloseInspector: () -> Unit, onAction: (RadialAction) -> Unit, modifier: Modifier) {
     val document = state.shownDocument ?: return
     val context = LocalContext.current
     val density = LocalDensity.current.density
     var size by remember { mutableStateOf(IntSize.Zero) }
     var viewport by remember { mutableStateOf(DesignViewport(60.0, 100.0, 300.0)) }
     val pointer = remember { PointerSession() }
+    var menuAnchor by remember { mutableStateOf<Offset?>(null) }
+    var lastPosition by remember { mutableStateOf<Offset?>(null) }
+    var windowBounds by remember { mutableStateOf(Rect.Zero) }
+    fun openCommands(point:Offset) {
+        if(!allowCommands) return
+        model.cancelPreview();pointer.clear();onCloseInspector();menuAnchor=point
+    }
+    LaunchedEffect(commandRequest) {
+        if(commandRequest>0) openCommands(lastPosition ?: Offset(size.width/2f,size.height/2f))
+    }
+    // Generic events are routed only while this canvas is active, using window-local bounds.
+    // Hover itself never edits. The button opens a latched, tap-to-choose wheel; release does not execute.
+    val genericHandler by rememberUpdatedState<(MotionEvent)->Boolean>({ event ->
+        val stylus=event.pointerCount>0 && event.getToolType(0)==MotionEvent.TOOL_TYPE_STYLUS
+        if(!stylus || !allowCommands || inspector!=null) false else {
+            val down=event.isButtonPressed(MotionEvent.BUTTON_STYLUS_PRIMARY)
+            val point=Offset(event.x,event.y)
+            val inside=windowBounds.contains(point)
+            val invoke=inside && pointer.document==null && !pointer.buttonLatched &&
+                ((event.actionMasked==MotionEvent.ACTION_BUTTON_PRESS && event.actionButton==MotionEvent.BUTTON_STYLUS_PRIMARY) || down)
+            if(event.actionMasked==MotionEvent.ACTION_HOVER_EXIT) pointer.buttonLatched=false
+            else pointer.buttonLatched=down
+            if(inside) lastPosition=point-windowBounds.topLeft
+            if(invoke) { openCommands(point-windowBounds.topLeft);true }
+            else inside && (event.actionMasked==MotionEvent.ACTION_BUTTON_RELEASE || down)
+        }
+    })
+    DisposableEffect(context) {
+        val activity=context as? MainActivity
+        val handler:(MotionEvent)->Boolean={ genericHandler(it) }
+        activity?.workspaceGenericMotionHandler=handler
+        onDispose { activity?.let { if(it.workspaceGenericMotionHandler===handler) it.workspaceGenericMotionHandler=null } }
+    }
     val lifecycle = LocalLifecycleOwner.current
     DisposableEffect(lifecycle, model) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_PAUSE) { pointer.clear(); model.cancelPreview() }
+            if (event == Lifecycle.Event.ON_PAUSE) { pointer.clear();pointer.buttonLatched=false;menuAnchor=null;model.cancelPreview() }
         }
         lifecycle.lifecycle.addObserver(observer)
         onDispose { lifecycle.lifecycle.removeObserver(observer); pointer.clear(); model.cancelPreview() }
     }
     LaunchedEffect(size, state.fitRequest) {
+        menuAnchor=null
         if (size.width > 0 && size.height > 0) {
             model.cancelPreview(); pointer.clear()
             viewport = DesignViewport.fit(state.document!!, size.width.toDouble(), size.height.toDouble())
@@ -251,9 +316,15 @@ private fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMod
     val projection = projectionResult.getOrNull()
     val selected = document.objects.firstOrNull { it.id == state.selectedId }
     val radius = 6f * density
-    Box(modifier.onSizeChanged { size = it }.clipToBounds().background(Color(0xFFFBFAF5))
+    Box(modifier.onSizeChanged { size = it }.onGloballyPositioned { windowBounds=it.boundsInWindow() }.clipToBounds().background(Color(0xFFFBFAF5))
         .testTag("workspace-canvas").pointerInteropFilter { event ->
+            if(menuAnchor!=null || inspector!=null || !allowCommands) return@pointerInteropFilter false
             val x = event.x.toDouble(); val y = event.y.toDouble()
+            lastPosition=Offset(event.x,event.y)
+            if(event.actionMasked==MotionEvent.ACTION_DOWN && event.getToolType(0)==MotionEvent.TOOL_TYPE_STYLUS &&
+                event.isButtonPressed(MotionEvent.BUTTON_STYLUS_PRIMARY)) {
+                openCommands(Offset(event.x,event.y));pointer.blockedEdit=true;return@pointerInteropFilter true
+            }
             if (pointer.document != null && pointer.document?.revision != state.document?.revision) {
                 pointer.clear(); model.cancelPreview()
             }
@@ -277,7 +348,7 @@ private fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMod
                     val target = pointer.target
                     if (!pointer.blockedEdit && target != null && event.pointerCount == 1) {
                         if (hypot(x - pointer.downX, y - pointer.downY) > 3 * density) pointer.moved = true
-                        if (pointer.moved) model.preview(DesignPicking.drag(pointer.document!!, target, pointer.down!!, pointer.startView!!.toWorld(x, y)), pointer.document!!.revision)
+                        if (pointer.moved) model.preview(DesignPicking.drag(pointer.document!!, target, pointer.down!!, pointer.startView!!.toWorld(x, y)).let { if(gridSnap) GridAssist.snap(it) else it }, pointer.document!!.revision)
                     } else if (!detector.isInProgress && event.pointerCount == 1 && !pointer.blockedEdit) {
                         viewport = viewport.panned(x - pointer.lastX, y - pointer.lastY)
                     }
@@ -287,7 +358,7 @@ private fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMod
                     if (pointer.target != null && !pointer.blockedEdit &&
                         (pointer.moved || hypot(x - pointer.downX, y - pointer.downY) > 3 * density)) {
                         // Pen-up can contain the last position even without a final move event.
-                        model.preview(DesignPicking.drag(pointer.document!!, pointer.target!!, pointer.down!!, pointer.startView!!.toWorld(x, y)), pointer.document!!.revision)
+                        model.preview(DesignPicking.drag(pointer.document!!, pointer.target!!, pointer.down!!, pointer.startView!!.toWorld(x, y)).let { if(gridSnap) GridAssist.snap(it) else it }, pointer.document!!.revision)
                         model.commitPreview()
                     } else model.cancelPreview()
                     pointer.clear()
@@ -297,6 +368,18 @@ private fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMod
             true
         }) {
         Canvas(Modifier.fillMaxSize()) {
+            if(showGrid) {
+                var step=GridAssist.SPACING_METRES*viewport.pixelsPerMetre
+                while(step<16*density) step*=2
+                val startX=((viewport.offsetX%step)+step)%step
+                val startY=((viewport.offsetY%step)+step)%step
+                for(i in 0..ceil(size.width/step).toInt().coerceAtMost(250)) {
+                    val x=(startX+i*step).toFloat();drawLine(Color(0xFFE1E4DE),Offset(x,0f),Offset(x,size.height.toFloat()),1f)
+                }
+                for(i in 0..ceil(size.height/step).toInt().coerceAtMost(250)) {
+                    val y=(startY+i*step).toFloat();drawLine(Color(0xFFE1E4DE),Offset(0f,y),Offset(size.width.toFloat(),y),1f)
+                }
+            }
             drawIntoCanvas { canvas ->
                 val native = canvas.nativeCanvas
                 native.save()
@@ -338,5 +421,30 @@ private fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMod
                     .size(44.dp).testTag("workspace-curve-$index").semantics { contentDescription = "Curve handle ${index + 1}" })
             }
         }
+        if(inspector!=null && selected!=null) {
+            Box(Modifier.fillMaxSize().pointerInput(inspector) { detectTapGestures { onCloseInspector() } })
+            BackHandler { onCloseInspector() }
+            Box(Modifier.align(Alignment.TopEnd).imePadding().padding(12.dp).widthIn(max=350.dp)) {
+                if(inspector=="size") WorkspaceSizePanel(selected,model,onCloseInspector)
+                else Surface(shape=MaterialTheme.shapes.large,shadowElevation=5.dp,tonalElevation=3.dp,
+                    modifier=Modifier.testTag("workspace-coping-panel")) {
+                    Column(Modifier.padding(vertical=8.dp)) {
+                        Row(Modifier.fillMaxWidth().padding(horizontal=12.dp),verticalAlignment=Alignment.CenterVertically) {
+                            Text("Following coping",Modifier.weight(1f),style=MaterialTheme.typography.titleMedium)
+                            TextButton(onClick=onCloseInspector,modifier=Modifier.testTag("workspace-coping-close")) { Text("Close") }
+                        }
+                        CopingWidthControl(selected,model,state.preview==null)
+                    }
+                }
+            }
+        }
+        menuAnchor?.let { anchor ->
+            WorkspaceRadialMenu(anchor,size,RadialAvailability(state.document!=null,selected!=null,
+                selected!=null && !selected.locked,
+                selected?.kind==DesignObjectKind.POOL || selected?.kind==DesignObjectKind.SPA,
+                state.canUndo,state.canRedo,document.objects.isNotEmpty(),showGrid,touchEdit,gridSnap),
+                onDismiss={ menuAnchor=null },onAction=onAction)
+        }
+
     }
 }

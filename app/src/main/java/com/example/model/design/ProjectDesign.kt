@@ -52,6 +52,7 @@ sealed interface DesignCommand {
     data class ChangeBulge(val objectId: String, val edgeId: String, val bulge: Double) : DesignCommand
     data class ReplaceBoundary(val objectId: String, val boundary: DesignBoundary) : DesignCommand
     data class SetCoping(val objectId: String, val spec: CopingSpec) : DesignCommand
+    data class SetDimension(val objectId: String, val axis: SizeAxis, val metres: Double) : DesignCommand
 }
 
 /** Pure command path. It either returns a complete next state or throws without changing the input. */
@@ -68,6 +69,7 @@ object DesignCommands {
             is DesignCommand.ChangeBulge -> command.objectId
             is DesignCommand.ReplaceBoundary -> command.objectId
             is DesignCommand.SetCoping -> command.objectId
+            is DesignCommand.SetDimension -> command.objectId
             else -> error("Unsupported command")
         }
         val current = document.objectById(id)
@@ -85,6 +87,7 @@ object DesignCommands {
             is DesignCommand.MoveVertex -> current.boundary.movedVertex(command.vertexId, command.point)
             is DesignCommand.ChangeBulge -> current.boundary.changedBulge(command.edgeId, command.bulge)
             is DesignCommand.ReplaceBoundary -> command.boundary
+            is DesignCommand.SetDimension -> DesignDimensions.resize(current.boundary, command.axis, command.metres)
             else -> error("Unsupported boundary command")
         }
         if (boundary == current.boundary) return document

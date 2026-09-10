@@ -50,6 +50,10 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
 
     private val viewModel: MainViewModel by viewModels()
+    // Registered only by the opt-in workspace and cleared on disposal. Other screens keep their input.
+    var workspaceGenericMotionHandler: ((android.view.MotionEvent) -> Boolean)? = null
+    override fun dispatchGenericMotionEvent(event: android.view.MotionEvent): Boolean =
+        workspaceGenericMotionHandler?.invoke(event) == true || super.dispatchGenericMotionEvent(event)
 
     override fun dispatchTouchEvent(event: android.view.MotionEvent): Boolean {
         // Preserve system rejection before Compose converts the pointer event.
