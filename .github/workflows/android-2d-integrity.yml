@@ -2,7 +2,7 @@ name: Android 2D integrity
 
 on:
   push:
-    branches: [feat/off-tablet-integrity, feat/2d-foundation-northstar]
+    branches: [feat/project-geometry-seam, feat/off-tablet-integrity, feat/2d-foundation-northstar]
     paths:
       - 'app/**'
       - 'gradle/**'
@@ -12,7 +12,7 @@ on:
       - '.env.example'
       - '.github/workflows/android-2d-integrity.yml'
   pull_request:
-    branches: [main, feat/2d-foundation-northstar]
+    branches: [main, feat/2d-foundation-northstar, feat/off-tablet-integrity]
     paths:
       - 'app/**'
       - 'gradle/**'
