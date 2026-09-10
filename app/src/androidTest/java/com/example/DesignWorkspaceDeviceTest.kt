@@ -48,6 +48,10 @@ class DesignWorkspaceDeviceTest {
         ui.onNodeWithTag("workspace-add-pool").performClick()
         val initial = saved()
         assertEquals(1, initial.objects.size)
+        // Finger navigation must not edit an outline while pen-only editing is selected.
+        ui.onNodeWithTag("workspace-canvas").performTouchInput { swipe(center, center + Offset(35f, 20f), 300) }
+        assertEquals(initial, saved())
+        ui.onNodeWithTag("workspace-fit").performClick()
         ui.onNodeWithTag("workspace-touch-edit").performClick()
         ui.onNodeWithTag("workspace-vertex-1").performTouchInput { swipe(center, center + Offset(48f, -24f), 350) }
         val moved = saved()
@@ -68,12 +72,18 @@ class DesignWorkspaceDeviceTest {
         // Platform cancellation must discard a preview, not save a partial gesture.
         ui.onNodeWithTag("workspace-vertex-1").performTouchInput { down(center); moveBy(Offset(15f, 18f)); cancel() }
         assertEquals(bent, saved())
+        ui.onNodeWithTag("workspace-delete").performClick()
+        assertEquals(listOf(bent.objects.first()), saved().objects)
+        ui.onNodeWithTag("workspace-undo").performClick()
+        val restored = saved()
+        assertEquals(bent.objects, restored.objects)
+        ui.onNodeWithTag("workspace-object-1").performClick()
         screenshot("edited-workspace")
         val evidence = File(context.getExternalFilesDir(null), "workspace-evidence")
-        File(evidence, "before-process-restart.json").writeText(DesignJsonCodec.encode(bent))
+        File(evidence, "before-process-restart.json").writeText(DesignJsonCodec.encode(restored))
         ui.onNodeWithTag("workspace-back").performClick()
         openWorkspace()
-        assertEquals(bent, saved())
+        assertEquals(restored, saved())
         ui.onNodeWithTag("workspace-object-count").assertTextEquals("2 objects")
     }
     @Test fun reopenAfterProcessDeath() {

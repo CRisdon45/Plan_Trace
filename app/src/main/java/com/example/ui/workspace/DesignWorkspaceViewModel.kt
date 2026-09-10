@@ -50,7 +50,7 @@ class DesignWorkspaceViewModel(application: Application) : AndroidViewModel(appl
             } catch (error: CancellationException) { throw error }
             catch (error: Exception) {
                 _state.value = WorkspaceState(loading = false,
-                    loadError = "The saved design could not be opened. Its files have been kept unchanged. ${error.message.orEmpty()}")
+                    loadError = "The saved design could not be opened. It has not been replaced with a new design. ${error.message.orEmpty().take(220)}")
             }
         }
         viewModelScope.launch {
@@ -61,7 +61,7 @@ class DesignWorkspaceViewModel(application: Application) : AndroidViewModel(appl
                         saveError = if (it.document?.revision == document.revision) null else it.saveError) }
                 } catch (error: CancellationException) { throw error }
                 catch (error: Exception) {
-                    _state.update { it.copy(saveError = "Not saved: ${error.message.orEmpty()}") }
+                    _state.update { it.copy(saveError = "Not saved: ${error.message.orEmpty().take(220)}") }
                 }
             }
         }
@@ -75,8 +75,13 @@ class DesignWorkspaceViewModel(application: Application) : AndroidViewModel(appl
             _state.update { it.copy(selectedId = value.id, fitRequest = it.fitRequest + 1) }
         }
     }
-    fun preview(command: DesignCommand) {
+    fun preview(command: DesignCommand, expectedRevision: Long? = null) {
         val current = session ?: return
+        if (expectedRevision != null && expectedRevision != current.document.revision) {
+            cancelPreview()
+            feedback("The design changed while this gesture was open. Start the edit again.")
+            return
+        }
         try {
             val next = current.preview(command)
             pendingCommand = command

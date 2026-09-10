@@ -30,7 +30,7 @@ data class DesignViewport(val pixelsPerMetre: Double, val offsetX: Double, val o
     fun panned(dx: Double, dy: Double) = copy(offsetX = offsetX + dx, offsetY = offsetY + dy)
     fun zoomed(factor: Double, focusX: Double, focusY: Double): DesignViewport {
         require(factor.isFinite() && factor > 0)
-        val scale = (pixelsPerMetre * factor).coerceIn(5.0, 3000.0)
+        val scale = (pixelsPerMetre * factor).coerceIn(0.01, 3000.0)
         val actual = scale / pixelsPerMetre
         return DesignViewport(scale, focusX + (offsetX - focusX) * actual, focusY + (offsetY - focusY) * actual)
     }
@@ -42,7 +42,7 @@ data class DesignViewport(val pixelsPerMetre: Double, val offsetX: Double, val o
             val maxX = points.maxOfOrNull { it.x } ?: 8.0
             val minY = points.minOfOrNull { it.y } ?: 0.0
             val maxY = points.maxOfOrNull { it.y } ?: 5.0
-            val scale = min(width * 0.78 / max(maxX - minX, 1.0), height * 0.72 / max(maxY - minY, 1.0)).coerceIn(5.0, 3000.0)
+            val scale = min(width * 0.78 / max(maxX - minX, 1.0), height * 0.72 / max(maxY - minY, 1.0)).coerceIn(0.01, 3000.0)
             return DesignViewport(scale, width / 2 - (minX + maxX) / 2 * scale, height / 2 + (minY + maxY) / 2 * scale)
         }
     }

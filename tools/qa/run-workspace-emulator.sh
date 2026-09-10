@@ -4,9 +4,13 @@ mkdir -p emulator-evidence
 export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
 package=com.aistudio.plantrace.jzkrwq.dev
 serial=emulator-5554
-function device() { adb -s "$serial" "$@"; }
+function device() { timeout 30 adb -s "$serial" "$@"; }
 function finish() {
+  timeout 15 adb -s "$serial" exec-out screencap -p > emulator-evidence/final-screen.png 2>/dev/null || true
+  timeout 15 adb -s "$serial" shell uiautomator dump /sdcard/final-ui.xml >/dev/null 2>&1 || true
+  device pull /sdcard/final-ui.xml emulator-evidence/final-ui.xml >/dev/null 2>&1 || true
   device logcat -b crash -d > emulator-evidence/crash-buffer.txt 2>&1 || true
+  device logcat -d -s AndroidRuntime TestRunner ActivityTaskManager > emulator-evidence/test-runtime-log.txt 2>&1 || true
   device pull "/sdcard/Android/data/$package/files/workspace-evidence" emulator-evidence/ >/dev/null 2>&1 || true
   device emu kill >/dev/null 2>&1 || true
 }
@@ -29,12 +33,12 @@ device shell settings put global window_animation_scale 0
 device shell settings put global transition_animation_scale 0
 device shell settings put global animator_duration_scale 0
 device shell input keyevent 82
-device install -r app/build/outputs/apk/debug/app-debug.apk
-device install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+timeout 120 adb -s "$serial" install -r app/build/outputs/apk/debug/app-debug.apk
+timeout 120 adb -s "$serial" install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 device logcat -c
 function run_case() {
   local name="$1"
-  device shell am instrument -w -r -e class "com.example.DesignWorkspaceDeviceTest#$name" \
+  timeout 180 adb -s "$serial" shell am instrument -w -r -e class "com.example.DesignWorkspaceDeviceTest#$name" \
     "$package.test/androidx.test.runner.AndroidJUnitRunner" | tee "emulator-evidence/$name.txt"
   grep -qE 'OK \([1-9][0-9]* tests?\)' "emulator-evidence/$name.txt"
   ! grep -qE 'FAILURES!!!|INSTRUMENTATION_FAILED|Process crashed' "emulator-evidence/$name.txt"
@@ -48,7 +52,7 @@ device exec-out run-as "$package" cat files/project-design/workspace.json > emul
 cmp emulator-evidence/saved-before-restart.json emulator-evidence/saved-after-restart.json
 {
   echo "Source: ${GITHUB_SHA:-local}"
-  echo 'Completed: creation, vertex drag, curve drag, cancellation, Undo/Redo, disk save, process restart, activity recreation.'
+  echo 'Completed: creation, vertex drag, curve drag, finger navigation, cancellation, Delete/Undo/Redo, disk save, process restart, activity recreation.'
   echo "API: $(device shell getprop ro.build.version.sdk | tr -d '\r')"
   echo "ABI: $(device shell getprop ro.product.cpu.abi | tr -d '\r')"
   device shell wm size

@@ -98,6 +98,10 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
                     modifier = Modifier.testTag("workspace-add-paving")) { Text("Paving outline") }
                 TextButton(onClick = model::undo, enabled = state.canUndo && state.preview == null, modifier = Modifier.testTag("workspace-undo")) { Text("Undo") }
                 TextButton(onClick = model::redo, enabled = state.canRedo && state.preview == null, modifier = Modifier.testTag("workspace-redo")) { Text("Redo") }
+                TextButton(onClick = {
+                    state.selectedId?.let { model.execute(DesignCommand.Remove(it)) }
+                }, enabled = ready && state.document?.objects?.any { it.id == state.selectedId && !it.locked } == true,
+                    modifier = Modifier.testTag("workspace-delete")) { Text("Delete") }
                 TextButton(onClick = model::fit, modifier = Modifier.testTag("workspace-fit")) { Text("Fit") }
                 FilterChip(selected = touchEdit, onClick = { model.cancelPreview(); touchEdit = !touchEdit },
                     label = { Text("Touch edit") }, modifier = Modifier.testTag("workspace-touch-edit"))
@@ -180,6 +184,14 @@ private fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMod
     var size by remember { mutableStateOf(IntSize.Zero) }
     var viewport by remember { mutableStateOf(DesignViewport(60.0, 100.0, 300.0)) }
     val pointer = remember { PointerSession() }
+    val lifecycle = LocalLifecycleOwner.current
+    DisposableEffect(lifecycle, model) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE) { pointer.clear(); model.cancelPreview() }
+        }
+        lifecycle.lifecycle.addObserver(observer)
+        onDispose { lifecycle.lifecycle.removeObserver(observer); pointer.clear(); model.cancelPreview() }
+    }
     LaunchedEffect(size, state.fitRequest) {
         if (size.width > 0 && size.height > 0) {
             model.cancelPreview(); pointer.clear()
@@ -199,6 +211,9 @@ private fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMod
     Box(modifier.onSizeChanged { size = it }.clipToBounds().background(Color(0xFFFBFAF5))
         .testTag("workspace-canvas").pointerInteropFilter { event ->
             val x = event.x.toDouble(); val y = event.y.toDouble()
+            if (pointer.document != null && pointer.document?.revision != state.document?.revision) {
+                pointer.clear(); model.cancelPreview()
+            }
             if (event.actionMasked == MotionEvent.ACTION_POINTER_DOWN) {
                 model.cancelPreview(); pointer.target = null; pointer.blockedEdit = true
             }
@@ -219,14 +234,19 @@ private fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMod
                     val target = pointer.target
                     if (!pointer.blockedEdit && target != null && event.pointerCount == 1) {
                         if (hypot(x - pointer.downX, y - pointer.downY) > 3 * density) pointer.moved = true
-                        if (pointer.moved) model.preview(DesignPicking.drag(pointer.document!!, target, pointer.down!!, pointer.startView!!.toWorld(x, y)))
+                        if (pointer.moved) model.preview(DesignPicking.drag(pointer.document!!, target, pointer.down!!, pointer.startView!!.toWorld(x, y)), pointer.document!!.revision)
                     } else if (!detector.isInProgress && event.pointerCount == 1 && !pointer.blockedEdit) {
                         viewport = viewport.panned(x - pointer.lastX, y - pointer.lastY)
                     }
                     pointer.lastX = x; pointer.lastY = y
                 }
                 MotionEvent.ACTION_UP -> {
-                    if (pointer.target != null && pointer.moved && !pointer.blockedEdit) model.commitPreview() else model.cancelPreview()
+                    if (pointer.target != null && !pointer.blockedEdit &&
+                        (pointer.moved || hypot(x - pointer.downX, y - pointer.downY) > 3 * density)) {
+                        // Pen-up can contain the last position even without a final move event.
+                        model.preview(DesignPicking.drag(pointer.document!!, pointer.target!!, pointer.down!!, pointer.startView!!.toWorld(x, y)), pointer.document!!.revision)
+                        model.commitPreview()
+                    } else model.cancelPreview()
                     pointer.clear()
                 }
                 MotionEvent.ACTION_CANCEL -> { model.cancelPreview(); pointer.clear() }

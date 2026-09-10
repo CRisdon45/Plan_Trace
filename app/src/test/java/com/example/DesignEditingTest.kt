@@ -41,6 +41,16 @@ class DesignEditingTest {
         assertEquals(DesignHit.Body("r"), DesignPicking.hit(doc, null, DesignPoint(5.0, 0.0), 0.1))
         assertNull(DesignPicking.hit(ProjectDesign("case", listOf(obj.copy(locked = true))), "r", DesignPoint(0.0, 0.0), 0.1))
     }
+    @Test fun `fit includes distant objects instead of enforcing an unusable minimum zoom`() {
+        val obj = DesignObject("a", "A", DesignObjectKind.POOL, DesignFixtures.rectangle())
+        val far = obj.copy(id = "b", boundary = obj.boundary.translated(0.0, 1000.0))
+        val doc = ProjectDesign("wide", listOf(obj, far))
+        val view = DesignViewport.fit(doc, 1200.0, 700.0)
+        doc.objects.flatMap { it.boundary.nodes }.forEach {
+            val point = view.toScreen(it.point)
+            assertTrue(point.x in 0.0..1200.0 && point.y in 0.0..700.0)
+        }
+    }
     @Test fun `starting shapes have fresh identities and both curvature signs`() {
         val a = DesignStartingShapes.create(false, 0)
         val b = DesignStartingShapes.create(true, 1)
