@@ -58,3 +58,9 @@ Finish compatibility and correctness before styling: durable page-specific objec
 Implemented and tablet-checked rectangle corner resizing and decimal exact-size entry, existing-note revision, open/closed polyline completion and draft cancellation. All edits tested with exact Undo comparisons. Added multiline note bounds/rendering regression coverage. A visual reopen check found missing persistent source-file access; repaired document permission retention and MIME-based PDF identification, then confirmed image and PDF underlays survive force-stop/reopen. Final build: 18 passing tests, zero failures. Latest APK SHA-256: `4200195D1BF007F165EF83AF16123E84F9C0DE123C573E223EDB8D53B7A32A4B`. See the implementation report for evidence and remaining limitations.
 
 Next priority is migration-safe page-specific document state, followed by responsive controls, persistent input preferences and the S Pen modifier contract. The broad premium roadmap remains unfinished; this milestone establishes the first reliable editing foundations.
+
+## Third package completed: document pages
+
+Added migration-safe source/sheet ownership of drawings, layers, active layer, scale and underlay settings; separate per-sheet session Undo/Redo; stale-background protection and off-main-thread decoding. Existing records survived the tablet database upgrade field-for-field. Two distinct PDF sheets retained their own objects, units and active layers through navigation, Undo/Redo and restart. Returning to the prior image restored its original eight objects. Current-sheet PDF output was inspected. **23 tests passed.** See [page document implementation and evidence](PAGE_DOCUMENTS_IMPLEMENTATION.md).
+
+Next: fix clipped layer actions and narrow-screen controls, retain input preferences, then implement and physically validate the pen modifier contract. Source relinking/copy-between-sheets and multi-sheet export remain document-workflow follow-ups.

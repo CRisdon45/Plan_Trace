@@ -135,8 +135,8 @@ fun TraceCanvas(
     val coroutineScope = rememberCoroutineScope()
 
     // Transform State (Infinite Pan and Zoom)
-    var zoomScale by remember(project.id, project.backgroundResourceOrUri) { mutableFloatStateOf(1.0f) }
-    var panOffset by remember(project.id, project.backgroundResourceOrUri) { mutableStateOf(Offset(0f, 0f)) }
+    var zoomScale by remember(project.id, project.pageKey) { mutableFloatStateOf(1.0f) }
+    var panOffset by remember(project.id, project.pageKey) { mutableStateOf(Offset(0f, 0f)) }
 
     // Multi-touch Pan & Pinch Zoom tracking
     var prevCentroid by remember { mutableStateOf<Offset?>(null) }

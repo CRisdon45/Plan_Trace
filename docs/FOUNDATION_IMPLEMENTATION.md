@@ -39,7 +39,7 @@ The first package expanded run passed **15 tests with zero failures**: seven int
 
 This checkout still differs from the original APK. Keep both installed during development. Source polyline completion is now implemented and checked as recorded below; other APK/source differences still need reconciliation before promotion.
 
-Per-page PDF object ownership is not yet implemented; saving the active page alone does not solve that defect. Exact editing beyond rectangles, long layer-name/portrait layout, complete pen-button behavior, Fit View, save recovery UI and project backup remain on the execution plan. The Northstar specification is recorded, but semantic materials and presentation modes are not yet implemented.
+Per-page PDF object ownership was subsequently implemented and validated in [the page document package](PAGE_DOCUMENTS_IMPLEMENTATION.md). Exact editing beyond rectangles, long layer-name/portrait layout, complete pen-button behavior, Fit View, save recovery UI and project backup remain on the execution plan. The Northstar specification is recorded, but semantic materials and presentation modes are not yet implemented.
 
 History presently covers layer/element edits and active layer, not underlay replacement or calibration. Opacity sliders still record individual changes. Export annotation clearance uses padding in addition to measured note bounds; crowded and unusually long dimension labels need dedicated layout work. Failed saves are reported but durable recovery/retry storage is not implemented. These are explicit follow-up requirements, not completed claims.
 

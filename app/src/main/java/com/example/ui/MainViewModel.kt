@@ -30,6 +30,7 @@ import com.example.model.TraceProject
 import com.example.model.VectorElement
 import com.example.engine.SnapSettings
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -81,7 +82,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val strokeStyle: StateFlow<StrokeStyle> = _strokeStyle.asStateFlow()
 
     // Undo / Redo history
-    private val editHistory = EditHistory()
+    private val pageHistories = mutableMapOf<String, EditHistory>()
+    private val editHistory: EditHistory get() = pageHistories.getOrPut(_project.value.pageKey) { EditHistory() }
 
     private val _canUndo = MutableStateFlow(false)
     val canUndo: StateFlow<Boolean> = _canUndo.asStateFlow()
@@ -91,6 +93,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // Background bitmap
     private val _backgroundBitmap = MutableStateFlow<Bitmap?>(null)
+    private var backgroundLoadJob: Job? = null
     val backgroundBitmap: StateFlow<Bitmap?> = _backgroundBitmap.asStateFlow()
 
     // Scale calibration mode
@@ -327,17 +330,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun loadProject(p: TraceProject) {
+        cancelEditGesture()
+        cancelScaleCalibration()
+        pageHistories.clear()
         _project.value = p
-        editHistory.clear()
         _selectedElementId.value = null
         updateUndoRedoStates()
         loadBackgroundForProject(p)
     }
 
     private fun loadBackgroundForProject(p: TraceProject) {
-        viewModelScope.launch {
+        backgroundLoadJob?.cancel()
+        _backgroundBitmap.value = null
+        backgroundLoadJob = viewModelScope.launch {
             val context = getApplication<Application>()
-            val bitmap = when (p.backgroundType) {
+            val bitmap = withContext(Dispatchers.IO) { when (p.backgroundType) {
                 BackgroundType.SAMPLE -> {
                     val resId = if (p.backgroundResourceOrUri.contains("deck")) {
                         R.drawable.sample_plan_deck
@@ -365,7 +372,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
                 BackgroundType.BLANK_GRID -> null
-            }
+            } }
+            if (_project.value.id != p.id || _project.value.pageKey != p.pageKey) return@launch
             _backgroundBitmap.value = bitmap
             if (bitmap == null && p.backgroundType in listOf(BackgroundType.IMAGE_URI, BackgroundType.PDF_URI)) {
                 showToast("Cannot open this plan's source file. Import it again to restore the underlay.")
@@ -668,17 +676,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun selectSamplePlan(sampleKey: String) {
-        _project.value = _project.value.copy(
-            backgroundType = BackgroundType.SAMPLE,
-            backgroundResourceOrUri = sampleKey,
-            scaleCalibration = ScaleCalibration()
-        )
-        loadBackgroundForProject(_project.value)
-        saveProjectDebounced()
+        openSheet(BackgroundType.SAMPLE, sampleKey)
         _toastMessage.value = "Loaded architectural sample plan"
     }
 
     fun importPlanUri(uri: Uri) {
+        val importingProjectId = _project.value.id
         viewModelScope.launch {
             val context = getApplication<Application>()
             val isPdf: Boolean
@@ -700,24 +703,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 showToast("Could not retain access to this file. Try importing it from Files.")
                 return@launch
             }
-            if (isPdf) {
-                val totalPages = PdfManager.getPdfPageCount(context, uri)
-                _project.value = _project.value.copy(
-                    backgroundType = BackgroundType.PDF_URI,
-                    backgroundResourceOrUri = uri.toString(),
-                    scaleCalibration = ScaleCalibration(),
-                    pdfPageNumber = 0,
-                    pdfTotalPages = totalPages
-                )
-            } else {
-                _project.value = _project.value.copy(
-                    backgroundType = BackgroundType.IMAGE_URI,
-                    backgroundResourceOrUri = uri.toString(),
-                    scaleCalibration = ScaleCalibration()
-                )
-            }
-            loadBackgroundForProject(_project.value)
-            saveProjectDebounced()
+            val totalPages = if (isPdf) PdfManager.getPdfPageCount(context, uri) else 1
+            if (_project.value.id != importingProjectId) return@launch
+            openSheet(if (isPdf) BackgroundType.PDF_URI else BackgroundType.IMAGE_URI, uri.toString(), 0, totalPages)
             _toastMessage.value = if (isPdf) "Imported PDF plan" else "Imported image plan"
         }
     }
@@ -725,19 +713,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun nextPdfPage() {
         val p = _project.value
         if (p.backgroundType == BackgroundType.PDF_URI && p.pdfPageNumber < p.pdfTotalPages - 1) {
-            _project.value = p.copy(pdfPageNumber = p.pdfPageNumber + 1)
-            loadBackgroundForProject(_project.value)
-            saveProjectDebounced()
+            openSheet(p.backgroundType, p.backgroundResourceOrUri, p.pdfPageNumber + 1, p.pdfTotalPages)
         }
     }
 
     fun prevPdfPage() {
         val p = _project.value
         if (p.backgroundType == BackgroundType.PDF_URI && p.pdfPageNumber > 0) {
-            _project.value = p.copy(pdfPageNumber = p.pdfPageNumber - 1)
-            loadBackgroundForProject(_project.value)
-            saveProjectDebounced()
+            openSheet(p.backgroundType, p.backgroundResourceOrUri, p.pdfPageNumber - 1, p.pdfTotalPages)
         }
+    }
+
+    private fun openSheet(type: BackgroundType, source: String, page: Int = 0, count: Int = 1) {
+        cancelEditGesture()
+        cancelScaleCalibration()
+        _selectedElementId.value = null
+        _project.value = _project.value.openSheet(type, source, page, count)
+        updateUndoRedoStates()
+        loadBackgroundForProject(_project.value)
+        saveProjectDebounced()
     }
 
     // Scale calibration
@@ -832,6 +826,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // Export operations
     fun exportProjectWithArchitecturalOptions(options: PdfExportOptions, asPdf: Boolean) {
+        if (backgroundLoadJob?.isActive == true) {
+            showToast("Wait for this sheet to finish loading before exporting.")
+            return
+        }
         viewModelScope.launch {
             val context = getApplication<Application>()
             val file: File? = if (asPdf) {

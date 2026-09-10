@@ -15,6 +15,7 @@ import com.example.model.ScaleCalibration
 import com.example.model.StrokeStyle
 import com.example.model.TextElement
 import com.example.model.TraceProject
+import com.example.model.PageDrawing
 import com.example.model.VectorElement
 import org.json.JSONArray
 import org.json.JSONObject
@@ -39,7 +40,8 @@ object ProjectJsonConverter {
             unit = project.scaleCalibration.unit,
             layersJson = serializeLayers(project.layers),
             activeLayerId = project.activeLayerId,
-            elementsJson = serializeElements(project.elements)
+            elementsJson = serializeElements(project.elements),
+            pageDrawingsJson = serializePages(project.pageDrawings + (project.pageKey to project.currentPageDrawing()))
         )
     }
 
@@ -72,8 +74,39 @@ object ProjectJsonConverter {
             ),
             layers = if (layers.isNotEmpty()) layers else TraceProject.defaultLayers(),
             activeLayerId = entity.activeLayerId,
-            elements = elements
+            elements = elements,
+            pageDrawings = deserializePages(entity.pageDrawingsJson)
         )
+    }
+
+    fun serializePages(pages: Map<String, PageDrawing>): String = JSONObject().apply {
+        pages.forEach { (key, page) -> put(key, JSONObject().apply {
+            put("layers", JSONArray(serializeLayers(page.layers)))
+            put("activeLayerId", page.activeLayerId)
+            put("elements", JSONArray(serializeElements(page.elements)))
+            put("isCalibrated", page.scale.isCalibrated)
+            put("pixelDistance", page.scale.pixelDistance.toDouble())
+            put("realWorldUnits", page.scale.realWorldUnits.toDouble())
+            put("unit", page.scale.unit)
+            put("backgroundOpacity", page.backgroundOpacity.toDouble())
+            put("isBackgroundLocked", page.isBackgroundLocked)
+        }) }
+    }.toString()
+
+    fun deserializePages(json: String): Map<String, PageDrawing> {
+        val root = JSONObject(json)
+        return root.keys().asSequence().associateWith { key ->
+            val page = root.getJSONObject(key)
+            PageDrawing(
+                layers = deserializeLayers(page.getJSONArray("layers").toString()),
+                activeLayerId = page.getString("activeLayerId"),
+                elements = deserializeElements(page.getJSONArray("elements").toString()),
+                scale = ScaleCalibration(page.getBoolean("isCalibrated"), page.getDouble("pixelDistance").toFloat(),
+                    page.getDouble("realWorldUnits").toFloat(), page.getString("unit")),
+                backgroundOpacity = page.getDouble("backgroundOpacity").toFloat(),
+                isBackgroundLocked = page.getBoolean("isBackgroundLocked")
+            )
+        }
     }
 
     fun serializeLayers(layers: List<DrawingLayer>): String {

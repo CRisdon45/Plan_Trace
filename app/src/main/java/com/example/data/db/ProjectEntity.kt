@@ -2,6 +2,7 @@ package com.example.data.db
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import androidx.room.ColumnInfo
 
 @Entity(tableName = "projects")
 data class ProjectEntity(
@@ -22,5 +23,6 @@ data class ProjectEntity(
     val unit: String,
     val layersJson: String,
     val activeLayerId: String,
-    val elementsJson: String
+    val elementsJson: String,
+    @ColumnInfo(defaultValue = "'{}'") val pageDrawingsJson: String = "{}"
 )

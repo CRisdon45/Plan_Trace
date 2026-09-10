@@ -25,6 +25,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.key
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -156,6 +157,7 @@ fun PlanTraceApp(viewModel: MainViewModel) {
                 .padding(innerPadding)
         ) {
             // Main Canvas (Infinite Pan and Zoom, S Pen pressure & inking)
+            key(project.id, project.pageKey) {
             TraceCanvas(
                 modifier = Modifier.fillMaxSize(),
                 project = project,
@@ -193,6 +195,7 @@ fun PlanTraceApp(viewModel: MainViewModel) {
                 onQuickUndo = { viewModel.undo() },
                 onFeedbackMessage = { viewModel.showToast(it) }
             )
+            }
 
             // Left floating architectural toolbar
             ArchitecturalToolbar(
