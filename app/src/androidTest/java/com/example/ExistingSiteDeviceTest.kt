@@ -68,6 +68,8 @@ class ExistingSiteDeviceTest {
         start("house")
         corner(120.0,100.0);corner(640.0,100.0,true)
         assertEquals(original,saved());assertEquals(2,model.state.value.siteDraft!!.points.size)
+        ui.onNodeWithTag("workspace-canvas").performTouchInput { down(center);moveBy(Offset(12f,8f));cancel() }
+        assertEquals(2,model.state.value.siteDraft!!.points.size);assertEquals(original,saved())
         ui.onNodeWithTag("site-outline-cancel").performClick()
         assertEquals(original,saved());assertNull(model.state.value.siteDraft)
         // Site-specific Undo removes a draft corner, not an existing pool or the source.
@@ -82,8 +84,14 @@ class ExistingSiteDeviceTest {
         assertEquals(6,house.boundary.nodes.size);assertEquals(SiteOutlineRole.HOUSE,house.siteTrace!!.role)
         assertEquals(original.objects,houseDoc.objects.dropLast(1))
         ui.onNodeWithTag("workspace-vertex-0").assertDoesNotExist()
-        // A contact at a protected edge is navigation, not an object mutation.
-        ui.onNodeWithTag("workspace-canvas").performTouchInput { swipe(center,center+Offset(20f,10f),220) }
+        // Target the actual protected house edge, not an arbitrary empty canvas location.
+        val protectedBox=ui.onNodeWithTag("workspace-canvas").fetchSemanticsNode().boundsInRoot
+        val protectedView=DesignViewport.fit(houseDoc,protectedBox.width.toDouble(),protectedBox.height.toDouble())
+        val protectedPoint=protectedView.toScreen(house.boundary.edges().first().pointAt(0.5))
+        ui.onNodeWithTag("workspace-canvas").performTouchInput {
+            val at=Offset(protectedPoint.x.toFloat(),protectedPoint.y.toFloat())
+            swipe(at,at+Offset(20f,10f),220)
+        }
         assertEquals(houseDoc,saved());command("view","fit")
         start("property");corner(60.0,60.0);corner(1140.0,60.0);corner(1140.0,840.0);corner(60.0,840.0)
         ui.onNodeWithTag("site-outline-finish").performClick()
@@ -108,6 +116,7 @@ class ExistingSiteDeviceTest {
         command("view","site");ui.onNodeWithTag("site-move").performScrollTo().performClick()
         ui.onNodeWithTag("workspace-canvas").performTouchInput { swipe(center,center+Offset(20f,12f),220) }
         val moved=saved();assertEquals(beforeMove.objects,moved.objects)
+        assertNotEquals(beforeMove.siteImage!!.topLeft,moved.siteImage!!.topLeft)
         ui.onNodeWithTag("site-close").performScrollTo().performClick()
         ui.onNodeWithTag("workspace-registration-warning").assertExists();capture("site-registration-warning")
         ui.onNodeWithTag("workspace-undo").performClick()

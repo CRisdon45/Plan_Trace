@@ -122,13 +122,7 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
                     Modifier.weight(1f).fillMaxWidth())
                 state.siteDraft?.let { draft -> SiteOutlineControls(draft,state.draftOrthogonal,model) }
                 val selected = doc.objects.firstOrNull { it.id == state.selectedId }
-                selected?.siteTrace?.let { Text(it.notice(doc.siteImage),style=MaterialTheme.typography.labelMedium,
-                    modifier=Modifier.padding(horizontal=16.dp).testTag("workspace-trace-status")) }
-                if(doc.objects.any { it.siteTrace?.registration(doc.siteImage)==TraceRegistration.CHANGED }) {
-                    Text("Source registration changed. Existing traced geometry was kept in place; review alignment.",
-                        style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.error,
-                        modifier=Modifier.padding(horizontal=16.dp).testTag("workspace-registration-warning"))
-                }
+                WorkspaceTraceStatus(state)
 
                 Text(selected?.let { String.format(Locale.US, "%s · perimeter %.2f ft", it.name, it.boundary.perimeterMetres / 0.3048) }
                     ?: "Add an outline, then select its edge to edit.", style = MaterialTheme.typography.bodyMedium,
