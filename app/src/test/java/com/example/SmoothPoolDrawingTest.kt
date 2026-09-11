@@ -68,6 +68,13 @@ class SmoothPoolDrawingTest {
         assertThrows(IllegalArgumentException::class.java) { s.execute(DesignCommand.SetTangentRadius(p.id,p.boundary.nodes[0].edgeId,-1.0,p.boundary)) }
         assertEquals(saved,s.document);assertTrue(s.canRedo)
     }
+    @Test fun arcPickingUsesExactProjectionAtHighZoomNotASetOfSamples() {
+        val p=pool()
+        for(e in p.boundary.edges()) for(f in listOf(.017,.123,.317,.719,.983)) {
+            assertEquals(DesignHit.SmoothRadius(p.id,e.id),SmoothPoolEditing.hit(p,SmoothEditMode.RADIUS,e.pointAt(f),1e-7))
+        }
+        assertThrows(IllegalArgumentException::class.java) { SmoothPoolEditing.hit(p,SmoothEditMode.SHAPE,p.boundary.nodes[0].point,Double.NaN) }
+    }
     @Test fun objectSnapIsAnExactInputToTheTangentSolve() {
         val p=pool();val target=p.boundary.nodes[0].point.translated(.15,.12)
         val reference=DesignObject("ref","Reference",DesignObjectKind.SITE_OUTLINE,DesignFixtures.rectangle().translated(target.x,target.y),locked=true)

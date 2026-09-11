@@ -48,6 +48,8 @@ enum class SmoothEditMode { OFF, SHAPE, RADIUS }
 
 /** Scope/picking and gesture mathematics shared by the canvas and tests. No screen-unit authority. */
 object SmoothPoolEditing {
+    // Reuse the existing exact finite-arc projection, independently of whether snapping is enabled.
+    private val projection = GeometrySnapIndex(emptyList())
     fun canEdit(obj: DesignObject?): Boolean = obj != null && !obj.locked &&
         obj.kind in setOf(DesignObjectKind.POOL,DesignObjectKind.SPA) && obj.coping != null &&
         obj.boundary.nodes.size >= 6 && obj.boundary.nodes.all {
@@ -57,8 +59,9 @@ object SmoothPoolEditing {
         if(!canEdit(obj) || mode == SmoothEditMode.OFF) return null
         val b = obj.boundary; val edges = b.edges()
         // Boundary picking, not an arbitrary point anywhere in the pool's bounding box.
-        val edge = edges.minBy { e -> (0..24).minOf { e.pointAt(it/24.0).distanceTo(point) } }
-        if((0..24).minOf { edge.pointAt(it/24.0).distanceTo(point) } > tolerance) return null
+        require(tolerance.isFinite() && tolerance > 0)
+        val edge = edges.minBy { e -> projection.closestOnEdge(e,point).distanceTo(point) }
+        if(projection.closestOnEdge(edge,point).distanceTo(point) > tolerance) return null
         return if(mode == SmoothEditMode.SHAPE) {
             val node = b.nodes.minBy { it.point.distanceTo(point) }
             DesignHit.SmoothAnchor(obj.id,node.vertexId)
