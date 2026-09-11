@@ -26,7 +26,7 @@ class WorkspaceObjectNavigatorTest {
         val objects = DesignFixtures.document().objects
         var selected: String? = null
         ui.setContent { MaterialTheme {
-            WorkspaceObjectNavigator(objects, selected) { selected = it }
+            WorkspaceObjectNavigator(objects, selected, onSelect = { selected = it })
         } }
         ui.onNodeWithTag("workspace-object-count").assertTextEquals("${objects.size} objects")
         objects.forEachIndexed { index, obj ->
