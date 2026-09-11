@@ -103,14 +103,16 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
             else if(gridSnap) GridAssist.snap(command) else command
         model.preview(resolved,pointer.document!!.revision)
         val next=model.state.value.preview
+        val rejection=model.state.value.message
+        if(next==null && rejection!=null) model.feedback(null)
         editSnap=match?.takeIf { next!=null }
         editMeasure=if(next!=null) LiveMeasurements.editing(pointer.document!!,next,pointer.target!!,pointer.down!!)
-            else LiveMeasure(rawTarget,listOf("Invalid edit · not placed"),invalid=true)
+            else LiveMeasure(rawTarget,listOf(rejection ?: "Edit not placed"),invalid=true)
     }
     fun dragPreview(at: DesignPoint) {
         try { previewEdit(DesignPicking.drag(pointer.document!!,pointer.target!!,pointer.down!!,at),at) }
-        catch(e:IllegalArgumentException) { model.cancelPreview();model.feedback(e.message);editSnap=null
-            editMeasure=LiveMeasure(at,listOf("Cannot keep these connections"),invalid=true) }
+        catch(e:IllegalArgumentException) { model.cancelPreview();editSnap=null
+            editMeasure=LiveMeasure(at,listOf(e.message ?: "Cannot keep these connections"),invalid=true) }
     }
     // Generic events are routed only while this canvas is active, using window-local bounds.
     // Hover itself never edits. The button opens a latched, tap-to-choose wheel; release does not execute.
@@ -401,7 +403,7 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
             }
             if(menuAnchor==null && inspector==null) {
                 BackHandler { model.setSmoothMode(SmoothEditMode.OFF) }
-                Text(if(state.smoothMode==SmoothEditMode.SHAPE) "Keep smooth · tap an edge, then drag the point" else "Radius · tap an arc, then drag",
+                Text(if(state.smoothMode==SmoothEditMode.SHAPE) "Smooth shape" else "Arc radius",
                     Modifier.align(Alignment.TopEnd).padding(8.dp).testTag("smooth-edit-mode"),style=MaterialTheme.typography.labelMedium)
             }
         }
