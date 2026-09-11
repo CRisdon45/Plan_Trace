@@ -49,9 +49,7 @@ class RadialWorkflowDeviceTest {
         val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
         automation.waitForIdle(300, 3000)
         val dir = File(context.getExternalFilesDir(null), "workspace-evidence").apply { mkdirs() }
-        val image = automation.takeScreenshot()
-        File(dir, "$name.png").outputStream().use { image.compress(Bitmap.CompressFormat.PNG, 100, it) }
-        image.recycle()
+        EmulatorCapture.save(context,dir,name)
         File(dir, "$name-semantics.txt").writeText(ui.onRoot().printToString())
     }
     private fun hover(x: Float, y: Float, buttons: Int) {

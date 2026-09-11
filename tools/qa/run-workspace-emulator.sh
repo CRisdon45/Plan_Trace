@@ -46,6 +46,7 @@ device shell settings put global window_animation_scale 0
 device shell settings put global transition_animation_scale 0
 device shell settings put global animator_duration_scale 0
 device shell input keyevent 82
+sleep 3 # Allow initial display reconfiguration to settle before launching tests.
 timeout 120 adb -s "$serial" install -r app/build/outputs/apk/debug/app-debug.apk
 timeout 120 adb -s "$serial" install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 device logcat -c
@@ -66,19 +67,7 @@ device exec-out run-as "$package" cat files/project-design/workspace.json > emul
 cmp emulator-evidence/saved-before-restart.json emulator-evidence/saved-after-restart.json
 # Independent follow-on scenarios keep the existing synthetic draft; no pm clear or reinstall.
 run_case radialEditingSafety com.example.RadialWorkflowDeviceTest
-device shell am force-stop "$package"
-device shell wm size 1000x1600
-run_case portraitCommands com.example.RadialWorkflowDeviceTest
-device shell am force-stop "$package"
-device shell wm size 800x1400
-device shell wm density 400
-run_case compactCommands com.example.RadialWorkflowDeviceTest
-device shell am force-stop "$package"
-device exec-out run-as "$package" cat files/project-design/workspace.json > emulator-evidence/saved-after-radial-review.json
-
 # Source-image cases reuse the existing synthetic design without clearing user-style state.
-device shell wm size 1600x1000
-device shell wm density 240
 run_case siteImportCalibrateAndMove com.example.SiteWorkspaceDeviceTest
 device shell am force-stop "$package"
 device exec-out run-as "$package" cat files/project-design/workspace.json > emulator-evidence/site-before-restart.json
@@ -87,10 +76,31 @@ device shell am force-stop "$package"
 device exec-out run-as "$package" cat files/project-design/workspace.json > emulator-evidence/site-after-restart.json
 cmp emulator-evidence/site-before-restart.json emulator-evidence/site-after-restart.json
 
+# Layout changes happen after the source/restart scenarios. Keep the test app
+# foreground while Android applies display changes, rather than reconfiguring the launcher.
+function layout_display() {
+  local width="$1" height="$2" density="$3"
+  local activity
+  activity="$(device shell cmd package resolve-activity --brief "$package" | tr -d '\r' | tail -n 1)"
+  [[ "$activity" == "$package/"* ]] || { echo "Application activity could not be resolved"; exit 1; }
+  device shell am start -W -n "$activity" > "emulator-evidence/display-${width}x${height}-launch.txt"
+  device shell wm size "${width}x${height}"
+  device shell wm density "$density"
+  sleep 3
+}
+layout_display 1000 1600 240
+run_case portraitCommands com.example.RadialWorkflowDeviceTest
+device shell am force-stop "$package"
+layout_display 800 1400 400
+run_case compactCommands com.example.RadialWorkflowDeviceTest
+device shell am force-stop "$package"
+device exec-out run-as "$package" cat files/project-design/workspace.json > emulator-evidence/saved-after-radial-review.json
+
 {
   echo "Source: ${GITHUB_SHA:-local}"
   echo 'Completed: existing edit/save/restart scenarios, real grid-snapped drag, canceled size entry, freeform uniform sizing, four-corner wheel access, disabled actions, portrait and 320dp compact fallback.'
-  echo 'Additional: owned raster intake callback, two reference taps, preset scale, source-only move/cancel/remove/Undo, restart and actual PNG/PDF output. External picker UI NOT automated.'
+  echo 'Additional: owned raster intake, calibrated source, second-distance match/disagreement without rescaling, source move/cancel/Undo, restart and actual PNG/PDF output. External picker UI NOT automated.'
+  echo 'Every accepted in-app screenshot checks the Android active-window package; obstructed frames fail and are retained, never dismissed.'
   echo 'Display cases: landscape 1600x1000@240, portrait 1000x1600@240, compact 800x1400@400.'
   echo "API: $(device shell getprop ro.build.version.sdk | tr -d '\r')"
   echo "ABI: $(device shell getprop ro.product.cpu.abi | tr -d '\r')"

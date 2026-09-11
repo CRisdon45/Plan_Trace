@@ -46,8 +46,7 @@ class SiteWorkspaceDeviceTest {
     }
     private fun capture(name:String) {
         ui.waitForIdle();InstrumentationRegistry.getInstrumentation().uiAutomation.waitForIdle(300,3000)
-        val bitmap=InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
-        File(evidence,"$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG,100,it) };bitmap.recycle()
+        EmulatorCapture.save(context,evidence,name)
         File(evidence,"$name-semantics.txt").writeText(ui.onRoot().printToString())
     }
     private fun fixture():File {

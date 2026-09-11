@@ -58,9 +58,7 @@ class DesignWorkspaceDeviceTest {
         val dir = File(context.getExternalFilesDir(null), "workspace-evidence").apply { mkdirs() }
         ui.waitForIdle()
         InstrumentationRegistry.getInstrumentation().uiAutomation.waitForIdle(300, 3000)
-        val bitmap = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
-        File(dir, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
-        bitmap.recycle()
+        EmulatorCapture.save(context,dir,name)
         File(dir, "$name-semantics.txt").writeText(ui.onRoot().printToString())
     }
     @Test fun createEditUndoPersist() {
