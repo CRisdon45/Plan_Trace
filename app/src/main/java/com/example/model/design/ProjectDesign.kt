@@ -56,6 +56,8 @@ sealed interface DesignCommand {
     data class Remove(val objectId: String) : DesignCommand
     data class SetLocked(val objectId: String, val locked: Boolean) : DesignCommand
     data class Translate(val objectId: String, val dxMetres: Double, val dyMetres: Double) : DesignCommand
+    data class MoveTangentAnchor(val objectId: String, val vertexId: String, val point: DesignPoint, val expectedBoundary: DesignBoundary) : DesignCommand
+    data class SetTangentRadius(val objectId: String, val edgeId: String, val metres: Double, val expectedBoundary: DesignBoundary) : DesignCommand
     data class MoveSide(val objectId: String, val edgeId: String, val offsetMetres: Double) : DesignCommand
     data class MoveVertex(val objectId: String, val vertexId: String, val point: DesignPoint) : DesignCommand
     data class ChangeBulge(val objectId: String, val edgeId: String, val bulge: Double) : DesignCommand
@@ -79,6 +81,8 @@ object DesignCommands {
             is DesignCommand.Remove -> command.objectId
             is DesignCommand.SetLocked -> command.objectId
             is DesignCommand.Translate -> command.objectId
+            is DesignCommand.MoveTangentAnchor -> command.objectId
+            is DesignCommand.SetTangentRadius -> command.objectId
             is DesignCommand.MoveSide -> command.objectId
             is DesignCommand.MoveVertex -> command.objectId
             is DesignCommand.ChangeBulge -> command.objectId
@@ -98,7 +102,19 @@ object DesignCommands {
             if (command.spec == current.coping) return document
             return document.revised(document.objects.map { if (it.id == id) it.copy(coping = command.spec) else it })
         }
+        if (command is DesignCommand.MoveTangentAnchor || command is DesignCommand.SetTangentRadius) {
+            val expected = when (command) {
+                is DesignCommand.MoveTangentAnchor -> command.expectedBoundary
+                is DesignCommand.SetTangentRadius -> command.expectedBoundary
+                else -> error("Unsupported tangent command")
+            }
+            require(current.boundary == expected) { "Pool geometry changed during this edit. Start again" }
+            require((current.kind == DesignObjectKind.POOL || current.kind == DesignObjectKind.SPA) &&
+                current.coping != null && current.siteTrace == null) { "Tangent edits require a pool or spa with following coping" }
+        }
         val boundary = when (command) {
+            is DesignCommand.MoveTangentAnchor -> TangentSpanEditing.moveAnchor(current.boundary, command.vertexId, command.point)
+            is DesignCommand.SetTangentRadius -> TangentSpanEditing.setFirstRadius(current.boundary, command.edgeId, command.metres)
             is DesignCommand.Translate -> {
                 require(command.dxMetres.isFinite() && command.dyMetres.isFinite())
                 current.boundary.translated(command.dxMetres, command.dyMetres)
