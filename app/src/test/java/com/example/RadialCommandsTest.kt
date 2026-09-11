@@ -37,7 +37,7 @@ class RadialCommandsTest {
         assertFalse(empty.enabled(RadialAction.SIZE));assertFalse(empty.enabled(RadialAction.DELETE))
         assertFalse(empty.enabled(RadialAction.COPING));assertFalse(empty.enabled(RadialAction.UNDO))
         assertTrue(empty.enabled(RadialAction.POOL));assertTrue(empty.enabled(RadialAction.GRID))
-        assertEquals(listOf(RadialAction.SIZE,RadialAction.COPING,RadialAction.DELETE),RadialCommands.actions(RadialCategory.EDIT))
+        assertEquals(listOf(RadialAction.SIZE,RadialAction.COPING,RadialAction.DELETE,RadialAction.SIDES),RadialCommands.actions(RadialCategory.EDIT))
         val locked=empty.copy(hasSelection=true,hasCopingTarget=true,hasObjects=true)
         assertFalse(locked.enabled(RadialAction.COPING));assertTrue(locked.enabled(RadialAction.CLEAR))
     }

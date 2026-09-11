@@ -39,6 +39,7 @@ data class WorkspaceState(
     val siteTool: SiteTool = SiteTool.NONE,
     val referencePoints: List<ImagePoint> = emptyList(),
     val referencePurpose: SiteTool = SiteTool.CALIBRATE,
+    val sideEditing: Boolean = false,
     val siteDraft: SiteOutlineDraft? = null,
     val draftCursor: DesignPoint? = null,
     val draftTarget: DrawingTarget? = null,
@@ -124,6 +125,7 @@ class DesignWorkspaceViewModel(application: Application) : AndroidViewModel(appl
         }
     }
     fun startSiteTool(tool: SiteTool) {
+        stopSideEditing()
         if (session?.document?.siteImage?.visible != true || state.value.siteBitmap == null) return
         if (tool == SiteTool.CHECK && session?.document?.siteImage?.calibration == null) {
             feedback("Set the image scale before checking another distance"); return
@@ -136,7 +138,7 @@ class DesignWorkspaceViewModel(application: Application) : AndroidViewModel(appl
     }
     fun stopSiteTool() { cancelPreview(); _state.update { it.copy(siteTool=SiteTool.NONE,referencePoints=emptyList(),siteDraft=null,proposedDraft=null,draftCursor=null,draftTarget=null) } }
     fun beginSiteOutline(role: SiteOutlineRole) {
-        stopSiteTool()
+        stopSideEditing(); stopSiteTool()
         val doc=session?.document ?: return
         val source=doc.siteImage
         if(source?.calibration==null || !source.visible || state.value.siteBitmap==null) {
@@ -146,7 +148,7 @@ class DesignWorkspaceViewModel(application: Application) : AndroidViewModel(appl
         _state.update { it.copy(siteDraft=draft,selectedId=null,draftOrthogonal=role==SiteOutlineRole.HOUSE,message=null) }
     }
     fun beginProposedOutline(kind: DesignObjectKind) {
-        stopSiteTool()
+        stopSideEditing(); stopSiteTool()
         val doc=session?.document ?: return
         _state.update { it.copy(proposedDraft=ProposedOutlineDraft(kind,doc.id,doc.revision),
             selectedId=null,draftOrthogonal=true,message=null) }
@@ -219,8 +221,19 @@ class DesignWorkspaceViewModel(application: Application) : AndroidViewModel(appl
             if (!checking) fit()
         } catch (error: IllegalArgumentException) { feedback(error.message) }
     }
-    fun select(id: String?) { stopSiteTool(); _state.update { it.copy(selectedId = id, message = null) } }
+    fun select(id: String?) {
+        stopSiteTool()
+        _state.update { it.copy(selectedId=id, sideEditing=it.sideEditing && it.selectedId==id, message=null) }
+    }
+    fun toggleSideEditing() {
+        stopSiteTool()
+        val obj=session?.document?.objects?.firstOrNull { it.id==state.value.selectedId }
+        if(!StraightSideEditing.canEdit(obj)) { feedback("Select an unlocked pool with supported straight sides"); return }
+        _state.update { it.copy(sideEditing=!it.sideEditing,message=null) }
+    }
+    fun stopSideEditing() { cancelPreview(); _state.update { it.copy(sideEditing=false) } }
     fun addOutline(curved: Boolean, kind: DesignObjectKind = DesignObjectKind.POOL) {
+        stopSideEditing()
         val doc = session?.document ?: return
         val value = DesignStartingShapes.create(curved, doc.objects.size, kind)
         execute(DesignCommand.Add(value))
@@ -268,6 +281,7 @@ class DesignWorkspaceViewModel(application: Application) : AndroidViewModel(appl
         val current = session ?: return
         _state.update { it.copy(document = current.document, preview = null, message = null, saveError = null,
             canUndo = current.canUndo, canRedo = current.canRedo,
+            sideEditing = it.sideEditing && StraightSideEditing.canEdit(current.document.objects.firstOrNull { obj -> obj.id==it.selectedId }),
             siteTool = SiteTool.NONE, referencePoints = emptyList(), siteDraft=null, proposedDraft=null, draftCursor=null, draftTarget=null,
             selectedId = it.selectedId?.takeIf { id -> current.document.objects.any { obj -> obj.id == id } }) }
         refreshSource()

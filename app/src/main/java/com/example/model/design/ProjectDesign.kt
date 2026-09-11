@@ -56,6 +56,7 @@ sealed interface DesignCommand {
     data class Remove(val objectId: String) : DesignCommand
     data class SetLocked(val objectId: String, val locked: Boolean) : DesignCommand
     data class Translate(val objectId: String, val dxMetres: Double, val dyMetres: Double) : DesignCommand
+    data class MoveSide(val objectId: String, val edgeId: String, val offsetMetres: Double) : DesignCommand
     data class MoveVertex(val objectId: String, val vertexId: String, val point: DesignPoint) : DesignCommand
     data class ChangeBulge(val objectId: String, val edgeId: String, val bulge: Double) : DesignCommand
     data class ReplaceBoundary(val objectId: String, val boundary: DesignBoundary) : DesignCommand
@@ -78,6 +79,7 @@ object DesignCommands {
             is DesignCommand.Remove -> command.objectId
             is DesignCommand.SetLocked -> command.objectId
             is DesignCommand.Translate -> command.objectId
+            is DesignCommand.MoveSide -> command.objectId
             is DesignCommand.MoveVertex -> command.objectId
             is DesignCommand.ChangeBulge -> command.objectId
             is DesignCommand.ReplaceBoundary -> command.objectId
@@ -100,6 +102,10 @@ object DesignCommands {
             is DesignCommand.Translate -> {
                 require(command.dxMetres.isFinite() && command.dyMetres.isFinite())
                 current.boundary.translated(command.dxMetres, command.dyMetres)
+            }
+            is DesignCommand.MoveSide -> {
+                require(StraightSideEditing.supports(current, command.edgeId)) { "This pool side is not supported for whole-side editing" }
+                StraightSideEditing.move(current.boundary, command.edgeId, command.offsetMetres)
             }
             is DesignCommand.MoveVertex -> current.boundary.movedVertex(command.vertexId, command.point)
             is DesignCommand.ChangeBulge -> current.boundary.changedBulge(command.edgeId, command.bulge)

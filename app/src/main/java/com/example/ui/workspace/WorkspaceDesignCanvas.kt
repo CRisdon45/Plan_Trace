@@ -91,9 +91,12 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
         if(commandRequest>0) openCommands(lastPosition ?: Offset(size.width/2f,size.height/2f))
     }
     fun previewEdit(command: DesignCommand, rawTarget: DesignPoint) {
-        val match = if(command is DesignCommand.MoveVertex) snapIndex?.resolve(command.point,
+        val side = if(command is DesignCommand.MoveSide) StraightSideTargets.resolve(
+            pointer.document!!.objectById(command.objectId),command,gridSnap,snapIndex,
+            12.0*density/viewport.pixelsPerMetre,editSnap?.key) else null
+        val match = side?.snap ?: if(command is DesignCommand.MoveVertex) snapIndex?.resolve(command.point,
             12.0*density/viewport.pixelsPerMetre,previous=editSnap?.key,excludeObjectId=command.objectId) else null
-        val resolved = if(command is DesignCommand.MoveVertex && match!=null) command.copy(point=match.point)
+        val resolved = side?.command ?: if(command is DesignCommand.MoveVertex && match!=null) command.copy(point=match.point)
             else if(gridSnap) GridAssist.snap(command) else command
         model.preview(resolved,pointer.document!!.revision)
         val next=model.state.value.preview
@@ -242,7 +245,7 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
                     pointer.lastX = x; pointer.lastY = y; pointer.downX = x; pointer.downY = y
                     val editing = touchEdit || event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS || event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER
                     if (editing && state.document != null) {
-                        pointer.target = DesignPicking.hit(state.document, state.selectedId, pointer.down!!, 22.0 * density / viewport.pixelsPerMetre)
+                        pointer.target = DesignPicking.hit(state.document, state.selectedId, pointer.down!!, 22.0 * density / viewport.pixelsPerMetre, state.sideEditing)
                         model.select(pointer.target?.objectId)
                     }
                 }
@@ -318,11 +321,20 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
                     drawCircle(Color.White,7*density,p);drawCircle(if(i==0) Color(0xFFAD762B) else Color(0xFF2F665F),4.5f*density,p)
                 }
             }
+            if(state.sideEditing && selected!=null && state.siteTool==SiteTool.NONE) {
+                selected.boundary.edges().filter { StraightSideEditing.supports(selected,it.id) }.forEach { edge ->
+                    val a=viewport.toScreen(edge.start.point); val b=viewport.toScreen(edge.end)
+                    val p=viewport.toScreen(edge.pointAt(0.5)); val at=Offset(p.x.toFloat(),p.y.toFloat())
+                    drawLine(Color(0xFF205D60),Offset(a.x.toFloat(),a.y.toFloat()),Offset(b.x.toFloat(),b.y.toFloat()),2*density)
+                    drawRect(Color.White,at-Offset(8*density,8*density),androidx.compose.ui.geometry.Size(16*density,16*density))
+                    drawRect(Color(0xFF205D60),at-Offset(5*density,5*density),androidx.compose.ui.geometry.Size(10*density,10*density))
+                }
+            }
             document.siteImage?.let { source -> state.referencePoints.forEach { pixel ->
                 val p=viewport.toScreen(source.toWorld(pixel));val at=Offset(p.x.toFloat(),p.y.toFloat())
                 drawCircle(Color.White,8*density,at);drawCircle(Color(0xFFC64D22),5*density,at)
             } }
-            if (selected != null && !selected.locked && state.siteTool==SiteTool.NONE) {
+            if (selected != null && !selected.locked && state.siteTool==SiteTool.NONE && !state.sideEditing) {
                 selected.boundary.nodes.forEach { n ->
                     val p = viewport.toScreen(n.point)
                     drawCircle(Color.White, radius + 2f * density, Offset(p.x.toFloat(), p.y.toFloat()))
@@ -337,7 +349,7 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
         }
         if (projection == null) Text("This outline cannot be displayed at the current precision: ${projectionResult.exceptionOrNull()?.message.orEmpty()}", modifier = Modifier.padding(16.dp), color = MaterialTheme.colorScheme.error)
         // Semantic hit targets coincide with the handles. Pointer handling remains on the parent.
-        if (selected != null && !selected.locked) {
+        if (selected != null && !selected.locked && !state.sideEditing) {
             selected.boundary.nodes.forEachIndexed { index, node ->
                 val p = viewport.toScreen(node.point)
                 Box(Modifier.offset { IntOffset((p.x - 22 * density).roundToInt(), (p.y - 22 * density).roundToInt()) }
@@ -348,6 +360,16 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
                 Box(Modifier.offset { IntOffset((p.x - 22 * density).roundToInt(), (p.y - 22 * density).roundToInt()) }
                     .size(44.dp).testTag("workspace-curve-$index").semantics { contentDescription = "Curve handle ${index + 1}" })
             }
+        }
+        if(state.sideEditing && selected!=null) {
+            selected.boundary.edges().forEachIndexed { index,edge ->
+                if(StraightSideEditing.supports(selected,edge.id)) {
+                    val p=viewport.toScreen(edge.pointAt(0.5))
+                    Box(Modifier.offset { IntOffset((p.x-22*density).roundToInt(),(p.y-22*density).roundToInt()) }
+                        .size(44.dp).testTag("workspace-side-$index").semantics { contentDescription="Move pool side ${index+1}" })
+                }
+            }
+            if(menuAnchor==null && inspector==null) BackHandler { model.stopSideEditing() }
         }
         if(document.siteImage!=null && inspector==null && !state.isDrawing) {
             Surface(Modifier.align(Alignment.TopStart).padding(8.dp),color=Color(0xEEFFFFFF)) {
@@ -428,7 +450,8 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
             WorkspaceRadialMenu(anchor,size,RadialAvailability(state.document!=null,selected!=null,
                 selected!=null && !selected.locked,
                 selected?.kind==DesignObjectKind.POOL || selected?.kind==DesignObjectKind.SPA,
-                state.canUndo,state.canRedo,document.objects.isNotEmpty(),showGrid,touchEdit,gridSnap,geometrySnap),
+                state.canUndo,state.canRedo,document.objects.isNotEmpty(),showGrid,touchEdit,gridSnap,geometrySnap,
+                canEditSides=StraightSideEditing.canEdit(selected),sideEditing=state.sideEditing),
                 onDismiss={ menuAnchor=null },onAction=onAction)
         }
 

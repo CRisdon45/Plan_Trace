@@ -6,26 +6,27 @@ import kotlin.math.*
 enum class RadialCategory(val label: String) { DRAW("Draw"), EDIT("Edit"), VIEW("View"), ASSIST("Assist"), HISTORY("History"), SELECT("Select") }
 enum class RadialAction(val label: String) {
     POOL("Pool"), CURVED("Curved"), PAVING("Paving"), SIZE("Size"), COPING("Coping"), DELETE("Delete"),
-    FIT("Fit"), GRID("Grid"), TOUCH("Touch edit"), SNAP("1 ft snap"), UNDO("Undo"), REDO("Redo"), NEXT("Next"), CLEAR("Clear"), SITE("Site image"), GEOMETRY("Object snap")
+    FIT("Fit"), GRID("Grid"), TOUCH("Touch edit"), SNAP("1 ft snap"), UNDO("Undo"), REDO("Redo"), NEXT("Next"), CLEAR("Clear"), SITE("Site image"), GEOMETRY("Object snap"), SIDES("Move sides")
 }
 data class RadialAvailability(val hasDocument: Boolean, val hasSelection: Boolean, val editable: Boolean,
     val hasCopingTarget: Boolean, val canUndo: Boolean, val canRedo: Boolean, val hasObjects: Boolean,
-    val grid: Boolean=false, val touch: Boolean=false, val snap: Boolean=false, val geometry: Boolean=false) {
+    val grid: Boolean=false, val touch: Boolean=false, val snap: Boolean=false, val geometry: Boolean=false, val canEditSides: Boolean=false, val sideEditing: Boolean=false) {
     fun enabled(a: RadialAction)=when(a) {
         RadialAction.SIZE, RadialAction.DELETE -> editable
         RadialAction.COPING -> editable && hasCopingTarget
+        RadialAction.SIDES -> editable && canEditSides
         RadialAction.UNDO -> canUndo
         RadialAction.REDO -> canRedo
         RadialAction.NEXT -> hasObjects
         RadialAction.CLEAR -> hasSelection
         else -> hasDocument
     }
-    fun checked(a: RadialAction): Boolean?=when(a) { RadialAction.GRID->grid;RadialAction.TOUCH->touch;RadialAction.SNAP->snap;RadialAction.GEOMETRY->geometry;else->null }
+    fun checked(a: RadialAction): Boolean?=when(a) { RadialAction.GRID->grid;RadialAction.TOUCH->touch;RadialAction.SNAP->snap;RadialAction.GEOMETRY->geometry;RadialAction.SIDES->sideEditing;else->null }
 }
 object RadialCommands {
     fun actions(c: RadialCategory): List<RadialAction> = when(c) {
         RadialCategory.DRAW -> listOf(RadialAction.POOL,RadialAction.CURVED,RadialAction.PAVING)
-        RadialCategory.EDIT -> listOf(RadialAction.SIZE,RadialAction.COPING,RadialAction.DELETE)
+        RadialCategory.EDIT -> listOf(RadialAction.SIZE,RadialAction.COPING,RadialAction.DELETE,RadialAction.SIDES)
         RadialCategory.VIEW -> listOf(RadialAction.FIT,RadialAction.GRID,RadialAction.SITE)
         RadialCategory.ASSIST -> listOf(RadialAction.TOUCH,RadialAction.SNAP,RadialAction.GEOMETRY)
         RadialCategory.HISTORY -> listOf(RadialAction.UNDO,RadialAction.REDO)
@@ -46,6 +47,8 @@ object RadialGeometry {
     fun childAngle(c:RadialCategory,index:Int): Double {
         val count=RadialCommands.actions(c).size
         require(index in 0 until count)
+        // Append side editing without moving the learned Size/Coping/Delete directions.
+        if(c==RadialCategory.EDIT) return angle(c)+listOf(-30.0,0.0,30.0,60.0)[index]
         // Preserve the existing Fit/Grid directions when adding source setup.
         if(c==RadialCategory.VIEW || c==RadialCategory.ASSIST) return angle(c)+listOf(-15.0,15.0,45.0)[index]
         return angle(c)+(index-(count-1)/2.0)*30.0

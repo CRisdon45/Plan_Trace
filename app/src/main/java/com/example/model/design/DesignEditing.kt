@@ -53,14 +53,22 @@ data class DesignViewport(val pixelsPerMetre: Double, val offsetX: Double, val o
 sealed interface DesignHit {
     val objectId: String
     data class Vertex(override val objectId: String, val vertexId: String) : DesignHit
+    data class Side(override val objectId: String, val edgeId: String) : DesignHit
     data class Curve(override val objectId: String, val edgeId: String) : DesignHit
     data class Body(override val objectId: String) : DesignHit
 }
 
 object DesignPicking {
-    fun hit(document: ProjectDesign, selectedId: String?, point: DesignPoint, toleranceMetres: Double): DesignHit? {
+    fun hit(document: ProjectDesign, selectedId: String?, point: DesignPoint, toleranceMetres: Double, sideEditing: Boolean = false): DesignHit? {
         require(toleranceMetres.isFinite() && toleranceMetres > 0)
         val selected = document.objects.firstOrNull { it.id == selectedId && !it.locked }
+        if (sideEditing) {
+            val current = selected ?: return null
+            val edge = current.boundary.edges().filter { StraightSideEditing.supports(current, it.id) }
+                .minByOrNull { it.pointAt(0.5).distanceTo(point) }
+            return edge?.takeIf { it.pointAt(0.5).distanceTo(point) <= toleranceMetres }
+                ?.let { DesignHit.Side(current.id, it.id) }
+        }
         selected?.boundary?.nodes?.minByOrNull { it.point.distanceTo(point) }?.let {
             if (it.point.distanceTo(point) <= toleranceMetres) return DesignHit.Vertex(selected.id, it.vertexId)
         }
@@ -87,6 +95,10 @@ object DesignPicking {
         is DesignHit.Vertex -> {
             val original = document.objectById(target.objectId).boundary.nodes.single { it.vertexId == target.vertexId }.point
             DesignCommand.MoveVertex(target.objectId, target.vertexId, original.translated(current.x - down.x, current.y - down.y))
+        }
+        is DesignHit.Side -> {
+            val frame = StraightSideEditing.frame(document.objectById(target.objectId).boundary, target.edgeId)
+            DesignCommand.MoveSide(target.objectId, target.edgeId, frame.offset(down, current))
         }
         is DesignHit.Curve -> {
             val edge = document.objectById(target.objectId).boundary.edges().single { it.id == target.edgeId }

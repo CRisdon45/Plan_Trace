@@ -76,6 +76,18 @@ object LiveMeasurements {
                     "Previous ${if(incoming.isLine) "line" else "arc"} · ${LiveFeetInches.format(incoming.lengthMetres)}",
                     "Next ${if(outgoing.isLine) "line" else "arc"} · ${LiveFeetInches.format(outgoing.lengthMetres)}"))
             }
+            is DesignHit.Side -> {
+                val edges = obj.boundary.edges()
+                val index = edges.indexOfFirst { it.id == hit.edgeId }
+                require(index >= 0)
+                val size = DesignDimensions.measure(obj.boundary)
+                val lines = if(size.rectangular) listOf(
+                    LiveFeetInches.format(size.lengthMetres) + " × " + LiveFeetInches.format(size.widthMetres))
+                else listOf(
+                    "Previous · " + LiveFeetInches.format(edges[(index+edges.size-1)%edges.size].lengthMetres),
+                    "Next · " + LiveFeetInches.format(edges[(index+1)%edges.size].lengthMetres))
+                LiveMeasure(edges[index].pointAt(0.5), lines)
+            }
             is DesignHit.Curve -> {
                 val edge = obj.boundary.edges().single { it.id == hit.edgeId }
                 LiveMeasure(edge.pointAt(0.5), listOf("${if(edge.isLine) "Line" else "Arc"} · ${LiveFeetInches.format(edge.lengthMetres)}") +

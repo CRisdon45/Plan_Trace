@@ -59,6 +59,7 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
             RadialAction.POOL -> model.beginProposedOutline(DesignObjectKind.POOL)
             RadialAction.CURVED -> model.addOutline(true)
             RadialAction.PAVING -> model.beginProposedOutline(DesignObjectKind.PAVING)
+            RadialAction.SIDES -> model.toggleSideEditing()
             RadialAction.SIZE -> if(selected!=null && !selected.locked) inspector="size"
             RadialAction.COPING -> if(selected!=null && !selected.locked) inspector="coping"
             RadialAction.DELETE -> selected?.let { model.execute(DesignCommand.Remove(it.id)) }
@@ -84,13 +85,13 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
     val lifecycle = LocalLifecycleOwner.current
     DisposableEffect(lifecycle, model) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_PAUSE) { model.stopSiteTool();inspector=null }
+            if (event == Lifecycle.Event.ON_PAUSE) { model.stopSideEditing(); model.stopSiteTool();inspector=null }
         }
         lifecycle.lifecycle.addObserver(observer)
-        onDispose { lifecycle.lifecycle.removeObserver(observer); model.stopSiteTool() }
+        onDispose { lifecycle.lifecycle.removeObserver(observer); model.stopSideEditing(); model.stopSiteTool() }
     }
     fun close() {
-        model.stopSiteTool()
+        model.stopSideEditing(); model.stopSiteTool()
         if (state.document == null || state.saved || state.document!!.revision == 0L) onBack()
         else leaveUnsaved = true
     }
