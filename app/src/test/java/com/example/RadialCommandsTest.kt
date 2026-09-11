@@ -37,9 +37,16 @@ class RadialCommandsTest {
         assertFalse(empty.enabled(RadialAction.SIZE));assertFalse(empty.enabled(RadialAction.DELETE))
         assertFalse(empty.enabled(RadialAction.COPING));assertFalse(empty.enabled(RadialAction.UNDO))
         assertTrue(empty.enabled(RadialAction.POOL));assertTrue(empty.enabled(RadialAction.GRID))
-        assertEquals(listOf(RadialAction.SIZE,RadialAction.COPING,RadialAction.DELETE,RadialAction.SIDES),RadialCommands.actions(RadialCategory.EDIT))
+        assertEquals(listOf(RadialAction.SIZE,RadialAction.COPING,RadialAction.DELETE,RadialAction.SIDES,RadialAction.SMOOTH,RadialAction.RADIUS),RadialCommands.actions(RadialCategory.EDIT))
         val locked=empty.copy(hasSelection=true,hasCopingTarget=true,hasObjects=true)
         assertFalse(locked.enabled(RadialAction.COPING));assertTrue(locked.enabled(RadialAction.CLEAR))
+    }
+    @Test fun `smooth actions preserve learned directions and require an editable pool`() {
+        assertEquals(listOf(-120.0,-90.0,-60.0), (0..2).map { RadialGeometry.childAngle(RadialCategory.DRAW,it) })
+        assertEquals(listOf(-60.0,-30.0,0.0,30.0), (0..3).map { RadialGeometry.childAngle(RadialCategory.EDIT,it) })
+        val no=RadialAvailability(true,true,false,true,false,false,true,canEditSmooth=true)
+        assertFalse(no.enabled(RadialAction.SMOOTH));assertFalse(no.enabled(RadialAction.RADIUS))
+        assertTrue(no.copy(editable=true).enabled(RadialAction.SMOOTH))
     }
     @Test fun `grid display and grid snapping are separate explicit toggle states`() {
         val state=RadialAvailability(true,true,true,true,true,false,true,grid=true,snap=false)

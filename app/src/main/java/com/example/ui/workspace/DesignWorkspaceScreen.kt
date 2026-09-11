@@ -58,6 +58,9 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
             RadialAction.SITE -> { model.stopSiteTool(); inspector="site" }
             RadialAction.POOL -> model.beginProposedOutline(DesignObjectKind.POOL)
             RadialAction.CURVED -> model.addOutline(true)
+            RadialAction.SMOOTH_POOL -> model.beginSmoothPool()
+            RadialAction.SMOOTH -> model.setSmoothMode(if(state.smoothMode==SmoothEditMode.SHAPE) SmoothEditMode.OFF else SmoothEditMode.SHAPE)
+            RadialAction.RADIUS -> model.setSmoothMode(if(state.smoothMode==SmoothEditMode.RADIUS) SmoothEditMode.OFF else SmoothEditMode.RADIUS)
             RadialAction.PAVING -> model.beginProposedOutline(DesignObjectKind.PAVING)
             RadialAction.SIDES -> model.toggleSideEditing()
             RadialAction.SIZE -> if(selected!=null && !selected.locked) inspector="size"
@@ -125,6 +128,7 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
                     Modifier.weight(1f).fillMaxWidth())
                 state.siteDraft?.let { draft -> SiteOutlineControls(draft,state.draftOrthogonal,model) }
                 state.proposedDraft?.let { draft -> ProposedOutlineControls(draft,state.draftOrthogonal,model) }
+                state.smoothDraft?.let { draft -> SmoothOutlineControls(draft,model) }
                 val selected = doc.objects.firstOrNull { it.id == state.selectedId }
                 WorkspaceTraceStatus(state)
 

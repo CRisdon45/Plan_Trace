@@ -108,6 +108,15 @@ device shell am force-stop "$package"
 device exec-out run-as "$package" cat files/project-design/workspace.json > emulator-evidence/side-after-restart.json
 cmp emulator-evidence/side-before-restart.json emulator-evidence/side-after-restart.json
 
+run_case authorAndReshapeWithSystemPen com.example.SmoothPoolDeviceTest
+run_case radiusAndInvalidDragUseTheSameSavedPool com.example.SmoothPoolDeviceTest
+device shell am force-stop "$package"
+device exec-out run-as "$package" cat files/project-design/workspace.json > emulator-evidence/smooth-before-restart.json
+run_case reopenAndCanceledNewPoolKeepTheStoredResult com.example.SmoothPoolDeviceTest
+device shell am force-stop "$package"
+device exec-out run-as "$package" cat files/project-design/workspace.json > emulator-evidence/smooth-after-restart.json
+cmp emulator-evidence/smooth-before-restart.json emulator-evidence/smooth-after-restart.json
+
 # Layout changes happen after the source/restart scenarios. Keep the test app
 # foreground while Android applies display changes, rather than reconfiguring the launcher.
 function layout_display() {
@@ -142,6 +151,7 @@ device exec-out run-as "$package" cat files/project-design/workspace.json > emul
   echo "ABI: $(device shell getprop ro.product.cpu.abi | tr -d '\r')"
   device shell wm size
   device shell wm density
+  echo 'Additional: smooth pool drawn with system-injected stylus events, local reshape, radius drag, cancellation, flagged pen-up rejection, second-contact cancellation, Undo/Redo and save/restart. Not physical S Pen evidence.'
   echo 'Physical S Pen/palm and Northstar acceptance: NOT RUN.'
 } | tee emulator-evidence/RESULT.txt
 if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then cat emulator-evidence/RESULT.txt >> "$GITHUB_STEP_SUMMARY"; fi
