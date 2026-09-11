@@ -13,12 +13,18 @@ data class DesignObject(
     val locked: Boolean = false,
     val confidence: GeometryConfidence = GeometryConfidence.DESIGNED,
     val sourceReference: String? = null,
-    val coping: CopingSpec? = null
+    val coping: CopingSpec? = null,
+    val siteTrace: SiteTrace? = null
 ) {
     init {
         require(id.isNotBlank() && name.isNotBlank())
         require(sourceReference == null || sourceReference.isNotBlank())
         require(coping == null || kind == DesignObjectKind.POOL || kind == DesignObjectKind.SPA) { "Coping belongs to a pool or spa" }
+        siteTrace?.let {
+            require(kind==DesignObjectKind.SITE_OUTLINE && confidence==GeometryConfidence.TRACED &&
+                sourceReference==it.source.asset.sha256 && coping==null) { "Site trace metadata and object meaning disagree" }
+            SiteOutlineGeometry.validate(boundary)
+        }
     }
     /** Cached per immutable object; recomputed after an edit or decode, never saved as duplicate geometry. */
     val copingFootprint: CopingFootprint? by lazy { coping?.let { PoolCoping.derive(boundary, it) } }
@@ -48,6 +54,7 @@ sealed interface DesignCommand {
     data class SetSiteImage(val value: SiteImage?, val expected: SiteImage?) : DesignCommand
     data class Add(val value: DesignObject) : DesignCommand
     data class Remove(val objectId: String) : DesignCommand
+    data class SetLocked(val objectId: String, val locked: Boolean) : DesignCommand
     data class Translate(val objectId: String, val dxMetres: Double, val dyMetres: Double) : DesignCommand
     data class MoveVertex(val objectId: String, val vertexId: String, val point: DesignPoint) : DesignCommand
     data class ChangeBulge(val objectId: String, val edgeId: String, val bulge: Double) : DesignCommand
@@ -69,6 +76,7 @@ object DesignCommands {
         }
         val id = when (command) {
             is DesignCommand.Remove -> command.objectId
+            is DesignCommand.SetLocked -> command.objectId
             is DesignCommand.Translate -> command.objectId
             is DesignCommand.MoveVertex -> command.objectId
             is DesignCommand.ChangeBulge -> command.objectId
@@ -78,6 +86,10 @@ object DesignCommands {
             else -> error("Unsupported command")
         }
         val current = document.objectById(id)
+        if(command is DesignCommand.SetLocked) {
+            if(current.locked==command.locked) return document
+            return document.revised(document.objects.map { if(it.id==id) it.copy(locked=command.locked) else it })
+        }
         require(!current.locked) { "Design object is locked: $id" }
         if (command is DesignCommand.Remove) return document.revised(document.objects.filterNot { it.id == id })
         if (command is DesignCommand.SetCoping) {
@@ -96,7 +108,7 @@ object DesignCommands {
             else -> error("Unsupported boundary command")
         }
         if (boundary == current.boundary) return document
-        return document.revised(document.objects.map { if (it.id == id) it.copy(boundary = boundary) else it })
+        return document.revised(document.objects.map { if (it.id == id) it.copy(boundary = boundary, siteTrace = it.siteTrace?.copy(adjusted=true)) else it })
     }
 }
 

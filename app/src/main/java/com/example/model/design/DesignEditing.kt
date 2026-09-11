@@ -64,7 +64,7 @@ object DesignPicking {
         selected?.boundary?.nodes?.minByOrNull { it.point.distanceTo(point) }?.let {
             if (it.point.distanceTo(point) <= toleranceMetres) return DesignHit.Vertex(selected.id, it.vertexId)
         }
-        selected?.boundary?.edges()?.minByOrNull { it.pointAt(0.5).distanceTo(point) }?.let {
+        selected?.takeIf { it.siteTrace==null }?.boundary?.edges()?.minByOrNull { it.pointAt(0.5).distanceTo(point) }?.let {
             if (it.pointAt(0.5).distanceTo(point) <= toleranceMetres) return DesignHit.Curve(selected.id, it.id)
         }
         // Boundary-only picking: an unvalidated outline must not imply a filled valid surface.

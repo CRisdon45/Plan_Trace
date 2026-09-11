@@ -33,7 +33,7 @@ class DesignDocumentOutputTest {
     }
     @Test fun `unsupported version and coordinate systems fail instead of misreading geometry`() {
         val json = DesignJsonCodec.encode(DesignFixtures.document())
-        listOf("version" to 5, "version" to 1.5, "revision" to 1.5, "coordinateUnit" to "foot", "yAxis" to "down").forEach { (key, value) ->
+        listOf("version" to 6, "version" to 1.5, "revision" to 1.5, "coordinateUnit" to "foot", "yAxis" to "down").forEach { (key, value) ->
             assertThrows(IllegalArgumentException::class.java) { DesignJsonCodec.decode(JSONObject(json).put(key, value).toString()) }
         }
     }

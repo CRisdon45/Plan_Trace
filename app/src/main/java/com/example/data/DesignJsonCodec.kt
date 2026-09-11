@@ -6,7 +6,7 @@ import org.json.JSONObject
 
 /** A separate, versioned document format. Does not reinterpret or migrate existing TraceProject data. */
 object DesignJsonCodec {
-    private const val VERSION = 4
+    private const val VERSION = 5
     fun encode(document: ProjectDesign): String = JSONObject().apply {
         put("format", "plan-trace-project-design")
         put("version", VERSION)
@@ -14,26 +14,15 @@ object DesignJsonCodec {
         put("yAxis", "up")
         put("id", document.id)
         put("revision", document.revision)
-        document.siteImage?.let { image ->
-            put("siteImage", JSONObject().apply {
-                put("sha256", image.asset.sha256); put("width", image.asset.width); put("height", image.asset.height)
-                put("x", image.topLeft.x); put("y", image.topLeft.y); put("metresPerPixel", image.metresPerPixel)
-                put("visible", image.visible)
-                image.calibration?.let { c -> put("calibration", JSONObject().apply {
-                    put("x1", c.first.x); put("y1", c.first.y); put("x2", c.second.x); put("y2", c.second.y)
-                    put("distanceMetres", c.distanceMetres)
-                }) }
-                image.distanceCheck?.let { c -> put("distanceCheck", JSONObject().apply {
-                    put("x1", c.first.x); put("y1", c.first.y); put("x2", c.second.x); put("y2", c.second.y)
-                    put("distanceMetres", c.distanceMetres)
-                }) }
-            })
-        }
+        document.siteImage?.let { put("siteImage", encodeImage(it)) }
         put("objects", JSONArray().apply {
             document.objects.forEach { item -> put(JSONObject().apply {
                 put("id", item.id); put("name", item.name); put("kind", item.kind.name)
                 put("locked", item.locked); put("confidence", item.confidence.name)
                 item.sourceReference?.let { put("sourceReference", it) }
+                item.siteTrace?.let { trace -> put("siteTrace", JSONObject().apply {
+                    put("role",trace.role.name); put("source",encodeImage(trace.source)); put("adjusted",trace.adjusted)
+                }) }
                 item.coping?.let { spec ->
                     put("coping", JSONObject().put("widthMetres", spec.widthMetres).put("generatorVersion", spec.generatorVersion))
                 }
@@ -77,6 +66,12 @@ object DesignJsonCodec {
                 locked = obj.getBoolean("locked"),
                 confidence = GeometryConfidence.valueOf(obj.getString("confidence")),
                 sourceReference = if (obj.has("sourceReference")) obj.getString("sourceReference") else null,
+                siteTrace = if(obj.has("siteTrace")) {
+                    require(version>=5) { "Older format cannot contain site-outline provenance" }
+                    val trace=obj.getJSONObject("siteTrace")
+                    require(trace.get("adjusted") is Boolean) { "Invalid site adjustment flag" }
+                    SiteTrace(SiteOutlineRole.valueOf(trace.getString("role")), decodeImage(trace.getJSONObject("source"),version), trace.getBoolean("adjusted"))
+                } else null,
                 coping = if (obj.has("coping")) {
                     require(version >= 2) { "Version 1 cannot contain unrecognized coping intent" }
                     val spec = obj.getJSONObject("coping")
@@ -87,7 +82,26 @@ object DesignJsonCodec {
         }
         val image = if (root.has("siteImage")) {
             require(version >= 3) { "An older document cannot contain unrecognized source registration" }
-            val i = root.getJSONObject("siteImage")
+            decodeImage(root.getJSONObject("siteImage"),version)
+        } else null
+        return ProjectDesign(root.getString("id"), result, root.getLong("revision"), image)
+    }
+
+    private fun encodeImage(image: SiteImage): JSONObject = JSONObject().apply {
+                put("sha256", image.asset.sha256); put("width", image.asset.width); put("height", image.asset.height)
+                put("x", image.topLeft.x); put("y", image.topLeft.y); put("metresPerPixel", image.metresPerPixel)
+                put("visible", image.visible)
+                image.calibration?.let { c -> put("calibration", JSONObject().apply {
+                    put("x1", c.first.x); put("y1", c.first.y); put("x2", c.second.x); put("y2", c.second.y)
+                    put("distanceMetres", c.distanceMetres)
+                }) }
+                image.distanceCheck?.let { c -> put("distanceCheck", JSONObject().apply {
+                    put("x1", c.first.x); put("y1", c.first.y); put("x2", c.second.x); put("y2", c.second.y)
+                    put("distanceMetres", c.distanceMetres)
+                }) }
+
+    }
+    private fun decodeImage(i: JSONObject, version: Int): SiteImage {
             require(i.get("width") is Int && i.get("height") is Int && i.get("visible") is Boolean)
             fun numeric(o: JSONObject, name: String): Double {
                 require(o.get(name) is Number) { "Source coordinates must be numeric" }
@@ -104,9 +118,7 @@ object DesignJsonCodec {
                         ImagePoint(numeric(c,"x2"),numeric(c,"y2")),numeric(c,"distanceMetres"))
                 }
             } else null
-            SiteImage(SiteImageAsset(i.getString("sha256"), i.getInt("width"), i.getInt("height")),
+            return SiteImage(SiteImageAsset(i.getString("sha256"), i.getInt("width"), i.getInt("height")),
                 DesignPoint(numeric(i,"x"), numeric(i,"y")), numeric(i,"metresPerPixel"), calibration, i.getBoolean("visible"), check)
-        } else null
-        return ProjectDesign(root.getString("id"), result, root.getLong("revision"), image)
     }
 }

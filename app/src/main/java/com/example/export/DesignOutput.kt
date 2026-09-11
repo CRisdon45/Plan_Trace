@@ -40,7 +40,7 @@ object DesignOutput {
             }
             Point2D(x, y)
         }
-        val elements = document.objects.flatMap { obj ->
+        val elements = document.objects.sortedBy { if(it.siteTrace!=null) 0 else 1 }.flatMap { obj ->
             val footprint = obj.copingFootprint
             require(footprint == null || settings.maxChordErrorMetres >= 2 * PoolCoping.CHORD_ERROR_METRES) {
                 "Requested output tolerance is finer than the coping generator supports"
@@ -55,9 +55,15 @@ object DesignOutput {
                     strokeWidth = 1.3f, material = SurfaceMaterial.PAVING))
             }
             result.add(PolylineElement(id = "${obj.id}:outline", layerId = layer.id,
-                points = points, isClosed = true, strokeWidth = 2f,
+                points = points, isClosed = true, strokeWidth = if(obj.siteTrace!=null) 2.8f else 2f,
+                strokeColor = if(obj.siteTrace!=null) 0xFF596257 else 0xFF1E293B,
                 material = if (footprint != null) SurfaceMaterial.WATER else null))
-            if (settings.includeMeasurements) {
+            if(obj.siteTrace!=null && settings.includeSourceNotice) {
+                result.add(TextElement(id="${obj.id}:site-notice",layerId=layer.id,
+                    text=obj.name+"\n"+obj.siteTrace.notice(document.siteImage),
+                    position=Point2D(points.minOf { it.x },points.minOf { it.y }-100f),fontSizeSp=8f))
+            }
+            if (settings.includeMeasurements && obj.siteTrace==null) {
                 val units = if (settings.imperialLabels) "ft" else "m"
                 val length = obj.boundary.perimeterMetres / if (settings.imperialLabels) 0.3048 else 1.0
                 val copingLabel = obj.coping?.let { String.format(Locale.US, "\nCoping %.2f in", it.widthInches) }.orEmpty()

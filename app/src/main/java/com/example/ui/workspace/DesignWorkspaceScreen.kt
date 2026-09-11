@@ -95,7 +95,7 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
     BackHandler { close() }
     Scaffold(modifier = Modifier.fillMaxSize(), topBar = {
         WorkspaceHeader(state, exportBusy, onBack = { close() },
-            onCommands = { inspector = null; commandRequest++ }, onUndo = model::undo,
+            onCommands = { model.stopSiteTool(); inspector = null; commandRequest++ }, onUndo = model::undo,
             onRedo = model::redo, onExport = { exporting = true })
     }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).navigationBarsPadding()) {
@@ -113,14 +113,22 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
                     Text("${doc.objects.size} objects", modifier = Modifier.testTag("workspace-object-count"), style = MaterialTheme.typography.labelMedium)
                     doc.objects.forEachIndexed { index, obj ->
                         FilterChip(selected = obj.id == state.selectedId, onClick = { model.select(obj.id) },
-                            label = { Text(obj.name) }, modifier = Modifier.testTag("workspace-object-$index"))
+                            label = { Text(obj.name + if(obj.locked) " · Locked" else "") }, modifier = Modifier.testTag("workspace-object-$index"))
                     }
                 }
                 WorkspaceCanvas(state, model, touchEdit, showGrid, gridSnap, commandRequest, inspector,
                     !exporting && !leaveUnsaved, { inspector=null; model.stopSiteTool() }, ::command,
                     { sitePicker.launch(arrayOf("image/png","image/jpeg")) }, { inspector="site" },
                     Modifier.weight(1f).fillMaxWidth())
+                state.siteDraft?.let { draft -> SiteOutlineControls(draft,state.draftOrthogonal,model) }
                 val selected = doc.objects.firstOrNull { it.id == state.selectedId }
+                selected?.siteTrace?.let { Text(it.notice(doc.siteImage),style=MaterialTheme.typography.labelMedium,
+                    modifier=Modifier.padding(horizontal=16.dp).testTag("workspace-trace-status")) }
+                if(doc.objects.any { it.siteTrace?.registration(doc.siteImage)==TraceRegistration.CHANGED }) {
+                    Text("Source registration changed. Existing traced geometry was kept in place; review alignment.",
+                        style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.error,
+                        modifier=Modifier.padding(horizontal=16.dp).testTag("workspace-registration-warning"))
+                }
 
                 Text(selected?.let { String.format(Locale.US, "%s · perimeter %.2f ft", it.name, it.boundary.perimeterMetres / 0.3048) }
                     ?: "Add an outline, then select its edge to edit.", style = MaterialTheme.typography.bodyMedium,

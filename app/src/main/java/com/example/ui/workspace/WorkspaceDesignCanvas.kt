@@ -56,7 +56,8 @@ private class PointerSession {
     var blockedEdit = false
     var moved = false
     var buttonLatched = false
-    fun clear() { target = null; document = null; down = null; startView = null; blockedEdit = false; moved = false }
+    var traceAuthoring = false
+    fun clear() { target = null; document = null; down = null; startView = null; blockedEdit = false; moved = false; traceAuthoring=false }
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -135,6 +136,34 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
             if(menuAnchor!=null || inspector!=null || !allowCommands) return@pointerInteropFilter false
             val x = event.x.toDouble(); val y = event.y.toDouble()
             lastPosition=Offset(event.x,event.y)
+            if(state.siteDraft != null) {
+                detector.onTouchEvent(event)
+                when(event.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> {
+                        pointer.clear();pointer.document=state.document;pointer.startView=viewport
+                        pointer.down=viewport.toWorld(x,y);pointer.lastX=x;pointer.lastY=y
+                        pointer.traceAuthoring=touchEdit || event.getToolType(0)==MotionEvent.TOOL_TYPE_STYLUS
+                        if(pointer.traceAuthoring) model.previewSiteCorner(pointer.down,gridSnap)
+                    }
+                    MotionEvent.ACTION_POINTER_DOWN -> { pointer.blockedEdit=true;model.previewSiteCorner(null) }
+                    MotionEvent.ACTION_MOVE -> {
+                        if(pointer.traceAuthoring && !pointer.blockedEdit && event.pointerCount==1) {
+                            model.previewSiteCorner(viewport.toWorld(x,y),gridSnap)
+                        } else if(!pointer.traceAuthoring && !pointer.blockedEdit && !detector.isInProgress && event.pointerCount==1) {
+                            viewport=viewport.panned(x-pointer.lastX,y-pointer.lastY)
+                        }
+                        pointer.lastX=x;pointer.lastY=y
+                    }
+                    MotionEvent.ACTION_UP -> {
+                        if(pointer.traceAuthoring && !pointer.blockedEdit && pointer.document?.revision==state.document?.revision) {
+                            model.markSiteCorner(viewport.toWorld(x,y),18.0*density/viewport.pixelsPerMetre,gridSnap)
+                        }
+                        model.previewSiteCorner(null);pointer.clear()
+                    }
+                    MotionEvent.ACTION_CANCEL -> { model.previewSiteCorner(null);pointer.clear() }
+                }
+                return@pointerInteropFilter true
+            }
             if(state.siteTool != SiteTool.NONE) {
                 val source = state.document?.siteImage ?: return@pointerInteropFilter false
                 when(event.actionMasked) {
@@ -245,11 +274,25 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
                     val zoom = (viewport.pixelsPerMetre / 100).toFloat()
                     native.scale(zoom, zoom)
                     projection?.elements?.forEach { element ->
-                        val outline = (element as PolylineElement).copy(strokeWidth = 1.6f * density / zoom,
-                            strokeColor = if (element.id == "${state.selectedId}:outline") 0xFF21546D else 0xFF3B4548)
+                        val outline = (element as PolylineElement).copy(strokeWidth =
+                            (if(element.strokeColor==0xFF596257) 2.3f else 1.6f) * density / zoom,
+                            strokeColor = if (element.id == "${state.selectedId}:outline") 0xFF21546D else element.strokeColor)
                         WatercolorRenderer.render(native, outline, 1f, projection.scaleCalibration, showDimensions = false)
                     }
                 } finally { native.restore() }
+            }
+            state.siteDraft?.let { draft ->
+                val vertices=draft.points.map { viewport.toScreen(it) }.map { Offset(it.x.toFloat(),it.y.toFloat()) }
+                vertices.zipWithNext().forEach { (a,b) -> drawLine(Color(0xFF2F665F),a,b,2*density) }
+                state.draftCursor?.let { point -> if(vertices.isNotEmpty()) {
+                    val cursor=viewport.toScreen(point)
+                    drawLine(Color(0xFF598B84),vertices.last(),Offset(cursor.x.toFloat(),cursor.y.toFloat()),2*density)
+                } }
+                if(vertices.size>=3) drawLine(Color(0x88637A72),vertices.last(),vertices.first(),density,
+                    pathEffect=androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(6*density,5*density)))
+                vertices.forEachIndexed { i,p ->
+                    drawCircle(Color.White,7*density,p);drawCircle(if(i==0) Color(0xFFAD762B) else Color(0xFF2F665F),4.5f*density,p)
+                }
             }
             document.siteImage?.let { source -> state.referencePoints.forEach { pixel ->
                 val p=viewport.toScreen(source.toWorld(pixel));val at=Offset(p.x.toFloat(),p.y.toFloat())
@@ -261,7 +304,7 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
                     drawCircle(Color.White, radius + 2f * density, Offset(p.x.toFloat(), p.y.toFloat()))
                     drawCircle(Color(0xFF21546D), radius, Offset(p.x.toFloat(), p.y.toFloat()))
                 }
-                selected.boundary.edges().forEach { edge ->
+                if(selected.siteTrace==null) selected.boundary.edges().forEach { edge ->
                     val p = viewport.toScreen(edge.pointAt(0.5))
                     drawCircle(Color.White, radius + density, Offset(p.x.toFloat(), p.y.toFloat()))
                     drawCircle(Color(0xFFAD762B), radius * 0.75f, Offset(p.x.toFloat(), p.y.toFloat()))
@@ -276,19 +319,20 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
                 Box(Modifier.offset { IntOffset((p.x - 22 * density).roundToInt(), (p.y - 22 * density).roundToInt()) }
                     .size(44.dp).testTag("workspace-vertex-$index").semantics { contentDescription = "Vertex ${index + 1}" })
             }
-            selected.boundary.edges().forEachIndexed { index, edge ->
+            if(selected.siteTrace==null) selected.boundary.edges().forEachIndexed { index, edge ->
                 val p = viewport.toScreen(edge.pointAt(0.5))
                 Box(Modifier.offset { IntOffset((p.x - 22 * density).roundToInt(), (p.y - 22 * density).roundToInt()) }
                     .size(44.dp).testTag("workspace-curve-$index").semantics { contentDescription = "Curve handle ${index + 1}" })
             }
         }
-        if(document.siteImage!=null && inspector==null) {
+        if(document.siteImage!=null && inspector==null && state.siteDraft==null) {
             Surface(Modifier.align(Alignment.TopStart).padding(8.dp),color=Color(0xEEFFFFFF)) {
                 Text(state.siteError ?: if(document.siteImage.calibration==null) "Source scale not set · reference only"
                     else "Source scaled from reference · site unverified",modifier=Modifier.padding(8.dp).testTag("site-canvas-status"),
                     style=MaterialTheme.typography.labelMedium)
             }
         }
+        if(state.siteDraft!=null) BackHandler { model.stopSiteTool() }
         if(state.siteTool!=SiteTool.NONE) {
             BackHandler { model.stopSiteTool() }
             Surface(Modifier.align(Alignment.BottomCenter).padding(8.dp),tonalElevation=3.dp) {
@@ -305,7 +349,7 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
             Box(Modifier.align(Alignment.TopEnd).imePadding().padding(12.dp).widthIn(max=350.dp)) {
                 if(inspector=="site") SiteImagePanel(state,model,onImportSite,onCloseInspector,onTool={ tool ->
                     onCloseInspector();model.startSiteTool(tool)
-                })
+                },onTrace={ role -> onCloseInspector();model.beginSiteOutline(role) })
                 else if(inspector=="size") WorkspaceSizePanel(selected!!,model,onCloseInspector)
                 else Surface(shape=MaterialTheme.shapes.large,shadowElevation=5.dp,tonalElevation=3.dp,
                     modifier=Modifier.testTag("workspace-coping-panel")) {

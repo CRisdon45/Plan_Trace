@@ -19,7 +19,7 @@ import com.example.model.design.*
  */
 @Composable
 fun SiteImagePanel(state: WorkspaceState, model: DesignWorkspaceViewModel, onImport: () -> Unit,
-                   onClose: () -> Unit, onTool: (SiteTool) -> Unit) {
+                   onClose: () -> Unit, onTool: (SiteTool) -> Unit, onTrace: (SiteOutlineRole) -> Unit) {
     val source = state.document?.siteImage
     Surface(Modifier.widthIn(max=360.dp).fillMaxWidth().testTag("workspace-site-panel"),
         shape=MaterialTheme.shapes.large, shadowElevation=5.dp, tonalElevation=3.dp) {
@@ -63,12 +63,30 @@ fun SiteImagePanel(state: WorkspaceState, model: DesignWorkspaceViewModel, onImp
                     }
                     Text(if(checking) "This compares distances only. Nothing is rescaled." else "The first mark stays in place. Existing design dimensions do not change.",style=MaterialTheme.typography.labelSmall)
                 }
+                Text("Create protected site outlines", style=MaterialTheme.typography.titleSmall)
+                Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick={onTrace(SiteOutlineRole.HOUSE)},
+                        enabled=source.calibration!=null && source.visible && state.siteBitmap!=null,
+                        modifier=Modifier.testTag("site-draw-house")) { Text("House") }
+                    OutlinedButton(onClick={onTrace(SiteOutlineRole.PROPERTY)},
+                        enabled=source.calibration!=null && source.visible && state.siteBitmap!=null,
+                        modifier=Modifier.testTag("site-draw-property")) { Text("Property") }
+                }
+                Text("Mark corners with the pen, then close. These are traced references, not verified boundaries.",style=MaterialTheme.typography.bodySmall)
                 OutlinedButton(onClick={onTool(SiteTool.CALIBRATE)},enabled=state.siteBitmap!=null && source.visible,modifier=Modifier.testTag("site-calibrate")) { Text("Mark a known distance") }
                 OutlinedButton(onClick={onTool(SiteTool.CHECK)},enabled=state.siteBitmap!=null && source.visible && source.calibration!=null,
                     modifier=Modifier.testTag("site-check")) { Text("Check another distance") }
                 OutlinedButton(onClick={onTool(SiteTool.MOVE)},enabled=state.siteBitmap!=null && source.visible,modifier=Modifier.testTag("site-move")) { Text("Move source only") }
                 TextButton(onClick={model.execute(DesignCommand.SetSiteImage(source.copy(visible=!source.visible),source))},modifier=Modifier.testTag("site-visibility")) { Text(if(source.visible) "Hide source" else "Show source") }
                 TextButton(onClick={model.stopSiteTool();model.execute(DesignCommand.SetSiteImage(null,source))},modifier=Modifier.testTag("site-remove")) { Text("Remove source · Undo restores it") }
+            }
+            state.document?.objects?.firstOrNull { it.id==state.selectedId && it.siteTrace!=null }?.let { selected ->
+                HorizontalDivider()
+                Text(selected.name,style=MaterialTheme.typography.titleSmall)
+                Text(selected.siteTrace!!.notice(source),modifier=Modifier.testTag("site-trace-status"),style=MaterialTheme.typography.bodySmall)
+                OutlinedButton(onClick={model.execute(DesignCommand.SetLocked(selected.id,!selected.locked))},
+                    modifier=Modifier.testTag("site-outline-lock")) { Text(if(selected.locked) "Unlock site outline" else "Lock site outline") }
+                Text("Unlock only to revise the existing outline. Image changes never move it automatically.",style=MaterialTheme.typography.bodySmall)
             }
             state.message?.let { Text(it,style=MaterialTheme.typography.bodySmall) }
         }
