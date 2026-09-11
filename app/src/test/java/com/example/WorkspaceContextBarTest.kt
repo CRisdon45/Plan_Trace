@@ -26,6 +26,12 @@ import java.util.Locale
 class WorkspaceContextBarTest {
     @get:Rule val ui = createComposeRule()
 
+    @Test fun `idle workspace reserves no empty context row`() {
+        ui.setContent { MaterialTheme { WorkspaceContextBar(null, null) } }
+        ui.onNodeWithTag("workspace-context").assertDoesNotExist()
+        ui.onNodeWithTag("workspace-selection").assertDoesNotExist()
+    }
+
     @Test fun `normal context is one compact selected-object row without permanent instructions`() {
         val selected = DesignFixtures.document().objects.first()
         ui.setContent { MaterialTheme {
@@ -55,5 +61,11 @@ class WorkspaceContextBarTest {
         )
         ui.onNodeWithTag("workspace-selection").assertTextEquals(selectionText)
         ui.onNodeWithTag("workspace-message").assertTextEquals("Edit kept the existing pool")
+    }
+
+    @Test fun `feedback can stand alone without inventing a selection`() {
+        ui.setContent { MaterialTheme { WorkspaceContextBar(null, "Source image not scaled") } }
+        ui.onNodeWithTag("workspace-selection").assertDoesNotExist()
+        ui.onNodeWithTag("workspace-message").assertTextEquals("Source image not scaled")
     }
 }
