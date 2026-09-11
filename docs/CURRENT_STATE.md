@@ -1,9 +1,11 @@
 # Current state and next-session handoff
 
 Updated 2026-09-11 after the verified expert-workspace hierarchy slice. The
-current branch is **feat/expert-workspace-ui** at `9cbc070`, based on the merged
-straight- and smooth-pool interaction seam in **feat/project-geometry-seam**.
-Do not reset the application branch to an older documentation checkpoint.
+current branch is **feat/expert-workspace-ui**; its verified code head is
+`9cbc070`, followed only by this checkpoint documentation. Draft PR #6 targets
+the merged straight- and smooth-pool interaction seam in
+**feat/project-geometry-seam**. Do not reset the application branch to an older
+documentation checkpoint.
 
 ## Delivered on this branch
 
