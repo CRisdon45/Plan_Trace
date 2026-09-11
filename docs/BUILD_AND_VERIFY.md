@@ -1,6 +1,6 @@
 # Build and verify
 
-Use the active application branch identified in [CURRENT_STATE.md](CURRENT_STATE.md), not an assumption that the default branch contains the latest app. Documentation presence on `main` is not application parity. Check live branch/commit identity before building or installing.
+Use the active application branch identified in [CURRENT_STATE.md](CURRENT_STATE.md), not an assumption that the default branch contains the latest app. Documentation presence on main is not application parity. Check live branch/commit identity before building or installing.
 
 ## Recorded environment and commands
 
@@ -18,9 +18,25 @@ Run the full applicable unit-test suite and debug assembly, rather than copying 
 
 These are verification instructions, not a claim they ran in the documentation session. Report environmental failures distinctly from test failures and passes. Do not invent a clean build when no build environment is available.
 
+## Local-runtime policy
+
+The current app has no Firebase/AI service dependency or provider-key setup. Do not add credentials or restore a template SDK merely to satisfy obsolete setup instructions. The build itself still needs Maven/SDK access for initial dependency resolution; an external document provider or share target may use its own network connection.
+
+Before accepting a changed runtime dependency or permission, run the same audit as CI:
+
+```sh
+python3 -m unittest discover -s tools/qa -p 'test_local_runtime_policy.py' -v
+./gradlew --no-daemon --no-configuration-cache --console=plain :app:reportRuntimeDependencies :app:processDebugMainManifest :app:processReleaseMainManifest
+python3 tools/qa/check_local_runtime.py --build-dir app/build
+```
+
+On Windows use python and .\gradlew.bat with the same arguments. The report task intentionally resolves configurations and runs separately without configuration caching. It emits the actual debug/release transitive runtime coordinates; the guard requires those and generated merged manifests, not a hand-written source manifest. Missing, unresolved, malformed or prohibited results fail. Reports live under app/build/reports/runtime-policy/ and are retained with the unit reports. The nine Python policy tests are a separate count from Kotlin/Robolectric tests and Android scenarios.
+
+This checks the current project's selected service/permission boundary, not every possible SDK, security property, cloud-backed provider or future release artifact. Processing the release manifest is not assembling/signing/installing a release. Keep file IDs, signing and existing storage unchanged during verification. See [reuse decisions](REUSE_AND_DEPENDENCIES.md) for the adopted libraries and conditional candidates.
+
 ## Safe installation
 
-The inspected development configuration produces `app/build/outputs/apk/debug/app-debug.apk` and uses package `com.aistudio.plantrace.jzkrwq.dev`, named Plan Trace Dev, alongside the original app. Verify the built package before installing. Preserve the original app, databases and editable work; do not uninstall, clear data or replace its release identity to simplify testing. Use disposable synthetic QA projects.
+The inspected development configuration produces app/build/outputs/apk/debug/app-debug.apk and uses package com.aistudio.plantrace.jzkrwq.dev, named Plan Trace Dev, alongside the original app. Verify the built package before installing. Preserve the original app, databases and editable work; do not uninstall, clear data or replace its release identity to simplify testing. Use disposable synthetic QA projects.
 
 Record the actual source commit, build variant, APK checksum, commands, test reports and device/OS for a checked build. Do not label an older installed APK as the latest source. The historical original-APK/source parity issue remains distinct from new development-build verification.
 
@@ -32,4 +48,4 @@ Runtime checks include creating/revising notes and shapes, calibration exclusivi
 
 Physical tablet checks separately establish pen/button/palm behavior, finger navigation, portrait/landscape and handedness reachability. Synthetic events are useful but cannot establish physical feel. Visual checks inspect real canvas and PNG/PDF results at working and output scale; screenshots of a mockup are not implementation evidence.
 
-Use [BENCHMARKS.md](BENCHMARKS.md) and the Q0 resume point for task-specific acceptance. Review every capture, log and artifact before publishing from a public repository. The documentation consolidation does not add an Android workflow, run CI, or certify a new APK.
+Use [BENCHMARKS.md](BENCHMARKS.md) and the Q0 resume point for task-specific acceptance. Review every capture, log and artifact before publishing from a public repository. Use the pinned evidence in CURRENT_STATE for what actually ran; instructions in this file do not certify a new APK.

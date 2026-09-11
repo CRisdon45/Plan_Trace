@@ -20,6 +20,6 @@ The latest explicit owner request controls scope. CURRENT_STATE records the chec
 
 ## Work and leave a useful checkpoint
 
-Choose the smallest end-to-end outcome that advances the current goal. Use the application's actual edit/render paths in tests; do not build a separate polished demonstration. Distinguish automated, synthetic runtime, physical-device and visual evidence. Report what did not run. Challenge technical proposals with evidence rather than freezing incidental choices into permanent rules.
+Choose the smallest end-to-end outcome that advances the current goal. Before adding general-purpose machinery or a new dependency, consult docs/REUSE_AND_DEPENDENCIES.md; prefer an existing, pinned component behind a tested project boundary. Use the application's actual edit/render paths in tests; do not build a separate polished demonstration. Distinguish automated, synthetic runtime, physical-device and visual evidence. Report what did not run. Challenge technical proposals with evidence rather than freezing incidental choices into permanent rules.
 
 At a meaningful checkpoint, update CURRENT_STATE with the application revision, actual checks, artifacts/limits and next outcome. Update a decision/contract only when it changes, and keep detailed evidence linked rather than duplicated. Preserve concurrent work and use reviewable, non-destructive commits. An explicit pause stays a pause; a subsequent implementation request can resume ordinary in-scope work without a new permission loop.

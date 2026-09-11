@@ -1,37 +1,37 @@
 # Current state and next-session handoff
 
-Updated 2026-09-11. Work on feat/project-geometry-seam, PR #4 into feat/off-tablet-integrity. PR #3 targets the 2D foundation, PR #2 main. Verify live refs and concurrent changes. No application PR was merged, and the interrupted physical tablet test, installed app, data and signing key remain untouched.
+Updated 2026-09-11 after the bounded reusable-infrastructure review. Continue on **feat/project-geometry-seam**, PR #4 into feat/off-tablet-integrity; PR #3 targets the 2D foundation and PR #2 main. Verify live refs and concurrent edits. No application PR was merged and the physical tablet's interrupted test, installed app, data and signing key remain untouched.
 
-## Owner direction
+## Direction and current scope
 
-Design for Cody as an expert. Routine live line feedback should be only the dimension beside the target: no bubble, "Line" label or repeated grid narration. Meaningful warnings and precise target cues still matter. He allowed visual cleanup to wait while functionality develops; the current prototype presentation is not approved by that deferral. This is preserved in AGENTS.md, D20 and the interaction contract. Pen work is primary, typing rare, no runtime AI and 3D paused.
+Keep Cody's exact project geometry and expert pen workflow custom; reuse suitable general-purpose libraries behind that boundary. No runtime AI, no notebook/framework restart and 3D paused. Routine live feedback should eventually be only the dimension, without a bubble, redundant Line label or grid narration. Typing remains an occasional fallback. UI cleanup is deferred to a coherent draw/snap/reshape pass, not abandoned or implicitly approved.
 
-## Latest verified application
+The working application retains hand-placed pool/deck boundaries, following coping, protected traced house/property geometry, registered source imagery and distance checks, radial commands, live target dimensions and Object snap. This milestone does not add whole-side manipulation or restyle the UI.
 
-Application 3579e10a59da869a7cedb5719e7fd003ed9c32c8 adds opt-in Object snap through Assist. Unit/build run 34626951272 passed 213 tests, zero failures/errors/skips, and debug assembly. Android run 34626951182 attempt 2 built app/instrumentation and passed all 13 scenarios. Downloaded XML, scenario results and all 29 capture-window records were checked; actual new line/vertex/reopened captures were opened.
+## Latest change
 
-The first emulator attempt stopped at a screenshot guard because a Pixel Launcher ANR covered the application before the snapping scenarios. The unchanged code was retried, not repaired or weakened to hide that failure. The successful replay's reviewed captures were unobstructed. The inherited KSP/AWT exception still appears in the successful unit/build log; no launcher or tooling root-cause fix is claimed.
+Implementation **0ecdb88fd6d6413615323130addcfe064043e39d** combines two reviewable changes: **92d1788** removes unused inherited AI/network-service dependencies and adds a local-runtime policy guard; **0ecdb88** reuses the existing pinned JTS 1.20.0 STRtree to shortlist finite snap references.
 
-The seven-object format-5 document was byte-identical across completed-save force-stop/reopen at revision 51. The previous six objects, source registration and site locks stayed unchanged. Detailed scope, run links, artifact hashes and failure history are in GEOMETRY_SNAPPING_IMPLEMENTATION.md. Later documentation commits do not constitute a new app build.
+The spatial index changes candidate lookup only. Exact line/arc calculations, priorities, stable ties, capture/release radii, deliberate axes and canonical coordinates remain unchanged. Distant corner-alignment guides still consider the whole scene, so this is not an overall logarithmic-query or physical-latency claim. In the sparse 512-object test it narrows 2,048 finite edges to one without changing the chosen snap. No new dependency or copied external implementation was added.
 
-## What changed
+Firebase AI/App Check, unused networking/image/serialization SDKs, their unused build plugins and tracked credential template were removed after checking production callers. The runtime audit resolves both debug/release transitive graphs and requires generated merged manifests. It rejects missing evidence, selected service packages and network permissions. This is not an exhaustive security audit, a release build or a restriction on separate system document-provider/share apps. Actual application IDs, signing, storage and used dependency versions are unchanged.
 
-Corner creation and vertex editing can attract to canonical object corners, exact midpoints, finite straight/curved edges and corner-alignment guides. Protected house/property geometry remains a read-only reference. Geometric points win over grid rounding; explicit right-angle axes are retained. Screen-scaled capture/release thresholds stabilize nearby targets. Preview, dimension and placed endpoint share the resolved point.
+## Verified evidence
 
-The Object snap preference is independent of grid display and one-foot snapping and starts off. Existing Assist command directions are preserved. Minimal geometric cues indicate attraction; the old live bubble/labels were deliberately left for the coherent UI pass. Snapping creates a one-time placement, not a persistent attachment or a change in source confidence.
+Unit/build run **34634307414** at 0ecdb88 passed **223 tests, zero failures/errors/skips**, plus the separate **nine Python policy tests**, and debug assembly. Downloaded XML from 31 test classes was counted. Resolved runtime reports contain 104 debug and 97 release modules, no blocked service family, and no Internet permission in either generated merged manifest. Release was resolved/manifest-processed, not assembled, signed or installed. The actual sparse-scene report and 1,200 seeded broad-phase equivalence cases passed; these are not a timing benchmark.
 
-Whole-object moves and curve-handle edits retain their prior behavior. Interior arc intersections against a constrained drawing axis, derived-coping references and general intersection/tangent solving are not included. The index has a bounded all-or-nothing reference budget, not a measured tablet-capacity guarantee.
+Android run **34634307450** at the same application revision built the app/instrumentation and passed **all 13 existing scenarios on its first attempt**. Both report archives were downloaded and verified. All 29 active-window records identify the application; the actual snapped-line, snapped-vertex and reopened screenshots were opened and unobstructed. Their retained prototype styling is not new UI acceptance. All five saved before/after process-restart comparisons were byte-identical after waiting for verified Saved; the final seven-object draft is format 5, revision 51 and 7,747 bytes. No physical pen or hardware-performance claim follows.
 
-## Next bounded outcome
+[REUSE_AND_DEPENDENCIES.md](REUSE_AND_DEPENDENCIES.md) contains component choices, pinned evidence, exact coverage and limits. Earlier feature reports remain historical evidence, not instructions to restore removed dependencies. The known KSP/AWT background exception still appeared in the successful build; removing Moshi/services did not resolve it. Compiler and action deprecations remain.
 
-Manipulate a whole straight pool side with the pen while preserving the intended adjacent geometry, following coping, live measurement/alignment and one-operation Undo. Do not make the user move each corner or type values for ordinary sizing. Keep the existing project authority, protected site base and save/reopen path.
+## Adoption decisions and next outcome
 
-Plan a coherent expert-facing UI/visual pass over usable draw/snap/reshape behavior, not endless isolated control polish and not a wait until every landscape feature exists. Current flat fills, verbose temporary controls and automatic export-label collisions are not Northstar acceptance.
+Ink and Cahier remain focused input/rendering references; neither was installed or substituted for pool authority. A published stable Ink trial belongs with loose freehand/discussion marks, with transform, cancellation and hardware evidence. Artemis is a conditional external QA candidate, not configured to run other models or installed on the user's tablet. Cavalier Contours remains a specialist candidate, not a mitred-coping replacement. No mass formatting or global assistant-rule installation occurred.
 
-## Boundaries and remaining work
+Return now to **whole-straight-pool-side manipulation with the pen**, preserving adjoining geometry, coping, useful alignment, live measurements and one-operation Undo. Then do the coherent expert UI/visual pass over that usable workflow. Do not turn the reuse review into an indefinite library search or a new numeric form.
 
-No format or dependency change; format 5 still reads prior supported drafts, with legacy Room separate. One draft, session-local Undo and app-owned images are not multi-project/portable recovery. Tests terminate after verified saving, not midway through queued writes.
+## Boundaries
 
-New Android snapping cases use explicit Touch edit; mathematical edge/arc/midpoint/alignment variants have unit coverage. Physical S Pen/palm/hover delivery, hand occlusion, latency, full drafting at every window size and Northstar quality remain unverified. Direct curved construction, shared decking, attached features, source PDF/rotation, project alternatives and full landscape scope remain unfinished.
+Format 5, separate legacy Room projects, one local draft and session-local Undo are unchanged. Physical S Pen/palm/hover/barrel behavior, hand occlusion, latency, full drafting across all layouts and Northstar quality remain unverified. Source PDF/rotation, direct curved authoring, shared decking, attached features, project alternatives, landscape scope and portable recovery remain unfinished. Existing source/label collisions are presentation gaps.
 
-Only disposable emulators and original synthetic fixtures were used. No physical installation, user-data clearing, signing workaround, release/APK publication, private client/reference publication, permissions/visibility change, runtime AI, framework/repository merger or 3D work occurred. Update main routing and this handoff from successful, read-back-verified writes; historical reports remain evidence rather than competing instructions.
+Only disposable emulator state was installed/force-stopped for this verification, after verified saving. No physical device/data clearing, signing workaround, release/APK publication, private client/reference publication, application merge, permissions/visibility change, runtime AI, 3D or framework/repository merger is included. Update this checkpoint and main routing from actual successful writes and checked evidence.

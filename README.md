@@ -21,6 +21,7 @@ Read [AGENTS.md](AGENTS.md), [current state and next outcome](docs/CURRENT_STATE
 | What should the live design look like? | [Northstar visual contract](docs/NORTHSTAR_VISUAL_SPEC.md) |
 | What real work must we prove, and in what order? | [Benchmarks](docs/BENCHMARKS.md) and [outcome roadmap](docs/EXECUTION_PLAN.md) |
 | Where are the references, and what is safe to publish? | [Reference policy](docs/REFERENCES.md) and [manifest](docs/references/manifest.json) |
+| Which reusable components fit, and what must stay local? | [Reuse decisions and runtime boundary](docs/REUSE_AND_DEPENDENCIES.md) |
 | How do we build/check the app and find earlier evidence? | [Build and verify](docs/BUILD_AND_VERIFY.md) and [history index](docs/HISTORY.md) |
 
 ## Boundaries
