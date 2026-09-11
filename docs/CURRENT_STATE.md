@@ -1,31 +1,80 @@
 # Current state and next-session handoff
 
-## This branch: isolated freeform Kotlin proof
+Updated 2026-09-11 after verified smooth-pool pen integration. This branch is
+**research/freeform-tangent-kotlin**, draft PR #5 into
+**feat/project-geometry-seam**. It is based directly on `8022429`, which already
+contains whole-straight-pool-side manipulation. Do not reset the application
+branch to an older documentation checkpoint.
 
-Updated 2026-09-11 for **research/freeform-tangent-kotlin**, draft **PR #5 into feat/project-geometry-seam**. This is a branch-specific checkpoint, not a replacement for the concurrent application's roadmap. It branched from `80224295df4f972d0c2bd1531bcab8015e552e01`, which already contained whole-straight-side editing. Verify live refs and concurrent changes before integration. Do not reset the application branch to this research baseline.
+## Delivered on this branch
 
-The inherited application handoff at that base is preserved in Git history: [baseline checkpoint](https://github.com/CRisdon45/Plan_Trace/blob/80224295df4f972d0c2bd1531bcab8015e552e01/docs/CURRENT_STATE.md). That prose predates the whole-side code in the same revision; it is historical context, not a reason to undo the newer source.
+The actual workspace can now create a smooth closed pool from deliberate pen
+points, derive following coping, select a meaningful local shape or radius
+handle through the existing radial commands, preview the constrained result,
+cancel safely, commit once, Undo/Redo, save, reopen and render the same geometry.
+Object snapping is applied to the requested shape anchor before the tangent
+solve. Locks, stable object/edge IDs, format-5 storage and the existing project
+command path remain authoritative.
 
-## Implemented and verified here
+`a852497` introduced the bounded Kotlin biarc construction and tangent-preserving
+project commands. `9eb25e5` connected authoring and editing to the real canvas;
+`2f28ac9d2d6ff873b79450fac95dbf5d950fb7d5` corrected radial-direction
+regressions, exact arc picking and emulator display setup. No new runtime
+dependency, saved constraint model, schema migration, runtime AI or 3D work was
+added.
 
-Implementation `a852497b3a2ca7123d77b3903d90601b440e2c2c` adds original Kotlin biarc construction and two bounded tangent-preserving project commands. A local anchor edit changes four edges; a radius edit changes two. They use existing canonical boundaries, retain IDs, reject stale geometry/unsupported branches, respect existing whole-object locks and use the real coping/history/storage path. No UI control exposes these commands yet.
+## Verified evidence
 
-Final test revision **2ee37169fa74f4a8c565e7b16ca1fcbd90f0614b**, [run 34645063378](https://github.com/CRisdon45/Plan_Trace/actions/runs/34645063378), passed **265 tests in 36 suites, zero failures/errors/skips**, including 22 new test methods, plus the separate nine Python runtime-policy tests, runtime dependency/manifest checks and debug assembly. Downloaded XML and ZIP hash were verified. The 5,000 seeded biarcs are internal cases, not 5,000 additional JUnit tests.
+[Android 2D integrity run 34650212981](https://github.com/CRisdon45/Plan_Trace/actions/runs/34650212981)
+at `2f28ac9` passed **275 tests in 36 suites with zero failures, errors or
+skips**, the separate nine Python runtime-policy tests, debug/release resolved
+runtime and merged-manifest checks, and debug assembly. The downloaded report
+archive digest is
+`93e4f7ac18d0248f17ec9a1dcb4aac81f7b36586cdca039ef4d5a8906669f478`.
+The known successful-build KSP/AWT background `NullPointerException` remains;
+compiler and action deprecations also remain.
 
-Actual production before/after PNGs were opened. The edited/reopened exports are byte-identical, including across both full CI runs. The locally smooth but globally crossing candidate is explicitly rejected by the complete project path without consuming redo. Format 5 and existing mitred JTS coping are unchanged. A one-off source-snapshot workflow was removed after use; cleanup and later documentation do not change the tested implementation.
+[Android workspace run 34650212974](https://github.com/CRisdon45/Plan_Trace/actions/runs/34650212974)
+passed **all 18 scenarios** on the first complete attempt, including the three
+new system-injected-stylus smooth-pool scenarios. The downloaded artifact digest
+is `c8286d8274bccb017ccd6f0cffeba9cf4d47360f647a0477d8343eadbd05d4f4`.
+All 41 active-window records identify the app; the smooth authoring, live shape,
+radius, rejected-radius, completed and reopened frames were opened and were
+unobstructed. All seven completed-save/restart pairs are byte-identical. The
+final smooth document is format 5, revision 63, eight objects and 10,825 bytes;
+its SHA-256 is
+`6311f9c7efb7205dda95a0c92282aee19155c5ae602fd96be2d1791fca1f7a7f`.
+No ANR or crash buffer entry was recorded.
 
-Read [FREEFORM_TANGENT_PROOF.md](FREEFORM_TANGENT_PROOF.md) for pinned revisions, artifacts, exact domains, derivation, reproduction and limits. The known KSP/AWT background exception appeared in the initial successful build here and remains unresolved. Existing compiler/action deprecations remain.
+This is synthetic Android-emulator interaction evidence, not physical S Pen,
+palm rejection, hardware latency or owner visual acceptance. The opened frames
+also retain the verbose prototype shell, overlapping synthetic scene and
+non-Northstar renderer; green interaction tests do not approve that appearance.
 
-## Not delivered by this proof
+## Next outcome
 
-No pen/UI exposure, physical-tablet or emulator interaction, performance/latency measurement, persistent per-edge tangent/radius locks, general linked solver or Kotlin footprint generator. No Cavalier or other new runtime dependency. No Northstar restyle, new project model, storage migration, runtime AI or 3D. No app merge, APK publication, installation, device/data clearing, signing-key change, permission change or private reference publication was performed here.
+Reconcile and integrate PR #5 into `feat/project-geometry-seam`, preserving its
+straight-side and existing-site history. Then begin a separate, reviewable
+**expert workspace UI/visual hierarchy** slice over the now-usable straight and
+smooth editing paths. Ordinary live feedback should be the dimension near the
+work, without a bubble, redundant tool label or grid narration. Reduce persistent
+chips, instructional prose and status noise so the design owns the screen, while
+retaining visible command access, stable radial directions, concise consequential
+errors and compact fallbacks. Do not treat a shell cleanup as Northstar renderer
+parity; introduce actual object-driven styling in bounded Technical/Graphic/
+Northstar slices with authentic canvas and export evidence.
 
-REF-FF-01 is a secondary private recreation/editing benchmark, not the required pool style or generator template. All committed fixtures are original mathematical outlines. The reference image remains outside this public repository.
+After dependable manual authoring and the coherent interaction pass, continue
+rectangle/convex-polygon pool generation using the same editable objects, target
+water area and explicit outside-coping containment. Do not replace this with a
+numeric-form milestone or restart solver/library research.
 
-## Next outcome and integration rule
+## Boundaries still in force
 
-Reconcile this draft with the live application branch, preserving its concurrent straight-side/UI work. Establish one complete pen-facing smooth-pool workflow through existing radial selection, meaningful handles, valid live previews with dimensions/coping, cancellation, one-operation Undo and save/reopen. Do not expose a numeric form or every technical biarc junction. Include snapping before the solve, not after it. Fixture injection alone does not prove authoring usability.
-
-After dependable manual authoring/editing, add rectangle/convex-polygon generation using the same editable objects, target water area and explicit outside-coping containment. Use specific failures to justify additional solver/offset components rather than restarting library research. Keep 3D paused and runtime behavior deterministic/local.
-
-Before merging, reconcile this branch-specific checkpoint with the application's then-current CURRENT_STATE rather than overwriting newer application evidence. Maintain a single authoritative project and report exactly which code, UI/device and visual checks ran.
+No persistent per-edge tangent/radius locks, general linked solver, footprint
+generator, shared curved surfaces, attached shelves/steps/spas, alternatives,
+full landscape scope, portable backup or Northstar acceptance is delivered.
+Physical S Pen/button/hover/palm behavior and full-layout drafting remain pending.
+Private references and client geometry remain outside this public repository.
+The physical tablet, installed app, signing key and user data were not changed.
+No application PR was merged at this checkpoint.
