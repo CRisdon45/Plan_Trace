@@ -30,6 +30,10 @@ Support an imported plan/overhead image and measured drawing from scratch. Estab
 
 The owner rarely wants on-screen numeric typing. Direct pen gestures, dependable snapping and local context should carry routine design. Typed values are an occasional precision fallback, not the default path through every operation. The existing numeric fields do not settle the final interaction design, which the owner deferred.
 
+Live measurement, target crosshair and committed geometry must agree after snapping and constraints. Keep feedback inside the drawing area without resizing it or intercepting the pen. Object snapping is a one-time placement aid; a lasting attachment is a separate deliberate relationship.
+
+Expert-facing presentation: the normal live-line readout should be the dimension alone, without a bubble, "Line" prefix or repeated grid-state text. Do not narrate actions Cody already understands. Use concise context only where it resolves a real ambiguity or reports a consequential problem. This is the accepted direction for later UI cleanup, not a claim about the current prototype readout.
+
 The primary barrel-button action summons a compact radial menu near the pointer, offset from the hand and usable near screen edges. Common command directions remain stable; context changes relevant operations without rearranging learned positions unpredictably. A visible entry provides the same functionality when device events are unavailable. Do not depend on Bluetooth remote gestures or silently change system settings.
 
 Use the wheel to choose intent, pen handles to manipulate geometry, and contextual precision controls for accurate changes. Keep feet/inches entry available as an occasional fallback, not a required step. Large plant/material collections belong in a temporary panel rather than nested rings of tiny choices. Specific sector layout, flick thresholds and handedness behavior are proposals to test, not fixed values invented by this document.

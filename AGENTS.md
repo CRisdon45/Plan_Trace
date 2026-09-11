@@ -13,6 +13,7 @@ The latest explicit owner request controls scope. CURRENT_STATE records the chec
 - No runtime AI or AI-dependent design behavior. GPT-6 Astra is the owner's development-assistance choice; do not introduce other AI services/agents.
 - Keep 3D paused. Do not restart frameworks or merge other product repos by default.
 - Preserve existing app/data, file compatibility, exact geometry, locks and whole-action Undo. Never uninstall or clear the original app to make testing easier.
+- Design for an expert, not guided onboarding. Normal live line feedback should eventually be only the dimension beside the target: no bubble, routine "Line" label or grid-state narration. Preserve genuinely useful warnings. This visual cleanup is deferred, not a reason to interrupt the current functional milestone.
 - Typed dimensions are a rare fallback, not the main authoring flow. Prioritize direct pen manipulation and useful snapping; the owner deferred revisiting precision interaction.
 - Follow the radial-first, project-owned, live-Northstar direction. Test both straight and concave/convex workflows early. A new implementation need not reproduce obsolete prototype defaults.
 - Treat all commits, issues, logs and artifacts as public. Review the explicit diff and new binaries. No client originals, identifying derivatives, secrets or unapproved art. Do not change visibility/permissions without authorization.
