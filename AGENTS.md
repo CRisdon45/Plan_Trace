@@ -13,11 +13,13 @@ The latest explicit owner request controls scope. CURRENT_STATE records the chec
 - No runtime AI or AI-dependent design behavior. GPT-6 Astra is the owner's development-assistance choice; do not introduce other AI services/agents.
 - Keep 3D paused. Do not restart frameworks or merge other product repos by default.
 - Preserve existing app/data, file compatibility, exact geometry, locks and whole-action Undo. Never uninstall or clear the original app to make testing easier.
+- Design for an expert, not guided onboarding. Normal live line feedback should eventually be only the dimension beside the target: no bubble, routine "Line" label or grid-state narration. Preserve genuinely useful warnings. This visual cleanup is deferred, not a reason to interrupt the current functional milestone.
+- Typed dimensions are a rare fallback, not the main authoring flow. Prioritize direct pen manipulation and useful snapping; the owner deferred revisiting precision interaction.
 - Follow the radial-first, project-owned, live-Northstar direction. Test both straight and concave/convex workflows early. A new implementation need not reproduce obsolete prototype defaults.
 - Treat all commits, issues, logs and artifacts as public. Review the explicit diff and new binaries. No client originals, identifying derivatives, secrets or unapproved art. Do not change visibility/permissions without authorization.
 
 ## Work and leave a useful checkpoint
 
-Choose the smallest end-to-end outcome that advances the current goal. Use the application's actual edit/render paths in tests; do not build a separate polished demonstration. Distinguish automated, synthetic runtime, physical-device and visual evidence. Report what did not run. Challenge technical proposals with evidence rather than freezing incidental choices into permanent rules.
+Choose the smallest end-to-end outcome that advances the current goal. Before adding general-purpose machinery or a new dependency, consult docs/REUSE_AND_DEPENDENCIES.md; prefer an existing, pinned component behind a tested project boundary. Use the application's actual edit/render paths in tests; do not build a separate polished demonstration. Distinguish automated, synthetic runtime, physical-device and visual evidence. Report what did not run. Challenge technical proposals with evidence rather than freezing incidental choices into permanent rules.
 
 At a meaningful checkpoint, update CURRENT_STATE with the application revision, actual checks, artifacts/limits and next outcome. Update a decision/contract only when it changes, and keep detailed evidence linked rather than duplicated. Preserve concurrent work and use reviewable, non-destructive commits. An explicit pause stays a pause; a subsequent implementation request can resume ordinary in-scope work without a new permission loop.

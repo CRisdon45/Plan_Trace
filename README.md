@@ -8,7 +8,7 @@ The goal is to keep up with an experienced designer: create the site, compose th
 
 Read [AGENTS.md](AGENTS.md), [current state and next outcome](docs/CURRENT_STATE.md), and [product direction](docs/PRODUCT_VISION.md). Then open only the contracts/evidence relevant to the task. The repository, not an unavailable conversation, carries the working context.
 
-**Application work is on `feat/2d-foundation-northstar` (PR #2).** The default `main` branch receives this context package without merging the unfinished 2D application code. Verify live branches and the current-state file before making changes. Old perspective/Filament branches are not the current roadmap.
+**Use [CURRENT_STATE.md](docs/CURRENT_STATE.md) to find the active implementation branch, stacked pull requests and tested application revision.** The default main branch carries the context/routing package without necessarily containing unfinished application code. Verify live refs before making changes; do not choose a work branch from an old report or assume the tablet build matches the latest code. Old perspective/Filament branches are not the current roadmap.
 
 ## Where each kind of information belongs
 
@@ -21,6 +21,7 @@ Read [AGENTS.md](AGENTS.md), [current state and next outcome](docs/CURRENT_STATE
 | What should the live design look like? | [Northstar visual contract](docs/NORTHSTAR_VISUAL_SPEC.md) |
 | What real work must we prove, and in what order? | [Benchmarks](docs/BENCHMARKS.md) and [outcome roadmap](docs/EXECUTION_PLAN.md) |
 | Where are the references, and what is safe to publish? | [Reference policy](docs/REFERENCES.md) and [manifest](docs/references/manifest.json) |
+| Which reusable components fit, and what must stay local? | [Reuse decisions and runtime boundary](docs/REUSE_AND_DEPENDENCIES.md) |
 | How do we build/check the app and find earlier evidence? | [Build and verify](docs/BUILD_AND_VERIFY.md) and [history index](docs/HISTORY.md) |
 
 ## Boundaries

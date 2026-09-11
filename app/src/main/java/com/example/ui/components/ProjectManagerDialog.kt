@@ -61,7 +61,8 @@ fun ProjectManagerDialog(
     onSelectProject: (TraceProject) -> Unit,
     onCreateNewProject: (title: String, sampleKey: String) -> Unit,
     onDeleteProject: (String) -> Unit,
-    onImportFile: () -> Unit
+    onImportFile: () -> Unit,
+    onOpenDesignWorkspace: (() -> Unit)? = null
 ) {
     var isCreating by remember { mutableStateOf(false) }
     var newTitle by remember { mutableStateOf("") }
@@ -103,6 +104,13 @@ fun ProjectManagerDialog(
                     }
                     IconButton(onClick = onDismiss) {
                         Icon(Icons.Default.Close, contentDescription = "Close")
+                    }
+                }
+
+                if (!isCreating && onOpenDesignWorkspace != null) {
+                    OutlinedButton(onClick = onOpenDesignWorkspace,
+                        modifier = Modifier.fillMaxWidth().testTag("open-design-workspace")) {
+                        Text("Design workspace · preview")
                     }
                 }
 

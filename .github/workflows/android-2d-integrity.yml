@@ -2,24 +2,26 @@ name: Android 2D integrity
 
 on:
   push:
-    branches: [feat/off-tablet-integrity, feat/2d-foundation-northstar]
+    branches: [research/freeform-tangent-kotlin, feat/project-geometry-seam, feat/off-tablet-integrity, feat/2d-foundation-northstar]
     paths:
       - 'app/**'
       - 'gradle/**'
       - '*.gradle.kts'
       - 'gradle.properties'
       - 'gradlew*'
-      - '.env.example'
+      - 'tools/qa/check_local_runtime.py'
+      - 'tools/qa/test_local_runtime_policy.py'
       - '.github/workflows/android-2d-integrity.yml'
   pull_request:
-    branches: [main, feat/2d-foundation-northstar]
+    branches: [main, feat/2d-foundation-northstar, feat/off-tablet-integrity]
     paths:
       - 'app/**'
       - 'gradle/**'
       - '*.gradle.kts'
       - 'gradle.properties'
       - 'gradlew*'
-      - '.env.example'
+      - 'tools/qa/check_local_runtime.py'
+      - 'tools/qa/test_local_runtime_policy.py'
       - '.github/workflows/android-2d-integrity.yml'
   workflow_dispatch:
 
@@ -61,6 +63,12 @@ jobs:
             -dname 'CN=Plan Trace CI,OU=Development,O=Plan Trace,C=US' \
             -keyalg RSA -keysize 2048 -validity 2
           echo 'This ephemeral CI key must not replace a locally installed development app key.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Audit the shipped runtime, not only declared dependencies
+        shell: bash
+        run: |
+          python3 -m unittest discover -s tools/qa -p 'test_local_runtime_policy.py' -v
+          ./gradlew --no-daemon --no-configuration-cache --console=plain :app:reportRuntimeDependencies :app:processDebugMainManifest :app:processReleaseMainManifest
+          python3 tools/qa/check_local_runtime.py --build-dir app/build
       - name: Unit tests and debug assembly
         shell: bash
         run: ./gradlew --no-daemon --console=plain --stacktrace :app:testDebugUnitTest :app:assembleDebug
@@ -96,6 +104,8 @@ jobs:
           path: |
             app/build/test-results/testDebugUnitTest/
             app/build/reports/tests/testDebugUnitTest/
+            app/build/reports/design-geometry/
+            app/build/reports/runtime-policy/
           if-no-files-found: warn
           retention-days: 7
       # No installation, release signing, deployment, private fixtures or APK upload.

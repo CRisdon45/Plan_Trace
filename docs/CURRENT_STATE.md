@@ -1,45 +1,80 @@
 # Current state and next-session handoff
 
-Updated: 2026-09-10, off-tablet implementation checkpoint. This is the current handoff, not an append-only chronology. Verify live branch heads and PRs before changing anything.
+Updated 2026-09-11 after verified smooth-pool pen integration. This branch is
+**research/freeform-tangent-kotlin**, draft PR #5 into
+**feat/project-geometry-seam**. It is based directly on `8022429`, which already
+contains whole-straight-pool-side manipulation. Do not reset the application
+branch to an older documentation checkpoint.
 
-## Scope and where to work
+## Delivered on this branch
 
-**Implementation has resumed at the owner's explicit request while tablet testing is unavailable and was already in progress elsewhere.** The pending physical-device gate is not a blanket prohibition on independently verifiable development. It is also not a passed gate. Preserve the interrupted tablet session, its installed build and all project data.
+The actual workspace can now create a smooth closed pool from deliberate pen
+points, derive following coping, select a meaningful local shape or radius
+handle through the existing radial commands, preview the constrained result,
+cancel safely, commit once, Undo/Redo, save, reopen and render the same geometry.
+Object snapping is applied to the requested shape anchor before the tangent
+solve. Locks, stable object/edge IDs, format-5 storage and the existing project
+command path remain authoritative.
 
-Repository: `CRisdon45/Plan_Trace`, intentionally public. `main` carries current direction/handoff documents without the unfinished application code. The integrated 2D foundation is `feat/2d-foundation-northstar` (PR #2), with application code still based on `3fc0491`; the context checkpoint before this session was `5367dbe`.
+`a852497` introduced the bounded Kotlin biarc construction and tangent-preserving
+project commands. `9eb25e5` connected authoring and editing to the real canvas;
+`2f28ac9d2d6ff873b79450fac95dbf5d950fb7d5` corrected radial-direction
+regressions, exact arc picking and emulator display setup. No new runtime
+dependency, saved constraint model, schema migration, runtime AI or 3D work was
+added.
 
-**Current implementation work: `feat/off-tablet-integrity`, PR #3 into `feat/2d-foundation-northstar`.** It was branched from `5367dbe` to avoid mixing changes with the tablet baseline. PR #3 is not an installation or a release. Main/foundation updates in this session are documentation-only; new application code stays on the parallel branch until deliberately integrated. Old perspective/Filament and audit branches are not the next implementation target.
+## Verified evidence
 
-## What was completed off-tablet
+[Android 2D integrity run 34650212981](https://github.com/CRisdon45/Plan_Trace/actions/runs/34650212981)
+at `2f28ac9` passed **275 tests in 36 suites with zero failures, errors or
+skips**, the separate nine Python runtime-policy tests, debug/release resolved
+runtime and merged-manifest checks, and debug assembly. The downloaded report
+archive digest is
+`93e4f7ac18d0248f17ec9a1dcb4aac81f7b36586cdca039ef4d5a8906669f478`.
+The known successful-build KSP/AWT background `NullPointerException` remains;
+compiler and action deprecations also remain.
 
-Shared PDF/PNG measurement and source-underlay controls now use labeled whole-row switches and saved state. The choices survive format switching and saved-state recreation. Closed freehand/polyline measurements now include the implicit final edge, without modifying vertices, IDs, stored data or schema. This fixes chain-length labels; it is not a freeform curve engine or complete takeoff system.
+[Android workspace run 34650212974](https://github.com/CRisdon45/Plan_Trace/actions/runs/34650212974)
+passed **all 18 scenarios** on the first complete attempt, including the three
+new system-injected-stylus smooth-pool scenarios. The downloaded artifact digest
+is `c8286d8274bccb017ccd6f0cffeba9cf4d47360f647a0477d8343eadbd05d4f4`.
+All 41 active-window records identify the app; the smooth authoring, live shape,
+radius, rejected-radius, completed and reopened frames were opened and were
+unobstructed. All seven completed-save/restart pairs are byte-identical. The
+final smooth document is format 5, revision 63, eight objects and 10,825 bytes;
+its SHA-256 is
+`6311f9c7efb7205dda95a0c92282aee19155c5ae602fd96be2d1791fca1f7a7f`.
+No ANR or crash buffer entry was recorded.
 
-A GitHub workflow runs the full unit-test suite and debug assembly using synthetic test data, read-only repository permission and an ephemeral CI debug key. It publishes test reports only, not an APK or a deployment. Never use its disposable signing key to replace the existing tablet application's key.
-
-## Evidence and limitations
-
-| Revision / scope | Actual result |
-| --- | --- |
-| `d9ef977f1b08c957240061bbb1022d690d7e8b98`, unchanged application baseline plus CI | Run 34496770033: 37 tests, zero failures/errors/skips; debug assembly succeeded. This full suite includes two tests absent from the prior focused 35-test report. |
-| `e7e75e895ecf1c2863945088c5502ee58b04cdff`, implementation and 12 new regressions | Run 34497580131: 49 tests, zero failures/errors/skips; debug assembly succeeded. Seven path tests, four Compose dialog tests and one actual PNG file/renderer test were added. |
-| Physical tablet / visual acceptance | Not run in this session. The latest courtyard example, real pen/palm/button behavior, physical reachability and final PNG/PDF appearance remain pending. |
-
-The implementation run also logged a KSP/AWT background-thread NullPointerException despite successful tasks/tests. It is recorded for toolchain follow-up, not certified harmless or hidden behind a clean-log claim. Existing Google-services/deprecation warnings remain. Read [OFF_TABLET_IMPLEMENTATION.md](OFF_TABLET_IMPLEMENTATION.md) for pinned run links, exact checks and unresolved limits. Later documentation-only commits do not create a new application-validation claim.
+This is synthetic Android-emulator interaction evidence, not physical S Pen,
+palm rejection, hardware latency or owner visual acceptance. The opened frames
+also retain the verbose prototype shell, overlapping synthetic scene and
+non-Northstar renderer; green interaction tests do not approve that appearance.
 
 ## Next outcome
 
-Keep PR #3 reviewable and reconcile any concurrent work before integration. The next independent implementation slice can begin Q1: establish a small project-owned geometry/relationship seam and original synthetic straight/concave-curved cases, without migrating live user data or creating a second demonstration-only renderer. Keep the scope small enough to exercise the actual editing, persistence and rendering paths. Model the project once, while preserving existing page-local sketches and their calibration.
+Reconcile and integrate PR #5 into `feat/project-geometry-seam`, preserving its
+straight-side and existing-site history. Then begin a separate, reviewable
+**expert workspace UI/visual hierarchy** slice over the now-usable straight and
+smooth editing paths. Ordinary live feedback should be the dimension near the
+work, without a bubble, redundant tool label or grid narration. Reduce persistent
+chips, instructional prose and status noise so the design owns the screen, while
+retaining visible command access, stable radial directions, concise consequential
+errors and compact fallbacks. Do not treat a shell cleanup as Northstar renderer
+parity; introduce actual object-driven styling in bounded Technical/Graphic/
+Northstar slices with authentic canvas and export evidence.
 
-Q0's shared measurement-control defect has automated coverage now. Its remaining tablet and visual checks stay explicit acceptance debt, not a reason to halt unrelated geometry tests. When the tablet is available, finish the interrupted session on its known build first, then deliberately test the newer version and compare its actual PNG/PDF outputs with automatic measurements on/off. No uninstall or data clearing.
+After dependable manual authoring and the coherent interaction pass, continue
+rectangle/convex-polygon pool generation using the same editable objects, target
+water area and explicit outside-coping containment. Do not replace this with a
+numeric-form milestone or restart solver/library research.
 
-## Remaining product gaps
+## Boundaries still in force
 
-The example still uses separate pool/coping/steps/labels; the new contract's connected project authority is not implemented. Per-page drawing storage remains the current model. Calibration/underlay history, source relinking, portable backups, associative dimensions, exact editing beyond rectangles, lasso, full-project handoff, primary radial interaction and Northstar rendering remain unfinished.
-
-The inherited runtime AI/service dependency audit is separate from the prior root metadata cleanup and was not done in this patch. No runtime AI is an accepted requirement; do not treat leftover scaffolding as approval to use it. 3D remains paused. Exact interchange with Estimator/Design-Platform is still a technical decision, not a repository merger.
-
-Private project originals and Northstar image pixels remain outside this public repo. Public benchmark descriptions are still specifications, not recreated client projects. See REFERENCES.md and its manifest. Do not infer access to absent private files or claim visual parity without reference review.
-
-## Maintain the checkpoint
-
-At each meaningful checkpoint replace the current status/next outcome, record the application revision and checks that actually ran, and link detailed evidence. Keep baseline and parallel-work branches distinguishable; documentation presence is not application parity. Preserve concurrent edits, original user data and the public/private boundary. Historical implementation reports are indexed in HISTORY.md and do not override current scope.
+No persistent per-edge tangent/radius locks, general linked solver, footprint
+generator, shared curved surfaces, attached shelves/steps/spas, alternatives,
+full landscape scope, portable backup or Northstar acceptance is delivered.
+Physical S Pen/button/hover/palm behavior and full-layout drafting remain pending.
+Private references and client geometry remain outside this public repository.
+The physical tablet, installed app, signing key and user data were not changed.
+No application PR was merged at this checkpoint.

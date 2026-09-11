@@ -71,7 +71,8 @@ object ExportManager {
         includeBackground: Boolean = true,
         width: Float,
         height: Float,
-        showDimensions: Boolean = true
+        showDimensions: Boolean = true,
+        registeredBackground: RectF? = null
     ) {
         // Draw paper background
         if (includeBackground && backgroundBitmap != null) {
@@ -80,7 +81,7 @@ object ExportManager {
                 isFilterBitmap = true
             }
             val src = android.graphics.Rect(0, 0, backgroundBitmap.width, backgroundBitmap.height)
-            val dst = RectF(0f, 0f, backgroundBitmap.width.toFloat(), backgroundBitmap.height.toFloat())
+            val dst = registeredBackground ?: RectF(0f, 0f, backgroundBitmap.width.toFloat(), backgroundBitmap.height.toFloat())
             canvas.drawBitmap(backgroundBitmap, src, dst, bgPaint)
         } else {
             // Draw clean architectural tracing paper off-white
@@ -114,7 +115,8 @@ object ExportManager {
         backgroundBitmap: Bitmap?,
         options: PdfExportOptions,
         pageWidth: Float,
-        pageHeight: Float
+        pageHeight: Float,
+        registeredBackground: RectF? = null
     ) {
         // 1. Pure crisp white paper background for printing
         canvas.drawColor(Color.WHITE)
@@ -156,7 +158,7 @@ object ExportManager {
         }
 
         // Calculate scale to fit plan proportionally inside drawing area
-        val bounds = ExportGeometry.contentBounds(project, backgroundBitmap?.width, backgroundBitmap?.height)
+        val bounds = ExportGeometry.contentBounds(project, backgroundBitmap?.width, backgroundBitmap?.height, registeredBackground)
         val insetDrawingRect = RectF(drawingRect).apply { inset(12f, 12f) }
         val fit = ExportGeometry.fit(bounds, insetDrawingRect)
         val scale = fit.scale
@@ -171,7 +173,8 @@ object ExportManager {
             includeBackground = options.includeBackground,
             width = bounds.width(),
             height = bounds.height(),
-            showDimensions = options.includeDimensions
+            showDimensions = options.includeDimensions,
+            registeredBackground = registeredBackground
         )
         canvas.restore()
 
@@ -357,17 +360,18 @@ object ExportManager {
         includeBackground: Boolean = true,
         width: Int = 2048,
         height: Int = 1536,
-        showDimensions: Boolean = true
+        showDimensions: Boolean = true,
+        registeredBackground: RectF? = null
     ): File? = withContext(Dispatchers.IO) {
         try {
             val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
             canvas.drawColor(if (project.backgroundType == com.example.model.BackgroundType.BLANK_PAPER) 0xFFFBFAF5.toInt() else Color.parseColor("#FBFBF8"))
-            val bounds = ExportGeometry.contentBounds(project, backgroundBitmap?.width, backgroundBitmap?.height)
+            val bounds = ExportGeometry.contentBounds(project, backgroundBitmap?.width, backgroundBitmap?.height, registeredBackground)
             val fit = ExportGeometry.fit(bounds, RectF(0f, 0f, width.toFloat(), height.toFloat()))
             canvas.translate(fit.translateX, fit.translateY)
             canvas.scale(fit.scale, fit.scale)
-            renderProjectToCanvas(canvas, project, backgroundBitmap, includeBackground, width.toFloat(), height.toFloat(), showDimensions)
+            renderProjectToCanvas(canvas, project, backgroundBitmap, includeBackground, width.toFloat(), height.toFloat(), showDimensions, registeredBackground)
 
             val cacheDir = File(context.cacheDir, "exports")
             cacheDir.mkdirs()
@@ -391,7 +395,8 @@ object ExportManager {
         context: Context,
         project: TraceProject,
         backgroundBitmap: Bitmap?,
-        options: PdfExportOptions = PdfExportOptions()
+        options: PdfExportOptions = PdfExportOptions(),
+        registeredBackground: RectF? = null
     ): File? = withContext(Dispatchers.IO) {
         try {
             val (pageW, pageH) = if (options.isLandscape) {
@@ -410,7 +415,8 @@ object ExportManager {
                 backgroundBitmap = backgroundBitmap,
                 options = options,
                 pageWidth = pageW.toFloat(),
-                pageHeight = pageH.toFloat()
+                pageHeight = pageH.toFloat(),
+                registeredBackground = registeredBackground
             )
 
             pdfDocument.finishPage(page)

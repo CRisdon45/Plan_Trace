@@ -1,0 +1,63 @@
+name: Android workspace emulator
+on:
+  push:
+    branches: [feat/project-geometry-seam, research/freeform-tangent-kotlin]
+    paths:
+      - 'app/**'
+      - 'gradle/**'
+      - '*.gradle.kts'
+      - 'tools/qa/run-workspace-emulator.sh'
+      - '.github/workflows/android-workspace-emulator.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: workspace-emulator-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  real-android-workflow:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Enable hosted-runner KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          sudo udevadm settle --timeout=15
+          for attempt in $(seq 1 10); do
+            if test -r /dev/kvm && test -w /dev/kvm; then break; fi
+            sleep 1
+          done
+          ls -l /dev/kvm
+          test -r /dev/kvm && test -w /dev/kvm
+      - name: Install SDK and disposable emulator image
+        run: |
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          set +o pipefail
+          yes | "$sdkmanager" --licenses >/dev/null
+          set -o pipefail
+          "$sdkmanager" 'platforms;android-36.1' 'build-tools;36.0.0' 'emulator' 'platform-tools' 'system-images;android-35;google_apis;x86_64'
+          keytool -genkeypair -noprompt -keystore debug.keystore -storepass android \
+            -alias androiddebugkey -keypass android -dname 'CN=Disposable Emulator Test' \
+            -keyalg RSA -keysize 2048 -validity 2
+      - name: Build actual app and instrumentation
+        run: ./gradlew --no-daemon --console=plain :app:assembleDebug :app:assembleDebugAndroidTest
+      - name: Exercise app editing and process restart
+        run: bash tools/qa/run-workspace-emulator.sh
+      - name: Retain synthetic emulator evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: workspace-emulator-${{ github.sha }}
+          path: emulator-evidence/
+          retention-days: 7
+          if-no-files-found: warn
+# No secrets, APK publication, deployment, external data, or physical-device connection.
