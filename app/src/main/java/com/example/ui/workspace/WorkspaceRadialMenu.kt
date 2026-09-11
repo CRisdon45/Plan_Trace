@@ -108,7 +108,7 @@ fun WorkspaceRadialMenu(anchor: Offset, bounds: IntSize, availability: RadialAva
                     val enabled=availability.enabled(a);val checked=availability.checked(a)
                     val angle=RadialGeometry.childAngle(category,i)
                     sector(angle,110f,162f,28f,if(checked==true) Color(0xFFD8EBE3) else Color(0xFFF0EFEB))
-                    label(a.label.replace("Touch edit","Touch\nedit")+(checked?.let { if(it) "\nOn" else "\nOff" }?:""),
+                    label(a.label.replace("Touch edit","Touch\nedit").replace("Object snap","Object\nsnap")+(checked?.let { if(it) "\nOn" else "\nOff" }?:""),
                         angle,136.0,if(enabled) Color(0xFF233C3F) else Color(0xFF8A9090),11f)
                 }
             }

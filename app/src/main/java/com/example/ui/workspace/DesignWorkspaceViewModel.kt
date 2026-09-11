@@ -152,19 +152,21 @@ class DesignWorkspaceViewModel(application: Application) : AndroidViewModel(appl
             selectedId=null,draftOrthogonal=true,message=null) }
     }
     fun toggleSiteOrthogonal() { _state.update { it.copy(draftOrthogonal=!it.draftOrthogonal,draftCursor=null,draftTarget=null) } }
-    fun previewSiteCorner(point: DesignPoint?, grid: Boolean=false, closeToleranceMetres: Double=0.0) {
+    fun previewSiteCorner(point: DesignPoint?, grid: Boolean=false, closeToleranceMetres: Double=0.0,
+                          geometry: GeometrySnapIndex?=null, snapToleranceMetres: Double=0.1) {
         val points=state.value.drawingPoints ?: return
-        val target=point?.let { CornerTarget.resolve(points,it,state.value.draftOrthogonal,grid,closeToleranceMetres) }
+        val target=point?.let { CornerTarget.resolve(points,it,state.value.draftOrthogonal,grid,closeToleranceMetres,geometry,snapToleranceMetres,state.value.draftTarget?.snap?.key) }
         _state.update { it.copy(draftCursor=target?.point,draftTarget=target) }
     }
-    fun markSiteCorner(point: DesignPoint, closeToleranceMetres: Double, grid: Boolean=false) {
+    fun markSiteCorner(point: DesignPoint, closeToleranceMetres: Double, grid: Boolean=false,
+                       geometry: GeometrySnapIndex?=null, snapToleranceMetres: Double=0.1) {
         val current=state.value; val points=current.drawingPoints ?: return
         val id=current.siteDraft?.documentId ?: current.proposedDraft!!.documentId
         val revision=current.siteDraft?.revision ?: current.proposedDraft!!.revision
         if(session?.document?.revision!=revision || session?.document?.id!=id) {
             stopSiteTool(); feedback("The design changed. Start the outline again"); return
         }
-        val target=CornerTarget.resolve(points,point,current.draftOrthogonal,grid,closeToleranceMetres)
+        val target=CornerTarget.resolve(points,point,current.draftOrthogonal,grid,closeToleranceMetres,geometry,snapToleranceMetres,current.draftTarget?.snap?.key)
         if(target.closing) { finishSiteOutline();return }
         try {
             val site=current.siteDraft?.append(target.point)

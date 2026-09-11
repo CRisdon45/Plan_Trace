@@ -63,7 +63,7 @@ private class PointerSession {
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewModel, touchEdit: Boolean,
-    showGrid: Boolean, gridSnap: Boolean, commandRequest: Int, inspector: String?, allowCommands: Boolean,
+    showGrid: Boolean, gridSnap: Boolean, geometrySnap: Boolean, commandRequest: Int, inspector: String?, allowCommands: Boolean,
     onCloseInspector: () -> Unit, onAction: (RadialAction) -> Unit,
     onImportSite: () -> Unit, onSiteComplete: () -> Unit, modifier: Modifier) {
     val document = state.shownDocument ?: return
@@ -72,20 +72,32 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
     var size by remember { mutableStateOf(IntSize.Zero) }
     var viewport by remember { mutableStateOf(DesignViewport(60.0, 100.0, 300.0)) }
     val pointer = remember { PointerSession() }
+    val snapIndex = remember(state.document?.objects,geometrySnap) {
+        if(geometrySnap) GeometrySnapIndex(state.document!!.objects.map { GeometrySnapSource(it.id,it.boundary) }) else null
+    }
+    LaunchedEffect(snapIndex?.supported) {
+        if(snapIndex?.supported==false) model.feedback("Object snapping paused: this draft exceeds the current reference budget")
+    }
+    var editSnap by remember { mutableStateOf<GeometrySnapMatch?>(null) }
     var menuAnchor by remember { mutableStateOf<Offset?>(null) }
     var editMeasure by remember { mutableStateOf<LiveMeasure?>(null) }
     var lastPosition by remember { mutableStateOf<Offset?>(null) }
     var windowBounds by remember { mutableStateOf(Rect.Zero) }
     fun openCommands(point:Offset) {
         if(!allowCommands) return
-        editMeasure=null;model.cancelPreview();pointer.clear();onCloseInspector();menuAnchor=point
+        editMeasure=null;editSnap=null;model.cancelPreview();pointer.clear();onCloseInspector();menuAnchor=point
     }
     LaunchedEffect(commandRequest) {
         if(commandRequest>0) openCommands(lastPosition ?: Offset(size.width/2f,size.height/2f))
     }
     fun previewEdit(command: DesignCommand, rawTarget: DesignPoint) {
-        model.preview(command,pointer.document!!.revision)
+        val match = if(command is DesignCommand.MoveVertex) snapIndex?.resolve(command.point,
+            12.0*density/viewport.pixelsPerMetre,previous=editSnap?.key,excludeObjectId=command.objectId) else null
+        val resolved = if(command is DesignCommand.MoveVertex && match!=null) command.copy(point=match.point)
+            else if(gridSnap) GridAssist.snap(command) else command
+        model.preview(resolved,pointer.document!!.revision)
         val next=model.state.value.preview
+        editSnap=match?.takeIf { next!=null }
         editMeasure=if(next!=null) LiveMeasurements.editing(pointer.document!!,next,pointer.target!!,pointer.down!!)
             else LiveMeasure(rawTarget,listOf("Invalid edit · not placed"),invalid=true)
     }
@@ -104,7 +116,7 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
             if(inside) lastPosition=point-windowBounds.topLeft
             if(inside && !down && menuAnchor==null && state.isDrawing) {
                 val at=point-windowBounds.topLeft
-                model.previewSiteCorner(viewport.toWorld(at.x.toDouble(),at.y.toDouble()),gridSnap,18.0*density/viewport.pixelsPerMetre)
+                model.previewSiteCorner(viewport.toWorld(at.x.toDouble(),at.y.toDouble()),gridSnap,18.0*density/viewport.pixelsPerMetre,snapIndex,12.0*density/viewport.pixelsPerMetre)
             }
             if(event.actionMasked==MotionEvent.ACTION_HOVER_EXIT && state.isDrawing) model.previewSiteCorner(null)
             if(invoke) { openCommands(point-windowBounds.topLeft);true }
@@ -120,13 +132,13 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
     val lifecycle = LocalLifecycleOwner.current
     DisposableEffect(lifecycle, model) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_PAUSE) { pointer.clear();pointer.buttonLatched=false;menuAnchor=null;editMeasure=null;model.cancelPreview() }
+            if (event == Lifecycle.Event.ON_PAUSE) { pointer.clear();pointer.buttonLatched=false;menuAnchor=null;editMeasure=null;editSnap=null;model.cancelPreview() }
         }
         lifecycle.lifecycle.addObserver(observer)
         onDispose { lifecycle.lifecycle.removeObserver(observer); pointer.clear(); model.cancelPreview() }
     }
     LaunchedEffect(size, state.fitRequest) {
-        menuAnchor=null;editMeasure=null
+        menuAnchor=null;editMeasure=null;editSnap=null
         if (size.width > 0 && size.height > 0) {
             model.cancelPreview(); pointer.clear()
             viewport = DesignViewport.fit(state.document!!, size.width.toDouble(), size.height.toDouble())
@@ -155,12 +167,12 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
                         pointer.clear();pointer.document=state.document;pointer.startView=viewport
                         pointer.down=viewport.toWorld(x,y);pointer.lastX=x;pointer.lastY=y
                         pointer.traceAuthoring=touchEdit || event.getToolType(0)==MotionEvent.TOOL_TYPE_STYLUS
-                        if(pointer.traceAuthoring) model.previewSiteCorner(pointer.down,gridSnap,18.0*density/viewport.pixelsPerMetre)
+                        if(pointer.traceAuthoring) model.previewSiteCorner(pointer.down,gridSnap,18.0*density/viewport.pixelsPerMetre,snapIndex,12.0*density/viewport.pixelsPerMetre)
                     }
                     MotionEvent.ACTION_POINTER_DOWN -> { pointer.blockedEdit=true;model.previewSiteCorner(null) }
                     MotionEvent.ACTION_MOVE -> {
                         if(pointer.traceAuthoring && !pointer.blockedEdit && event.pointerCount==1) {
-                            model.previewSiteCorner(viewport.toWorld(x,y),gridSnap,18.0*density/viewport.pixelsPerMetre)
+                            model.previewSiteCorner(viewport.toWorld(x,y),gridSnap,18.0*density/viewport.pixelsPerMetre,snapIndex,12.0*density/viewport.pixelsPerMetre)
                         } else if(!pointer.traceAuthoring && !pointer.blockedEdit && !detector.isInProgress && event.pointerCount==1) {
                             viewport=viewport.panned(x-pointer.lastX,y-pointer.lastY)
                         }
@@ -168,7 +180,7 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
                     }
                     MotionEvent.ACTION_UP -> {
                         if(pointer.traceAuthoring && !pointer.blockedEdit && pointer.document?.revision==state.document?.revision) {
-                            model.markSiteCorner(viewport.toWorld(x,y),18.0*density/viewport.pixelsPerMetre,gridSnap)
+                            model.markSiteCorner(viewport.toWorld(x,y),18.0*density/viewport.pixelsPerMetre,gridSnap,snapIndex,12.0*density/viewport.pixelsPerMetre)
                         }
                         model.previewSiteCorner(null);pointer.clear()
                     }
@@ -219,12 +231,12 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
                 pointer.clear(); model.cancelPreview()
             }
             if (event.actionMasked == MotionEvent.ACTION_POINTER_DOWN) {
-                editMeasure=null;model.cancelPreview(); pointer.target = null; pointer.blockedEdit = true
+                editMeasure=null;editSnap=null;model.cancelPreview(); pointer.target = null; pointer.blockedEdit = true
             }
             detector.onTouchEvent(event)
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
-                    editMeasure=null;pointer.clear(); model.cancelPreview()
+                    editMeasure=null;editSnap=null;pointer.clear(); model.cancelPreview()
                     pointer.document = state.document; pointer.startView = viewport
                     pointer.down = viewport.toWorld(x, y)
                     pointer.lastX = x; pointer.lastY = y; pointer.downX = x; pointer.downY = y
@@ -238,7 +250,7 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
                     val target = pointer.target
                     if (!pointer.blockedEdit && target != null && event.pointerCount == 1) {
                         if (hypot(x - pointer.downX, y - pointer.downY) > 3 * density) pointer.moved = true
-                        if (pointer.moved) previewEdit(DesignPicking.drag(pointer.document!!, target, pointer.down!!, pointer.startView!!.toWorld(x, y)).let { if(gridSnap) GridAssist.snap(it) else it },pointer.startView!!.toWorld(x,y))
+                        if (pointer.moved) previewEdit(DesignPicking.drag(pointer.document!!, target, pointer.down!!, pointer.startView!!.toWorld(x, y)),pointer.startView!!.toWorld(x,y))
                     } else if (!detector.isInProgress && event.pointerCount == 1 && !pointer.blockedEdit) {
                         viewport = viewport.panned(x - pointer.lastX, y - pointer.lastY)
                     }
@@ -248,12 +260,12 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
                     if (pointer.target != null && !pointer.blockedEdit &&
                         (pointer.moved || hypot(x - pointer.downX, y - pointer.downY) > 3 * density)) {
                         // Pen-up can contain the last position even without a final move event.
-                        previewEdit(DesignPicking.drag(pointer.document!!, pointer.target!!, pointer.down!!, pointer.startView!!.toWorld(x, y)).let { if(gridSnap) GridAssist.snap(it) else it },pointer.startView!!.toWorld(x,y))
+                        previewEdit(DesignPicking.drag(pointer.document!!, pointer.target!!, pointer.down!!, pointer.startView!!.toWorld(x, y)),pointer.startView!!.toWorld(x,y))
                         model.commitPreview()
                     } else model.cancelPreview()
-                    editMeasure=null;pointer.clear()
+                    editMeasure=null;editSnap=null;pointer.clear()
                 }
-                MotionEvent.ACTION_CANCEL -> { editMeasure=null;model.cancelPreview(); pointer.clear() }
+                MotionEvent.ACTION_CANCEL -> { editMeasure=null;editSnap=null;model.cancelPreview(); pointer.clear() }
             }
             true
         }
@@ -370,6 +382,28 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
                 LiveMeasureOverlay(measure,at)
             }
         }
+        if(menuAnchor==null && inspector==null && allowCommands) {
+            val attraction=state.draftTarget?.snap ?: editSnap?.takeIf { state.preview!=null }
+            attraction?.let { snap ->
+                Canvas(Modifier.fillMaxSize().testTag("geometry-snap-guide").semantics {
+                    contentDescription="${snap.key.kind.name.lowercase()} snap"
+                }) {
+                    val p=viewport.toScreen(snap.point); val r=viewport.toScreen(snap.reference)
+                    val at=Offset(p.x.toFloat(),p.y.toFloat()); val reference=Offset(r.x.toFloat(),r.y.toFloat())
+                    val ink=Color(0xFF205D60)
+                    if((at-reference).getDistance()>2*density) {
+                        drawLine(ink.copy(alpha=0.6f),reference,at,density,
+                            pathEffect=androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(5*density,4*density)))
+                        drawCircle(ink,3*density,reference)
+                    }
+                    val shape=androidx.compose.ui.graphics.Path().apply {
+                        moveTo(at.x,at.y-9*density);lineTo(at.x+9*density,at.y)
+                        lineTo(at.x,at.y+9*density);lineTo(at.x-9*density,at.y);close()
+                    }
+                    drawPath(shape,ink,style=androidx.compose.ui.graphics.drawscope.Stroke(1.5f*density))
+                }
+            }
+        }
         if(inspector=="site" || (inspector!=null && selected!=null)) {
             Box(Modifier.fillMaxSize().pointerInput(inspector) { detectTapGestures { onCloseInspector() } })
             BackHandler { onCloseInspector() }
@@ -394,7 +428,7 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
             WorkspaceRadialMenu(anchor,size,RadialAvailability(state.document!=null,selected!=null,
                 selected!=null && !selected.locked,
                 selected?.kind==DesignObjectKind.POOL || selected?.kind==DesignObjectKind.SPA,
-                state.canUndo,state.canRedo,document.objects.isNotEmpty(),showGrid,touchEdit,gridSnap),
+                state.canUndo,state.canRedo,document.objects.isNotEmpty(),showGrid,touchEdit,gridSnap,geometrySnap),
                 onDismiss={ menuAnchor=null },onAction=onAction)
         }
 

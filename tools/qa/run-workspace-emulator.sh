@@ -92,6 +92,14 @@ device shell am force-stop "$package"
 device exec-out run-as "$package" cat files/project-design/workspace.json > emulator-evidence/live-after-restart.json
 cmp emulator-evidence/live-before-restart.json emulator-evidence/live-after-restart.json
 
+run_case snapToProtectedGeometry com.example.GeometrySnapDeviceTest
+device shell am force-stop "$package"
+device exec-out run-as "$package" cat files/project-design/workspace.json > emulator-evidence/geometry-snap-before-restart.json
+run_case snapResultReopensWithoutTemporaryConstraints com.example.GeometrySnapDeviceTest
+device shell am force-stop "$package"
+device exec-out run-as "$package" cat files/project-design/workspace.json > emulator-evidence/geometry-snap-after-restart.json
+cmp emulator-evidence/geometry-snap-before-restart.json emulator-evidence/geometry-snap-after-restart.json
+
 # Layout changes happen after the source/restart scenarios. Keep the test app
 # foreground while Android applies display changes, rather than reconfiguring the launcher.
 function layout_display() {
@@ -118,6 +126,7 @@ device exec-out run-as "$package" cat files/project-design/workspace.json > emul
   echo 'Additional: owned raster intake, calibrated source, second-distance match/disagreement without rescaling, source move/cancel/Undo, restart and actual PNG/PDF output. External picker UI NOT automated.'
   echo 'Additional: corner-created house/property vectors, protected closure, unlock/edit/relock, source-registration warning, hidden-source output and restart.'
   echo 'Additional: hand-placed pool/deck outlines and held-pointer live distances, constrained target matching, closing edge, canceled edit, existing-site readout and persisted geometry.'
+  echo 'Additional: explicit geometry snapping against locked house corners, exact off-grid target/readout/placement, vertex snap/cancel/Undo and restart without stored snap constraints.'
   echo 'Every accepted in-app screenshot checks the Android active-window package; obstructed frames fail and are retained, never dismissed.'
   echo 'Display cases: landscape 1600x1000@240, portrait 1000x1600@240, compact 800x1400@400.'
   echo "API: $(device shell getprop ro.build.version.sdk | tr -d '\r')"

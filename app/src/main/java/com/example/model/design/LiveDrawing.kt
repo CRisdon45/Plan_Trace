@@ -4,13 +4,24 @@ import kotlin.math.*
 import java.util.UUID
 
 /** One resolved endpoint is shared by the guide, readout and eventual commit. */
-data class DrawingTarget(val point: DesignPoint, val closing: Boolean, val assistance: String)
+data class DrawingTarget(val point: DesignPoint, val closing: Boolean, val assistance: String,
+                         val snap: GeometrySnapMatch? = null)
 object CornerTarget {
     fun resolve(points: List<DesignPoint>, raw: DesignPoint, orthogonal: Boolean, grid: Boolean,
-                closeToleranceMetres: Double = 0.0): DrawingTarget {
+                closeToleranceMetres: Double = 0.0, geometry: GeometrySnapIndex? = null,
+                snapToleranceMetres: Double = 0.1, previousSnap: GeometrySnapKey? = null): DrawingTarget {
         require(closeToleranceMetres.isFinite() && closeToleranceMetres >= 0)
         if (points.size >= 3 && raw.distanceTo(points.first()) <= closeToleranceMetres)
             return DrawingTarget(points.first(), true, "Close outline")
+        val axis = DrawingSnapAxes.constraint(points,raw,orthogonal)
+        val query = axis?.let {
+            val along=(raw.x-it.origin.x)*it.direction.x+(raw.y-it.origin.y)*it.direction.y
+            it.origin.translated(along*it.direction.x,along*it.direction.y)
+        } ?: raw
+        val match = geometry?.resolve(query,snapToleranceMetres,previousSnap,axis=axis,
+            guideDirection=DrawingSnapAxes.direction(points))
+        // A geometric snap uses the exact reference, not a rounded nearby grid point.
+        if(match!=null) return DrawingTarget(match.point,false,if(axis!=null) "Right angle" else "",match)
         var point = if (grid) GridAssist.snapPoint(raw) else raw
         if (orthogonal && points.size >= 2) {
             val first = points[0]; val second = points[1]; val last = points.last()

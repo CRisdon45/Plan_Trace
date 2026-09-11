@@ -41,13 +41,14 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
     var touchEdit by rememberSaveable { mutableStateOf(preferences.getBoolean("touch", false)) }
     var showGrid by rememberSaveable { mutableStateOf(preferences.getBoolean("grid", false)) }
     var gridSnap by rememberSaveable { mutableStateOf(preferences.getBoolean("snap", false)) }
+    var geometrySnap by rememberSaveable { mutableStateOf(preferences.getBoolean("geometry-snap", false)) }
     var commandRequest by remember { mutableStateOf(0) }
     var inspector by remember { mutableStateOf<String?>(null) }
     val sitePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { model.importSiteImage(it) }
     }
-    LaunchedEffect(touchEdit, showGrid, gridSnap) {
-        preferences.edit().putBoolean("touch",touchEdit).putBoolean("grid",showGrid).putBoolean("snap",gridSnap).apply()
+    LaunchedEffect(touchEdit, showGrid, gridSnap, geometrySnap) {
+        preferences.edit().putBoolean("touch",touchEdit).putBoolean("grid",showGrid).putBoolean("snap",gridSnap).putBoolean("geometry-snap",geometrySnap).apply()
     }
     LaunchedEffect(state.selectedId) { inspector=null }
     fun command(action: RadialAction) {
@@ -65,6 +66,7 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
             RadialAction.GRID -> showGrid=!showGrid
             RadialAction.TOUCH -> { model.cancelPreview();touchEdit=!touchEdit }
             RadialAction.SNAP -> gridSnap=!gridSnap
+            RadialAction.GEOMETRY -> geometrySnap=!geometrySnap
             RadialAction.UNDO -> model.undo()
             RadialAction.REDO -> model.redo()
             RadialAction.CLEAR -> model.select(null)
@@ -116,7 +118,7 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
                             label = { Text(obj.name + if(obj.locked) " · Locked" else "") }, modifier = Modifier.testTag("workspace-object-$index"))
                     }
                 }
-                WorkspaceCanvas(state, model, touchEdit, showGrid, gridSnap, commandRequest, inspector,
+                WorkspaceCanvas(state, model, touchEdit, showGrid, gridSnap, geometrySnap, commandRequest, inspector,
                     !exporting && !leaveUnsaved, { inspector=null; model.stopSiteTool() }, ::command,
                     { sitePicker.launch(arrayOf("image/png","image/jpeg")) }, { inspector="site" },
                     Modifier.weight(1f).fillMaxWidth())
