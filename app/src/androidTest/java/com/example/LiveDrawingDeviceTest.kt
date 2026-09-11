@@ -95,6 +95,9 @@ class LiveDrawingDeviceTest {
         ui.onNodeWithTag("workspace-undo").performClick();assertEquals(original.objects,saved().objects)
         ui.onNodeWithTag("workspace-redo").performClick();val restored=saved()
         assertEquals(created.objects,restored.objects)
+        // Undoing object creation clears selection. Redo restores geometry, not an implicit
+        // selection, so explicitly choose the restored pool before targeting its handles.
+        ui.onNodeWithTag("workspace-object-${original.objects.size}").performClick()
         // Real edits show both affected edges; cancellation preserves committed geometry and disk.
         val handle=ui.onNodeWithTag("workspace-vertex-1")
         handle.performTouchInput { down(center);moveBy(Offset(14f,-5f)) }
