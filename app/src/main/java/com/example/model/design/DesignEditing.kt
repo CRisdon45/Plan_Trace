@@ -53,6 +53,8 @@ data class DesignViewport(val pixelsPerMetre: Double, val offsetX: Double, val o
 sealed interface DesignHit {
     val objectId: String
     data class Vertex(override val objectId: String, val vertexId: String) : DesignHit
+    data class SmoothAnchor(override val objectId: String, val vertexId: String) : DesignHit
+    data class SmoothRadius(override val objectId: String, val edgeId: String) : DesignHit
     data class Side(override val objectId: String, val edgeId: String) : DesignHit
     data class Curve(override val objectId: String, val edgeId: String) : DesignHit
     data class Body(override val objectId: String) : DesignHit
@@ -91,6 +93,17 @@ object DesignPicking {
     }
     /** Compute from the gesture's original document, never from accumulated preview samples. */
     fun drag(document: ProjectDesign, target: DesignHit, down: DesignPoint, current: DesignPoint): DesignCommand = when (target) {
+        is DesignHit.SmoothAnchor -> {
+            val b=document.objectById(target.objectId).boundary
+            val p=b.nodes.single { it.vertexId==target.vertexId }.point
+            DesignCommand.MoveTangentAnchor(target.objectId,target.vertexId,p.translated(current.x-down.x,current.y-down.y),b)
+        }
+        is DesignHit.SmoothRadius -> {
+            val b=document.objectById(target.objectId).boundary
+            val edge=b.edges().single { it.id==target.edgeId }
+            val p=edge.pointAt(0.5).translated(current.x-down.x,current.y-down.y)
+            DesignCommand.SetTangentRadius(target.objectId,target.edgeId,SmoothPoolEditing.radiusAt(edge,p),b)
+        }
         is DesignHit.Body -> DesignCommand.Translate(target.objectId, current.x - down.x, current.y - down.y)
         is DesignHit.Vertex -> {
             val original = document.objectById(target.objectId).boundary.nodes.single { it.vertexId == target.vertexId }.point

@@ -16,6 +16,8 @@ function finish() {
   device pull /sdcard/final-ui.xml emulator-evidence/final-ui.xml >/dev/null 2>&1 || true
   device logcat -b crash -d > emulator-evidence/crash-buffer.txt 2>&1 || true
   device logcat -d -s AndroidRuntime TestRunner ActivityTaskManager > emulator-evidence/test-runtime-log.txt 2>&1 || true
+  device logcat -d > emulator-evidence/full-runtime-log.txt 2>&1 || true
+  device shell dumpsys activity lastanr > emulator-evidence/last-anr.txt 2>&1 || true
   device pull "/sdcard/Android/data/$package/files/workspace-evidence" emulator-evidence/ >/dev/null 2>&1 || true
   device emu kill >/dev/null 2>&1 || true
 }
@@ -24,6 +26,17 @@ trap finish EXIT
 printf 'no\n' | timeout 90 avdmanager create avd --force --name plantrace_workspace_ci \
   --path "$ANDROID_AVD_HOME/plantrace_workspace_ci.avd" --package 'system-images;android-35;google_apis;x86_64'
 test -s "$ANDROID_AVD_HOME/plantrace_workspace_ci.avd/config.ini"
+# Set the initial display before boot. Resizing a newly initialized launcher in-flight
+# produced a retained Pixel Launcher ANR; do not dismiss or hide that failure.
+python3 - <<'PYCONFIG'
+import os
+from pathlib import Path
+p = Path(os.environ["ANDROID_AVD_HOME"]) / "plantrace_workspace_ci.avd/config.ini"
+values = dict(line.split("=", 1) for line in p.read_text().splitlines() if "=" in line)
+values.update({"hw.lcd.width": "1600", "hw.lcd.height": "1000", "hw.lcd.density": "240"})
+p.write_text("\n".join(f"{k}={v}" for k,v in values.items()) + "\n")
+PYCONFIG
+cp "$ANDROID_AVD_HOME/plantrace_workspace_ci.avd/config.ini" emulator-evidence/initial-avd-config.ini
 printf 'avd.ini.encoding=UTF-8\npath=%s\ntarget=android-35\n' "$ANDROID_AVD_HOME/plantrace_workspace_ci.avd" > "$ANDROID_AVD_HOME/plantrace_workspace_ci.ini"
 timeout 30 emulator -list-avds | tee emulator-evidence/available-avds.txt
 grep -Fxq plantrace_workspace_ci emulator-evidence/available-avds.txt
@@ -40,13 +53,15 @@ for n in $(seq 1 120); do
 done
 [[ "$booted" == true ]] || { echo 'Emulator did not finish booting'; exit 1; }
 [[ "$(device shell getprop ro.kernel.qemu | tr -d '\r')" == "1" ]] || { echo 'Refusing a non-emulator target'; exit 1; }
-device shell wm size 1600x1000
-device shell wm density 240
+device shell wm size | tee emulator-evidence/initial-display.txt
+device shell wm density | tee -a emulator-evidence/initial-display.txt
+grep -q '1600x1000' emulator-evidence/initial-display.txt
+grep -q '240' emulator-evidence/initial-display.txt
 device shell settings put global window_animation_scale 0
 device shell settings put global transition_animation_scale 0
 device shell settings put global animator_duration_scale 0
 device shell input keyevent 82
-sleep 3 # Allow initial display reconfiguration to settle before launching tests.
+sleep 3 # Allow the initially configured display to settle; no live launcher resize.
 timeout 120 adb -s "$serial" install -r app/build/outputs/apk/debug/app-debug.apk
 timeout 120 adb -s "$serial" install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 device logcat -c
@@ -108,6 +123,15 @@ device shell am force-stop "$package"
 device exec-out run-as "$package" cat files/project-design/workspace.json > emulator-evidence/side-after-restart.json
 cmp emulator-evidence/side-before-restart.json emulator-evidence/side-after-restart.json
 
+run_case authorAndReshapeWithSystemPen com.example.SmoothPoolDeviceTest
+run_case radiusAndInvalidDragUseTheSameSavedPool com.example.SmoothPoolDeviceTest
+device shell am force-stop "$package"
+device exec-out run-as "$package" cat files/project-design/workspace.json > emulator-evidence/smooth-before-restart.json
+run_case reopenAndCanceledNewPoolKeepTheStoredResult com.example.SmoothPoolDeviceTest
+device shell am force-stop "$package"
+device exec-out run-as "$package" cat files/project-design/workspace.json > emulator-evidence/smooth-after-restart.json
+cmp emulator-evidence/smooth-before-restart.json emulator-evidence/smooth-after-restart.json
+
 # Layout changes happen after the source/restart scenarios. Keep the test app
 # foreground while Android applies display changes, rather than reconfiguring the launcher.
 function layout_display() {
@@ -142,6 +166,7 @@ device exec-out run-as "$package" cat files/project-design/workspace.json > emul
   echo "ABI: $(device shell getprop ro.product.cpu.abi | tr -d '\r')"
   device shell wm size
   device shell wm density
+  echo 'Additional: smooth pool drawn with system-injected stylus events, local reshape, radius drag, cancellation, flagged pen-up rejection, second-contact cancellation, Undo/Redo and save/restart. Not physical S Pen evidence.'
   echo 'Physical S Pen/palm and Northstar acceptance: NOT RUN.'
 } | tee emulator-evidence/RESULT.txt
 if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then cat emulator-evidence/RESULT.txt >> "$GITHUB_STEP_SUMMARY"; fi

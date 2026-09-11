@@ -40,15 +40,19 @@ data class WorkspaceState(
     val referencePoints: List<ImagePoint> = emptyList(),
     val referencePurpose: SiteTool = SiteTool.CALIBRATE,
     val sideEditing: Boolean = false,
+    val smoothMode: SmoothEditMode = SmoothEditMode.OFF,
+    val smoothFocusId: String? = null,
+    val smoothDraft: SmoothPoolDraft? = null,
+    val smoothPreview: ProjectDesign? = null,
     val siteDraft: SiteOutlineDraft? = null,
     val draftCursor: DesignPoint? = null,
     val draftTarget: DrawingTarget? = null,
     val proposedDraft: ProposedOutlineDraft? = null,
     val draftOrthogonal: Boolean = false
 ) {
-    val isDrawing: Boolean get() = siteDraft != null || proposedDraft != null
-    val drawingPoints: List<DesignPoint>? get() = siteDraft?.points ?: proposedDraft?.points
-    val shownDocument: ProjectDesign? get() = preview ?: document
+    val isDrawing: Boolean get() = siteDraft != null || proposedDraft != null || smoothDraft != null
+    val drawingPoints: List<DesignPoint>? get() = siteDraft?.points ?: proposedDraft?.points ?: smoothDraft?.points
+    val shownDocument: ProjectDesign? get() = preview ?: smoothPreview ?: document
     val saved: Boolean get() = document != null && savedRevision == document.revision && saveError == null
 }
 
@@ -136,7 +140,7 @@ class DesignWorkspaceViewModel(application: Application) : AndroidViewModel(appl
         _state.update { it.copy(siteTool=if(tool == SiteTool.CHECK) SiteTool.CALIBRATE else tool,
             referencePurpose=tool, referencePoints=emptyList(), message=null) }
     }
-    fun stopSiteTool() { cancelPreview(); _state.update { it.copy(siteTool=SiteTool.NONE,referencePoints=emptyList(),siteDraft=null,proposedDraft=null,draftCursor=null,draftTarget=null) } }
+    fun stopSiteTool() { cancelPreview(); _state.update { it.copy(siteTool=SiteTool.NONE,referencePoints=emptyList(),siteDraft=null,proposedDraft=null,smoothDraft=null,smoothPreview=null,draftCursor=null,draftTarget=null) } }
     fun beginSiteOutline(role: SiteOutlineRole) {
         stopSideEditing(); stopSiteTool()
         val doc=session?.document ?: return
@@ -153,18 +157,47 @@ class DesignWorkspaceViewModel(application: Application) : AndroidViewModel(appl
         _state.update { it.copy(proposedDraft=ProposedOutlineDraft(kind,doc.id,doc.revision),
             selectedId=null,draftOrthogonal=true,message=null) }
     }
+    fun beginSmoothPool() {
+        stopSideEditing(); stopSiteTool()
+        val doc=session?.document ?: return
+        _state.update { it.copy(smoothDraft=SmoothPoolDraft(doc.id,doc.revision),selectedId=null,draftOrthogonal=false,message=null) }
+    }
+    fun setSmoothMode(mode: SmoothEditMode) {
+        stopSiteTool()
+        val obj=session?.document?.objects?.firstOrNull { it.id==state.value.selectedId }
+        if(mode!=SmoothEditMode.OFF && !SmoothPoolEditing.canEdit(obj)) { feedback("Select an unlocked smooth pool"); return }
+        val focus=obj?.boundary?.nodes?.firstOrNull()
+        _state.update { it.copy(sideEditing=false,smoothMode=mode,
+            smoothFocusId=if(mode==SmoothEditMode.RADIUS) focus?.edgeId else focus?.vertexId,message=null) }
+    }
+    fun focusSmooth(hit: DesignHit) { _state.update { it.copy(smoothFocusId=when(hit) {
+        is DesignHit.SmoothAnchor -> hit.vertexId
+        is DesignHit.SmoothRadius -> hit.edgeId
+        else -> it.smoothFocusId
+    }) } }
+    private fun refreshSmoothDraft() {
+        val s=state.value; val draft=s.smoothDraft ?: return
+        val doc=session?.document ?: return
+        if(doc.id!=draft.documentId || doc.revision!=draft.revision) { stopSiteTool();feedback("The design changed. Start the pool again");return }
+        try {
+            val t=s.draftTarget
+            val candidate=if(t!=null && !t.closing && (draft.points.lastOrNull()?.distanceTo(t.point) ?: 1.0)>=0.02) draft.append(t.point) else draft
+            val next=if(candidate.points.size>=3) ProjectDesign(doc.id,doc.objects+candidate.finish(),doc.revision,doc.siteImage) else null
+            _state.update { it.copy(smoothPreview=next,message=null) }
+        } catch(e:IllegalArgumentException) { _state.update { it.copy(smoothPreview=null,message=e.message) } }
+    }
     fun toggleSiteOrthogonal() { _state.update { it.copy(draftOrthogonal=!it.draftOrthogonal,draftCursor=null,draftTarget=null) } }
     fun previewSiteCorner(point: DesignPoint?, grid: Boolean=false, closeToleranceMetres: Double=0.0,
                           geometry: GeometrySnapIndex?=null, snapToleranceMetres: Double=0.1) {
         val points=state.value.drawingPoints ?: return
         val target=point?.let { CornerTarget.resolve(points,it,state.value.draftOrthogonal,grid,closeToleranceMetres,geometry,snapToleranceMetres,state.value.draftTarget?.snap?.key) }
-        _state.update { it.copy(draftCursor=target?.point,draftTarget=target) }
+        _state.update { it.copy(draftCursor=target?.point,draftTarget=target) }; refreshSmoothDraft()
     }
     fun markSiteCorner(point: DesignPoint, closeToleranceMetres: Double, grid: Boolean=false,
                        geometry: GeometrySnapIndex?=null, snapToleranceMetres: Double=0.1) {
         val current=state.value; val points=current.drawingPoints ?: return
-        val id=current.siteDraft?.documentId ?: current.proposedDraft!!.documentId
-        val revision=current.siteDraft?.revision ?: current.proposedDraft!!.revision
+        val id=current.siteDraft?.documentId ?: current.proposedDraft?.documentId ?: current.smoothDraft!!.documentId
+        val revision=current.siteDraft?.revision ?: current.proposedDraft?.revision ?: current.smoothDraft!!.revision
         if(session?.document?.revision!=revision || session?.document?.id!=id) {
             stopSiteTool(); feedback("The design changed. Start the outline again"); return
         }
@@ -173,27 +206,30 @@ class DesignWorkspaceViewModel(application: Application) : AndroidViewModel(appl
         try {
             val site=current.siteDraft?.append(target.point)
             val proposed=current.proposedDraft?.append(target.point)
-            _state.update { it.copy(siteDraft=site,proposedDraft=proposed,draftCursor=null,draftTarget=null,message=null) }
+            _state.update { it.copy(siteDraft=site,proposedDraft=proposed,smoothDraft=current.smoothDraft?.append(target.point),draftCursor=null,draftTarget=null,message=null) }
         } catch(e:IllegalArgumentException) { feedback(e.message) }
+        refreshSmoothDraft()
     }
     fun backSiteCorner() {
-        _state.update { it.copy(siteDraft=it.siteDraft?.back(),proposedDraft=it.proposedDraft?.back(),
-            draftCursor=null,draftTarget=null,message=null) }
+        _state.update { it.copy(siteDraft=it.siteDraft?.back(),proposedDraft=it.proposedDraft?.back(),smoothDraft=it.smoothDraft?.back(),
+            draftCursor=null,draftTarget=null,message=null) }; refreshSmoothDraft()
     }
     fun finishSiteOutline() {
         val current=state.value
         if(!current.isDrawing) return
         val doc=session?.document ?: return
-        val site=current.siteDraft;val proposed=current.proposedDraft
+        val site=current.siteDraft;val proposed=current.proposedDraft;val smooth=current.smoothDraft
         try {
-            require(doc.id==(site?.documentId ?: proposed!!.documentId) &&
-                doc.revision==(site?.revision ?: proposed!!.revision) && (site==null || doc.siteImage==site.source)) {
+            require(doc.id==(site?.documentId ?: proposed?.documentId ?: smooth!!.documentId) &&
+                doc.revision==(site?.revision ?: proposed?.revision ?: smooth!!.revision) && (site==null || doc.siteImage==site.source)) {
                 "The source or design changed. Cancel and restart the outline"
             }
-            val objectToAdd=site?.finish() ?: proposed!!.finish()
+            val objectToAdd=site?.finish() ?: proposed?.finish() ?: smooth!!.finish()
             execute(DesignCommand.Add(objectToAdd))
             if(session?.document?.objects?.any { it.id==objectToAdd.id }==true) {
-                _state.update { it.copy(siteDraft=null,proposedDraft=null,draftCursor=null,draftTarget=null,selectedId=objectToAdd.id,
+                _state.update { it.copy(siteDraft=null,proposedDraft=null,smoothDraft=null,smoothPreview=null,draftCursor=null,draftTarget=null,selectedId=objectToAdd.id,
+                    smoothMode=if(smooth!=null) SmoothEditMode.SHAPE else SmoothEditMode.OFF,
+                    smoothFocusId=if(smooth!=null) objectToAdd.boundary.nodes.first().vertexId else null,
                     message=if(site!=null) "${objectToAdd.name} created as traced and locked. Use Site controls to unlock it deliberately"
                         else if(objectToAdd.coping!=null) "Pool created with following coping" else "Deck outline created. Shared surface cutouts are not implemented yet") }
             }
@@ -223,15 +259,15 @@ class DesignWorkspaceViewModel(application: Application) : AndroidViewModel(appl
     }
     fun select(id: String?) {
         stopSiteTool()
-        _state.update { it.copy(selectedId=id, sideEditing=it.sideEditing && it.selectedId==id, message=null) }
+        _state.update { it.copy(selectedId=id, sideEditing=it.sideEditing && it.selectedId==id, smoothMode=if(it.selectedId==id) it.smoothMode else SmoothEditMode.OFF, smoothFocusId=if(it.selectedId==id) it.smoothFocusId else null, message=null) }
     }
     fun toggleSideEditing() {
         stopSiteTool()
         val obj=session?.document?.objects?.firstOrNull { it.id==state.value.selectedId }
         if(!StraightSideEditing.canEdit(obj)) { feedback("Select an unlocked pool with supported straight sides"); return }
-        _state.update { it.copy(sideEditing=!it.sideEditing,message=null) }
+        _state.update { it.copy(sideEditing=!it.sideEditing,smoothMode=SmoothEditMode.OFF,smoothFocusId=null,message=null) }
     }
-    fun stopSideEditing() { cancelPreview(); _state.update { it.copy(sideEditing=false) } }
+    fun stopSideEditing() { cancelPreview(); _state.update { it.copy(sideEditing=false,smoothMode=SmoothEditMode.OFF,smoothFocusId=null) } }
     fun addOutline(curved: Boolean, kind: DesignObjectKind = DesignObjectKind.POOL) {
         stopSideEditing()
         val doc = session?.document ?: return
@@ -282,7 +318,8 @@ class DesignWorkspaceViewModel(application: Application) : AndroidViewModel(appl
         _state.update { it.copy(document = current.document, preview = null, message = null, saveError = null,
             canUndo = current.canUndo, canRedo = current.canRedo,
             sideEditing = it.sideEditing && StraightSideEditing.canEdit(current.document.objects.firstOrNull { obj -> obj.id==it.selectedId }),
-            siteTool = SiteTool.NONE, referencePoints = emptyList(), siteDraft=null, proposedDraft=null, draftCursor=null, draftTarget=null,
+            siteTool = SiteTool.NONE, referencePoints = emptyList(), siteDraft=null, proposedDraft=null, smoothDraft=null, smoothPreview=null, draftCursor=null, draftTarget=null,
+            smoothMode=if(SmoothPoolEditing.canEdit(current.document.objects.firstOrNull { obj -> obj.id==it.selectedId })) it.smoothMode else SmoothEditMode.OFF,
             selectedId = it.selectedId?.takeIf { id -> current.document.objects.any { obj -> obj.id == id } }) }
         refreshSource()
         check(writes.trySend(current.document).isSuccess)

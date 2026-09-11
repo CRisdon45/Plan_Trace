@@ -94,15 +94,23 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
         val side = if(command is DesignCommand.MoveSide) StraightSideTargets.resolve(
             pointer.document!!.objectById(command.objectId),command,gridSnap,snapIndex,
             12.0*density/viewport.pixelsPerMetre,editSnap?.key) else null
-        val match = side?.snap ?: if(command is DesignCommand.MoveVertex) snapIndex?.resolve(command.point,
+        val tangent = command as? DesignCommand.MoveTangentAnchor
+        val match = if(tangent!=null) snapIndex?.resolve(tangent.point,12.0*density/viewport.pixelsPerMetre,
+            previous=editSnap?.key,excludeObjectId=tangent.objectId) else side?.snap ?: if(command is DesignCommand.MoveVertex) snapIndex?.resolve(command.point,
             12.0*density/viewport.pixelsPerMetre,previous=editSnap?.key,excludeObjectId=command.objectId) else null
-        val resolved = side?.command ?: if(command is DesignCommand.MoveVertex && match!=null) command.copy(point=match.point)
+        val resolved = if(tangent!=null) tangent.copy(point=match?.point ?: if(gridSnap) GridAssist.snapPoint(tangent.point) else tangent.point)
+            else side?.command ?: if(command is DesignCommand.MoveVertex && match!=null) command.copy(point=match.point)
             else if(gridSnap) GridAssist.snap(command) else command
         model.preview(resolved,pointer.document!!.revision)
         val next=model.state.value.preview
         editSnap=match?.takeIf { next!=null }
         editMeasure=if(next!=null) LiveMeasurements.editing(pointer.document!!,next,pointer.target!!,pointer.down!!)
             else LiveMeasure(rawTarget,listOf("Invalid edit · not placed"),invalid=true)
+    }
+    fun dragPreview(at: DesignPoint) {
+        try { previewEdit(DesignPicking.drag(pointer.document!!,pointer.target!!,pointer.down!!,at),at) }
+        catch(e:IllegalArgumentException) { model.cancelPreview();model.feedback(e.message);editSnap=null
+            editMeasure=LiveMeasure(at,listOf("Cannot keep these connections"),invalid=true) }
     }
     // Generic events are routed only while this canvas is active, using window-local bounds.
     // Hover itself never edits. The button opens a latched, tap-to-choose wheel; release does not execute.
@@ -161,6 +169,11 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
     // own touches rather than becoming source-move/calibration gestures on the parent Box.
     val artworkInput = Modifier.pointerInteropFilter { event ->
             if(menuAnchor!=null || inspector!=null || !allowCommands) return@pointerInteropFilter false
+            if(event.actionMasked==MotionEvent.ACTION_CANCEL ||
+                (event.actionMasked==MotionEvent.ACTION_UP && event.flags and MotionEvent.FLAG_CANCELED != 0)) {
+                detector.onTouchEvent(event);editMeasure=null;editSnap=null;model.cancelPreview();model.previewSiteCorner(null);pointer.clear()
+                return@pointerInteropFilter true
+            }
             val x = event.x.toDouble(); val y = event.y.toDouble()
             lastPosition=Offset(event.x,event.y)
             if(state.isDrawing) {
@@ -245,15 +258,18 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
                     pointer.lastX = x; pointer.lastY = y; pointer.downX = x; pointer.downY = y
                     val editing = touchEdit || event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS || event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER
                     if (editing && state.document != null) {
-                        pointer.target = DesignPicking.hit(state.document, state.selectedId, pointer.down!!, 22.0 * density / viewport.pixelsPerMetre, state.sideEditing)
+                        pointer.target = if(state.smoothMode!=SmoothEditMode.OFF && selected!=null)
+                            SmoothPoolEditing.hit(selected,state.smoothMode,pointer.down!!,22.0*density/viewport.pixelsPerMetre)
+                        else DesignPicking.hit(state.document, state.selectedId, pointer.down!!, 22.0 * density / viewport.pixelsPerMetre, state.sideEditing)
                         model.select(pointer.target?.objectId)
+                        pointer.target?.let { model.focusSmooth(it) }
                     }
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val target = pointer.target
                     if (!pointer.blockedEdit && target != null && event.pointerCount == 1) {
                         if (hypot(x - pointer.downX, y - pointer.downY) > 3 * density) pointer.moved = true
-                        if (pointer.moved) previewEdit(DesignPicking.drag(pointer.document!!, target, pointer.down!!, pointer.startView!!.toWorld(x, y)),pointer.startView!!.toWorld(x,y))
+                        if (pointer.moved) dragPreview(pointer.startView!!.toWorld(x,y))
                     } else if (!detector.isInProgress && event.pointerCount == 1 && !pointer.blockedEdit) {
                         viewport = viewport.panned(x - pointer.lastX, y - pointer.lastY)
                     }
@@ -263,7 +279,7 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
                     if (pointer.target != null && !pointer.blockedEdit &&
                         (pointer.moved || hypot(x - pointer.downX, y - pointer.downY) > 3 * density)) {
                         // Pen-up can contain the last position even without a final move event.
-                        previewEdit(DesignPicking.drag(pointer.document!!, pointer.target!!, pointer.down!!, pointer.startView!!.toWorld(x, y)),pointer.startView!!.toWorld(x,y))
+                        dragPreview(pointer.startView!!.toWorld(x,y))
                         model.commitPreview()
                     } else model.cancelPreview()
                     editMeasure=null;editSnap=null;pointer.clear()
@@ -310,12 +326,12 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
             }
             state.drawingPoints?.let { points ->
                 val vertices=points.map { viewport.toScreen(it) }.map { Offset(it.x.toFloat(),it.y.toFloat()) }
-                vertices.zipWithNext().forEach { (a,b) -> drawLine(Color(0xFF2F665F),a,b,2*density) }
-                state.draftCursor?.let { point -> if(vertices.isNotEmpty()) {
+                if(state.smoothPreview==null) vertices.zipWithNext().forEach { (a,b) -> drawLine(Color(0xFF2F665F),a,b,2*density) }
+                state.draftCursor?.let { point -> if(vertices.isNotEmpty() && state.smoothPreview==null) {
                     val cursor=viewport.toScreen(point)
                     drawLine(Color(0xFF598B84),vertices.last(),Offset(cursor.x.toFloat(),cursor.y.toFloat()),2*density)
                 } }
-                if(vertices.size>=3) drawLine(Color(0x88637A72),vertices.last(),vertices.first(),density,
+                if(vertices.size>=3 && state.smoothPreview==null) drawLine(Color(0x88637A72),vertices.last(),vertices.first(),density,
                     pathEffect=androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(6*density,5*density)))
                 vertices.forEachIndexed { i,p ->
                     drawCircle(Color.White,7*density,p);drawCircle(if(i==0) Color(0xFFAD762B) else Color(0xFF2F665F),4.5f*density,p)
@@ -330,11 +346,17 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
                     drawRect(Color(0xFF205D60),at-Offset(5*density,5*density),androidx.compose.ui.geometry.Size(10*density,10*density))
                 }
             }
+            selected?.let { obj -> SmoothPoolEditing.handles(obj,state.smoothMode,state.smoothFocusId)?.let { (target,a,b) ->
+                for(p in listOf(a,b)) { val s=viewport.toScreen(p)
+                    drawCircle(Color(0xFF637A72),5*density,Offset(s.x.toFloat(),s.y.toFloat()),style=androidx.compose.ui.graphics.drawscope.Stroke(density)) }
+                val s=viewport.toScreen(target);val at=Offset(s.x.toFloat(),s.y.toFloat())
+                drawCircle(Color.White,9*density,at);drawCircle(Color(0xFF205D60),6*density,at)
+            } }
             document.siteImage?.let { source -> state.referencePoints.forEach { pixel ->
                 val p=viewport.toScreen(source.toWorld(pixel));val at=Offset(p.x.toFloat(),p.y.toFloat())
                 drawCircle(Color.White,8*density,at);drawCircle(Color(0xFFC64D22),5*density,at)
             } }
-            if (selected != null && !selected.locked && state.siteTool==SiteTool.NONE && !state.sideEditing) {
+            if (selected != null && !selected.locked && state.siteTool==SiteTool.NONE && !state.sideEditing && state.smoothMode==SmoothEditMode.OFF) {
                 selected.boundary.nodes.forEach { n ->
                     val p = viewport.toScreen(n.point)
                     drawCircle(Color.White, radius + 2f * density, Offset(p.x.toFloat(), p.y.toFloat()))
@@ -349,7 +371,7 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
         }
         if (projection == null) Text("This outline cannot be displayed at the current precision: ${projectionResult.exceptionOrNull()?.message.orEmpty()}", modifier = Modifier.padding(16.dp), color = MaterialTheme.colorScheme.error)
         // Semantic hit targets coincide with the handles. Pointer handling remains on the parent.
-        if (selected != null && !selected.locked && !state.sideEditing) {
+        if (selected != null && !selected.locked && !state.sideEditing && state.smoothMode==SmoothEditMode.OFF) {
             selected.boundary.nodes.forEachIndexed { index, node ->
                 val p = viewport.toScreen(node.point)
                 Box(Modifier.offset { IntOffset((p.x - 22 * density).roundToInt(), (p.y - 22 * density).roundToInt()) }
@@ -371,6 +393,18 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
             }
             if(menuAnchor==null && inspector==null) BackHandler { model.stopSideEditing() }
         }
+        if(selected!=null && state.smoothMode!=SmoothEditMode.OFF) {
+            SmoothPoolEditing.handles(selected,state.smoothMode,state.smoothFocusId)?.let { (p,_,_) ->
+                val at=viewport.toScreen(p)
+                Box(Modifier.offset { IntOffset((at.x-22*density).roundToInt(),(at.y-22*density).roundToInt()) }
+                    .size(44.dp).testTag("workspace-smooth-handle").semantics { contentDescription=if(state.smoothMode==SmoothEditMode.SHAPE) "Reshape smooth pool" else "Change arc radius" })
+            }
+            if(menuAnchor==null && inspector==null) {
+                BackHandler { model.setSmoothMode(SmoothEditMode.OFF) }
+                Text(if(state.smoothMode==SmoothEditMode.SHAPE) "Keep smooth · tap an edge, then drag the point" else "Radius · tap an arc, then drag",
+                    Modifier.align(Alignment.TopEnd).padding(8.dp).testTag("smooth-edit-mode"),style=MaterialTheme.typography.labelMedium)
+            }
+        }
         if(document.siteImage!=null && inspector==null && !state.isDrawing) {
             Surface(Modifier.align(Alignment.TopStart).padding(8.dp),color=Color(0xEEFFFFFF)) {
                 Text(state.siteError ?: if(document.siteImage.calibration==null) "Source scale not set · reference only"
@@ -390,7 +424,11 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
             }
         }
         if(menuAnchor==null && inspector==null && allowCommands) {
-            val live=state.draftTarget?.let { target -> state.drawingPoints?.let { LiveMeasurements.segment(it,target) } }
+            val live=if(state.smoothDraft!=null) state.draftTarget?.let { t ->
+                val pool=state.smoothPreview?.objects?.lastOrNull()
+                if(pool!=null) LiveMeasure(t.point,listOf(java.lang.String.format(java.util.Locale.US,"%.1f sf",kotlin.math.abs(pool.boundary.signedAreaSquareMetres)/(0.3048*0.3048))),plain=true)
+                else if(state.message!=null) LiveMeasure(t.point,listOf("Adjust the shape points"),invalid=true) else null
+            } else state.draftTarget?.let { target -> state.drawingPoints?.let { LiveMeasurements.segment(it,target) } }
                 ?: editMeasure?.takeIf { state.preview!=null || it.invalid }
             live?.let { measure ->
                 val screen=viewport.toScreen(measure.target)
@@ -451,7 +489,8 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
                 selected!=null && !selected.locked,
                 selected?.kind==DesignObjectKind.POOL || selected?.kind==DesignObjectKind.SPA,
                 state.canUndo,state.canRedo,document.objects.isNotEmpty(),showGrid,touchEdit,gridSnap,geometrySnap,
-                canEditSides=StraightSideEditing.canEdit(selected),sideEditing=state.sideEditing),
+                canEditSides=StraightSideEditing.canEdit(selected),sideEditing=state.sideEditing,
+                canEditSmooth=SmoothPoolEditing.canEdit(selected),smoothMode=state.smoothMode),
                 onDismiss={ menuAnchor=null },onAction=onAction)
         }
 

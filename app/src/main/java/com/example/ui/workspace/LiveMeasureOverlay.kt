@@ -21,8 +21,8 @@ import kotlin.math.roundToInt
 @Composable
 fun LiveMeasureOverlay(measure: LiveMeasure, target: Offset, modifier: Modifier = Modifier) {
     Layout(modifier = modifier.fillMaxSize(), content = {
-        Box(Modifier.shadow(3.dp,MaterialTheme.shapes.medium)
-            .background(if(measure.invalid) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surface,MaterialTheme.shapes.medium)
+        Box((if(measure.plain && !measure.invalid) Modifier else Modifier.shadow(3.dp,MaterialTheme.shapes.medium)
+            .background(if(measure.invalid) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surface,MaterialTheme.shapes.medium))
             .testTag("drawing-live-measure").semantics { contentDescription=measure.lines.joinToString(". ") }) {
             Column(Modifier.padding(horizontal=12.dp,vertical=8.dp)) {
                 measure.lines.forEachIndexed { i,line -> Text(line,

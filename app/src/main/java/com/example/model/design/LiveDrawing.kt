@@ -55,7 +55,7 @@ object LiveFeetInches {
 
 /** Transient feedback only, not a saved dimension annotation or inferred survey measurement. */
 data class LiveMeasure(val target: DesignPoint, val lines: List<String>, val from: DesignPoint? = null,
-                       val invalid: Boolean = false)
+                       val invalid: Boolean = false, val plain: Boolean = false)
 object LiveMeasurements {
     fun segment(points: List<DesignPoint>, target: DrawingTarget): LiveMeasure? {
         val from = points.lastOrNull() ?: return null
@@ -67,6 +67,14 @@ object LiveMeasurements {
     fun editing(before: ProjectDesign, after: ProjectDesign, hit: DesignHit, down: DesignPoint): LiveMeasure {
         val obj = after.objectById(hit.objectId)
         return when (hit) {
+            is DesignHit.SmoothAnchor -> {
+                val p=obj.boundary.nodes.single { it.vertexId==hit.vertexId }.point
+                LiveMeasure(p,listOf(java.lang.String.format(java.util.Locale.US,"%.1f sf",abs(obj.boundary.signedAreaSquareMetres)/(0.3048*0.3048))),plain=true)
+            }
+            is DesignHit.SmoothRadius -> {
+                val e=obj.boundary.edges().single { it.id==hit.edgeId }
+                LiveMeasure(e.pointAt(0.5),listOf("R " + LiveFeetInches.format(e.radiusMetres!!)),plain=true)
+            }
             is DesignHit.Vertex -> {
                 val nodes = obj.boundary.nodes; val index = nodes.indexOfFirst { it.vertexId == hit.vertexId }
                 require(index >= 0)

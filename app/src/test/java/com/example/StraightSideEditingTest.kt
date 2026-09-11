@@ -155,7 +155,10 @@ class StraightSideEditingTest {
         assertPoint(DesignPoint(12.0,3.0),reading.target)
     }
     @Test fun `side command preserves existing radial directions and is disabled for unsupported selections`() {
-        val angles=RadialCommands.actions(RadialCategory.EDIT).indices.map { RadialGeometry.childAngle(RadialCategory.EDIT,it) }
+        // New actions may be appended, but the four learned directions must stay fixed.
+        val original=listOf(RadialAction.SIZE,RadialAction.COPING,RadialAction.DELETE,RadialAction.SIDES)
+        assertEquals(original,RadialCommands.actions(RadialCategory.EDIT).take(4))
+        val angles=original.indices.map { RadialGeometry.childAngle(RadialCategory.EDIT,it) }
         assertEquals(listOf(-60.0,-30.0,0.0,30.0),angles)
         val disabled=RadialAvailability(true,true,true,true,false,false,true)
         assertFalse(disabled.enabled(RadialAction.SIDES))
