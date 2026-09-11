@@ -1,33 +1,39 @@
 # Current state and next-session handoff
 
-Updated at source-intake verification, 2026-09-10. Verify live refs and concurrent edits. Active implementation: `feat/project-geometry-seam`, PR #4 into `feat/off-tablet-integrity`; PR #3 targets the foundation and PR #2 targets main. No application PR has been merged or installed on the physical tablet. Its interrupted test, signing key and data remain untouched.
+Source-image and distance-check checkpoint. Work is authorized on **feat/project-geometry-seam**, PR #4 into feat/off-tablet-integrity. PR #3 targets the 2D foundation and PR #2 main. No application PR was merged this session. Verify live refs and concurrent work; preserve the interrupted physical tablet test, original app/data/signing key.
 
 ## Owner direction
 
-Cody rarely, if ever, wants to type dimensions on screen. Preserve precision while prioritizing pen manipulation, snapping and contextual controls. Typed values are an occasional fallback, not the main design workflow. The owner deferred redesigning that interaction; do not turn the site work into another keyboard-entry feature.
+Cody rarely, if ever, wants to type dimensions on screen. Direct pen manipulation, useful snapping and contextual controls carry the intended workflow. Typed input is an occasional fallback. The owner deferred redesigning precision interaction; do not turn the next site step into a keyboard-entry milestone. This is also recorded in AGENTS.md, decision D16 and the interaction contract.
 
-## Verified baseline
+## Verified application
 
-Application revision `eb0b62f596b5eea98016fd3511fd57d0677c2404` completed unit/build run 34542680701 and emulator run 34542680695. This session downloaded both report archives, verified their hashes, counted **155 tests with zero failures/errors/skips**, and read **seven successful Android scenario results**. Source calibration/movement/reentry and direct PNG/PDF output are additional to the previous five radial/workspace scenarios. The system document-picker UI itself is not automated.
+Production feature revision **765ef687c91ec4482213f88c3fadc647055d978d** adds optional second-distance evidence to the site-image workflow. **884f0ef0d23b04751dc9b9b84f99b08564f12503** preserves that production code and unit tests while strengthening actual Android capture checks and display-test setup. Later documentation commits do not create new feature/build claims.
 
-Unit ZIP 10177973004: `a61c501b66e45353a6453b6c5abc088266edabfd02033a44fb49aa38049c21fc`. Emulator ZIP 10178047216: `ba9a137fa422f1c648eec861dd7ee65e8e183f701705330a7acd048eb840e3d5`. Actual source-reopened workspace and registered PNG captures were opened: source, proposed geometry and the unverified-scale notice are visible. The synthetic test has intentionally overlapping pool objects; it is not a finished layout or Northstar example. PDF rendering and broader source review are still in progress at this checkpoint.
+At 884f0ef: unit/build run **34545769738** passed **165 tests with zero failures/errors/skips** and debug assembly. Android run **34545769754** built app/instrumentation and passed **seven scenarios**. Downloaded XML, result files and all 15 capture-window records were checked. The source-backed saved file was byte-identical across completed-save force-stop/reopen at format 4, revision 29. Actual source-check, reopened-workspace, compact, PNG and rendered PDF captures were opened.
 
-The initial source run failed an exported-opacity assertion and a Cancel-control interaction. The correction kept the strict assertions, matched source appearance across output, and routed artwork contacts separately from overlay controls. Final full runs passed; this does not certify every source/device case or physical S Pen behavior.
+The preceding 765ef687 replay had seven green scenarios but a Pixel Launcher error dialog over its screenshots. That is not visual acceptance. The new capture helper records the actual active-window tree and raw screenshot, then fails if another package obscures the app; it never dismisses error dialogs. Final reviewed captures were unobstructed. This is a tested harness improvement, not a Pixel Launcher root-cause fix or replacement for manual visual review.
 
-## What exists
+See **SITE_IMAGE_IMPLEMENTATION.md** for exact runs, hashes, budgets, limitations and failures. RADIAL_IMPLEMENTATION.md restores the real earlier 137-test/five-scenario record. The formerly claimed 786f644 documentation commit did not land; obsolete main/PR links to it are replaced in this checkpoint, not treated as existing evidence.
 
-One opt-in local draft has exact line/circular-arc design objects, following coping, whole-command Undo/Redo, direct editing, radial commands and verified atomic saving through the existing renderer. PNG/JPEG intake copies bounded source imagery into app-owned storage, normalizes JPEG orientation, stores explicit image-to-design registration and calibration evidence, and keeps source movement/scale separate from proposed objects. Known-distance reference presets avoid compulsory typing; typed fallback remains. Source visibility, positioning, cancellation, removal/Undo and reopen have software coverage. Older drafts remain source-free.
+## Current working scope
 
-The current saved format is 3, reading formats 1-2 without silently adding a source. Older builds cannot read format-3 saves. Legacy Room projects remain separate. The app-owned source copy is not portable backup; one local draft and session-local Undo are still limitations. Coping validity is sampled/resolution-limited, not construction approval or takeoff certification.
+Projects -> Design workspace has one separately saved canonical draft, exact line/circular-arc objects, connected coping, direct edits, Undo/Redo/Delete, radial commands, grid/snap preferences and optional exact numeric controls. The existing renderer displays a disposable projection of that same authority. Coping uses sampled planar validation, not construction approval or a full takeoff engine.
 
-## Immediate continuation
+**View -> Site** imports bounded PNG/JPEG imagery into app-owned storage, with JPEG orientation normalization. Source registration is explicit upright uniform scale/translation. Two-point known-distance calibration and source-only movement never resize proposed geometry. Presets permit source setup without mandatory typing. Source visibility, remove/Undo, cancellation, saving and direct registered PNG/PDF output have automated/virtual coverage.
 
-Finish reviewing real source output and implementation safety, repair any confirmed gaps, then reconcile the active report, main routing and PR description using only commits whose writes and reads succeed. The formerly reported `786f644e1ec12f7f50bc28d738d13f36178d7e1c` documentation commit never landed. Main/PR links to it must be replaced, not repeated. Preserve the actual radial evidence at application 27ebdb2 instead.
+**Check another distance** compares a separate segment against the existing scale. It records agreement or disagreement without rescaling, moving objects or promoting the site to field-verified. Move/hide retains the check; recalibration clears stale evidence. The comparison remains in the saved draft and source-present output notice. It is optional and not a survey or full-image distortion test.
 
-Then advance SITE-01 toward protected editable existing-site outlines in this same workspace, retaining traced/assumed/verified provenance without mandatory numeric entry. Source-image intake alone does not finish site creation. Do not expand the wheel for its own sake or create another disconnected renderer.
+Format 4 reads formats 1-3 without inventing source/check information. Older builds reject newer saves. Legacy Room projects are separate and unchanged. App-owned image assets are not portable backup. One draft and session-local Undo remain limitations; tests wait for verified Saved before termination.
 
-## Remaining limits
+## Next bounded outcome
 
-PDF intake, arbitrary site-outline creation, independent reference validation, tangent assistance, attached shelves/steps, shared surfaces, alternatives, multiple-project/portable recovery and live Northstar presentation remain unfinished. Provider-specific system-picker access, physical stylus/palm/barrel feel, full accessibility/handedness, pinch synthesis, hardware performance, fixed-frame exports and full client-meeting acceptance remain pending. Source opacity or transforms are not a survey certification. Previously observed KSP/AWT tooling exceptions and inherited service/deprecation warnings remain open absent a tested cause-specific fix.
+Advance SITE-01 to **pen-created editable existing-house and property outlines over the calibrated source**, with deliberate closure, stable identities, traced provenance, protection from incidental edits and save/reopen/output through the same authority. Source-image intake alone is not complete site preparation. Establish how later source re-registration affects confidence/relationships rather than silently moving traced or proposed objects. Use original synthetic sources, not client material.
 
-No runtime AI feature, 3D, framework/repo merger, physical installation, user-data clearing, release, APK publication, client-data publication or permission change is included. Keep private originals and reference artwork outside public Git/logs/artifacts. Update checkpoints with real application revisions, checks, limits and next outcomes rather than accumulating competing instructions.
+Do not spend another milestone merely enlarging the wheel or adding numeric forms. Keep Northstar visual quality alongside useful editing, but current flat fills, technical notices and synthetic overlapping test pools are not approved presentation design.
+
+## Remaining limits and safety
+
+PDF intake, arbitrary site-outline authoring, source rotation/georeferencing, tangent assistance, attached steps/shelves, shared decking, associative dimensions, alternatives, multi-project/portable recovery and full landscape scope remain unfinished. System-picker/provider and share-chooser UI, physical S Pen/palm/barrel feel, continuous flick, hardware performance, fixed output frames and final Northstar acceptance are unverified. Prior KSP/AWT tooling exceptions and service/deprecation warnings remain open absent a tested cause-specific repair.
+
+Only disposable virtual devices were installed/force-stopped. No physical app/data clearing, signing-key replacement, release/APK publication, permissions/visibility change, private client-reference publication, runtime AI, framework/repo merger or 3D work occurred. Keep tests and screenshots truthful; update this handoff and main routing using only successful, read-back-verified commits.
