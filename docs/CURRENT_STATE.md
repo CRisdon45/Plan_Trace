@@ -1,37 +1,31 @@
 # Current state and next-session handoff
 
-Updated 2026-09-11 after the bounded reusable-infrastructure review. Continue on **feat/project-geometry-seam**, PR #4 into feat/off-tablet-integrity; PR #3 targets the 2D foundation and PR #2 main. Verify live refs and concurrent edits. No application PR was merged and the physical tablet's interrupted test, installed app, data and signing key remain untouched.
+## This branch: isolated freeform Kotlin proof
 
-## Direction and current scope
+Updated 2026-09-11 for **research/freeform-tangent-kotlin**, draft **PR #5 into feat/project-geometry-seam**. This is a branch-specific checkpoint, not a replacement for the concurrent application's roadmap. It branched from `80224295df4f972d0c2bd1531bcab8015e552e01`, which already contained whole-straight-side editing. Verify live refs and concurrent changes before integration. Do not reset the application branch to this research baseline.
 
-Keep Cody's exact project geometry and expert pen workflow custom; reuse suitable general-purpose libraries behind that boundary. No runtime AI, no notebook/framework restart and 3D paused. Routine live feedback should eventually be only the dimension, without a bubble, redundant Line label or grid narration. Typing remains an occasional fallback. UI cleanup is deferred to a coherent draw/snap/reshape pass, not abandoned or implicitly approved.
+The inherited application handoff at that base is preserved in Git history: [baseline checkpoint](https://github.com/CRisdon45/Plan_Trace/blob/80224295df4f972d0c2bd1531bcab8015e552e01/docs/CURRENT_STATE.md). That prose predates the whole-side code in the same revision; it is historical context, not a reason to undo the newer source.
 
-The working application retains hand-placed pool/deck boundaries, following coping, protected traced house/property geometry, registered source imagery and distance checks, radial commands, live target dimensions and Object snap. This milestone does not add whole-side manipulation or restyle the UI.
+## Implemented and verified here
 
-## Latest change
+Implementation `a852497b3a2ca7123d77b3903d90601b440e2c2c` adds original Kotlin biarc construction and two bounded tangent-preserving project commands. A local anchor edit changes four edges; a radius edit changes two. They use existing canonical boundaries, retain IDs, reject stale geometry/unsupported branches, respect existing whole-object locks and use the real coping/history/storage path. No UI control exposes these commands yet.
 
-Implementation **0ecdb88fd6d6413615323130addcfe064043e39d** combines two reviewable changes: **92d1788** removes unused inherited AI/network-service dependencies and adds a local-runtime policy guard; **0ecdb88** reuses the existing pinned JTS 1.20.0 STRtree to shortlist finite snap references.
+Final test revision **2ee37169fa74f4a8c565e7b16ca1fcbd90f0614b**, [run 34645063378](https://github.com/CRisdon45/Plan_Trace/actions/runs/34645063378), passed **265 tests in 36 suites, zero failures/errors/skips**, including 22 new test methods, plus the separate nine Python runtime-policy tests, runtime dependency/manifest checks and debug assembly. Downloaded XML and ZIP hash were verified. The 5,000 seeded biarcs are internal cases, not 5,000 additional JUnit tests.
 
-The spatial index changes candidate lookup only. Exact line/arc calculations, priorities, stable ties, capture/release radii, deliberate axes and canonical coordinates remain unchanged. Distant corner-alignment guides still consider the whole scene, so this is not an overall logarithmic-query or physical-latency claim. In the sparse 512-object test it narrows 2,048 finite edges to one without changing the chosen snap. No new dependency or copied external implementation was added.
+Actual production before/after PNGs were opened. The edited/reopened exports are byte-identical, including across both full CI runs. The locally smooth but globally crossing candidate is explicitly rejected by the complete project path without consuming redo. Format 5 and existing mitred JTS coping are unchanged. A one-off source-snapshot workflow was removed after use; cleanup and later documentation do not change the tested implementation.
 
-Firebase AI/App Check, unused networking/image/serialization SDKs, their unused build plugins and tracked credential template were removed after checking production callers. The runtime audit resolves both debug/release transitive graphs and requires generated merged manifests. It rejects missing evidence, selected service packages and network permissions. This is not an exhaustive security audit, a release build or a restriction on separate system document-provider/share apps. Actual application IDs, signing, storage and used dependency versions are unchanged.
+Read [FREEFORM_TANGENT_PROOF.md](FREEFORM_TANGENT_PROOF.md) for pinned revisions, artifacts, exact domains, derivation, reproduction and limits. The known KSP/AWT background exception appeared in the initial successful build here and remains unresolved. Existing compiler/action deprecations remain.
 
-## Verified evidence
+## Not delivered by this proof
 
-Unit/build run **34634307414** at 0ecdb88 passed **223 tests, zero failures/errors/skips**, plus the separate **nine Python policy tests**, and debug assembly. Downloaded XML from 31 test classes was counted. Resolved runtime reports contain 104 debug and 97 release modules, no blocked service family, and no Internet permission in either generated merged manifest. Release was resolved/manifest-processed, not assembled, signed or installed. The actual sparse-scene report and 1,200 seeded broad-phase equivalence cases passed; these are not a timing benchmark.
+No pen/UI exposure, physical-tablet or emulator interaction, performance/latency measurement, persistent per-edge tangent/radius locks, general linked solver or Kotlin footprint generator. No Cavalier or other new runtime dependency. No Northstar restyle, new project model, storage migration, runtime AI or 3D. No app merge, APK publication, installation, device/data clearing, signing-key change, permission change or private reference publication was performed here.
 
-Android run **34634307450** at the same application revision built the app/instrumentation and passed **all 13 existing scenarios on its first attempt**. Both report archives were downloaded and verified. All 29 active-window records identify the application; the actual snapped-line, snapped-vertex and reopened screenshots were opened and unobstructed. Their retained prototype styling is not new UI acceptance. All five saved before/after process-restart comparisons were byte-identical after waiting for verified Saved; the final seven-object draft is format 5, revision 51 and 7,747 bytes. No physical pen or hardware-performance claim follows.
+REF-FF-01 is a secondary private recreation/editing benchmark, not the required pool style or generator template. All committed fixtures are original mathematical outlines. The reference image remains outside this public repository.
 
-[REUSE_AND_DEPENDENCIES.md](REUSE_AND_DEPENDENCIES.md) contains component choices, pinned evidence, exact coverage and limits. Earlier feature reports remain historical evidence, not instructions to restore removed dependencies. The known KSP/AWT background exception still appeared in the successful build; removing Moshi/services did not resolve it. Compiler and action deprecations remain.
+## Next outcome and integration rule
 
-## Adoption decisions and next outcome
+Reconcile this draft with the live application branch, preserving its concurrent straight-side/UI work. Establish one complete pen-facing smooth-pool workflow through existing radial selection, meaningful handles, valid live previews with dimensions/coping, cancellation, one-operation Undo and save/reopen. Do not expose a numeric form or every technical biarc junction. Include snapping before the solve, not after it. Fixture injection alone does not prove authoring usability.
 
-Ink and Cahier remain focused input/rendering references; neither was installed or substituted for pool authority. A published stable Ink trial belongs with loose freehand/discussion marks, with transform, cancellation and hardware evidence. Artemis is a conditional external QA candidate, not configured to run other models or installed on the user's tablet. Cavalier Contours remains a specialist candidate, not a mitred-coping replacement. No mass formatting or global assistant-rule installation occurred.
+After dependable manual authoring/editing, add rectangle/convex-polygon generation using the same editable objects, target water area and explicit outside-coping containment. Use specific failures to justify additional solver/offset components rather than restarting library research. Keep 3D paused and runtime behavior deterministic/local.
 
-Return now to **whole-straight-pool-side manipulation with the pen**, preserving adjoining geometry, coping, useful alignment, live measurements and one-operation Undo. Then do the coherent expert UI/visual pass over that usable workflow. Do not turn the reuse review into an indefinite library search or a new numeric form.
-
-## Boundaries
-
-Format 5, separate legacy Room projects, one local draft and session-local Undo are unchanged. Physical S Pen/palm/hover/barrel behavior, hand occlusion, latency, full drafting across all layouts and Northstar quality remain unverified. Source PDF/rotation, direct curved authoring, shared decking, attached features, project alternatives, landscape scope and portable recovery remain unfinished. Existing source/label collisions are presentation gaps.
-
-Only disposable emulator state was installed/force-stopped for this verification, after verified saving. No physical device/data clearing, signing workaround, release/APK publication, private client/reference publication, application merge, permissions/visibility change, runtime AI, 3D or framework/repository merger is included. Update this checkpoint and main routing from actual successful writes and checked evidence.
+Before merging, reconcile this branch-specific checkpoint with the application's then-current CURRENT_STATE rather than overwriting newer application evidence. Maintain a single authoritative project and report exactly which code, UI/device and visual checks ran.
