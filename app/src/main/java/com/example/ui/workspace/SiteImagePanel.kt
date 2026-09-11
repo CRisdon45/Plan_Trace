@@ -37,9 +37,14 @@ fun SiteImagePanel(state: WorkspaceState, model: DesignWorkspaceViewModel, onImp
                 Text(if(source.calibration==null) "Scale not set. The image is reference only."
                     else "Scale set from a reference distance. Site accuracy is still unverified.", modifier=Modifier.testTag("site-scale-status"))
                 Text("Ordinary design gestures cannot move this source. Site actions change only the image, never your existing pool or landscape objects.",style=MaterialTheme.typography.bodySmall)
+                source.distanceReading?.let { reading ->
+                    Text(reading.summary(), modifier=Modifier.testTag("site-check-result"), style=MaterialTheme.typography.bodyMedium)
+                    Text("A second-distance comparison, not a survey or whole-site approval. Scale and proposed objects were not changed.", style=MaterialTheme.typography.bodySmall)
+                }
                 state.siteError?.let { Text(it,color=MaterialTheme.colorScheme.error) }
                 if(state.referencePoints.size==2) {
-                    Text("Distance between your two marks:")
+                    val checking = state.referencePurpose == SiteTool.CHECK
+                    Text(if (checking) "Known distance for this separate check:" else "Distance between your two marks:")
                     Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                         listOf(10,20,30,40).forEach { feet ->
                             OutlinedButton(onClick={model.calibrateSite(feet*DesignDimensions.FOOT)},contentPadding=PaddingValues(9.dp),
@@ -56,9 +61,11 @@ fun SiteImagePanel(state: WorkspaceState, model: DesignWorkspaceViewModel, onImp
                                 catch(e:IllegalArgumentException) { model.feedback(e.message) }
                             }))
                     }
-                    Text("The first mark stays in place. Existing design dimensions do not change.",style=MaterialTheme.typography.labelSmall)
+                    Text(if(checking) "This compares distances only. Nothing is rescaled." else "The first mark stays in place. Existing design dimensions do not change.",style=MaterialTheme.typography.labelSmall)
                 }
                 OutlinedButton(onClick={onTool(SiteTool.CALIBRATE)},enabled=state.siteBitmap!=null && source.visible,modifier=Modifier.testTag("site-calibrate")) { Text("Mark a known distance") }
+                OutlinedButton(onClick={onTool(SiteTool.CHECK)},enabled=state.siteBitmap!=null && source.visible && source.calibration!=null,
+                    modifier=Modifier.testTag("site-check")) { Text("Check another distance") }
                 OutlinedButton(onClick={onTool(SiteTool.MOVE)},enabled=state.siteBitmap!=null && source.visible,modifier=Modifier.testTag("site-move")) { Text("Move source only") }
                 TextButton(onClick={model.execute(DesignCommand.SetSiteImage(source.copy(visible=!source.visible),source))},modifier=Modifier.testTag("site-visibility")) { Text(if(source.visible) "Hide source" else "Show source") }
                 TextButton(onClick={model.stopSiteTool();model.execute(DesignCommand.SetSiteImage(null,source))},modifier=Modifier.testTag("site-remove")) { Text("Remove source · Undo restores it") }

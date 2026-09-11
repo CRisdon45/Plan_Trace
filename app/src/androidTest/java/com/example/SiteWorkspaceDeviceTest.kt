@@ -115,11 +115,42 @@ class SiteWorkspaceDeviceTest {
         ui.runOnIdle { assertEquals(SiteTool.NONE,model.state.value.siteTool) }
         ui.waitUntil(10000) { model.state.value.siteBitmap!=null }
         command("view","fit");capture("site-registered-workspace")
-        File(evidence,"site-expected.json").writeText(DesignJsonCodec.encode(restored))
+        // A second pair checks the first calibration without changing registration or objects.
+        val checkBox=ui.onNodeWithTag("workspace-canvas").fetchSemanticsNode().boundsInRoot
+        val checkView=DesignViewport.fit(restored,checkBox.width.toDouble(),checkBox.height.toDouble())
+        fun checkPair(feet:Int) {
+            command("view","site");ui.onNodeWithTag("site-check").performScrollTo().performClick()
+            listOf(ImagePoint(200.0,700.0),ImagePoint(500.0,700.0)).forEach { pixel ->
+                val screen=checkView.toScreen(restored.siteImage!!.toWorld(pixel))
+                ui.onNodeWithTag("workspace-canvas").performTouchInput { click(Offset(screen.x.toFloat(),screen.y.toFloat())) }
+            }
+            ui.onNodeWithTag("site-distance-$feet").performScrollTo().performClick()
+        }
+        checkPair(20)
+        val matching=saved()
+        assertEquals(restored.objects,matching.objects)
+        assertEquals(restored.siteImage!!.topLeft,matching.siteImage!!.topLeft)
+        assertEquals(restored.siteImage!!.metresPerPixel,matching.siteImage!!.metresPerPixel,0.0)
+        assertEquals(0.0,matching.siteImage!!.distanceReading!!.differenceMetres,0.001)
+        ui.onNodeWithTag("site-close").performScrollTo().performClick()
+        ui.onNodeWithTag("workspace-undo").performClick();assertEquals(restored.siteImage,saved().siteImage)
+        ui.onNodeWithTag("workspace-redo").performClick();assertEquals(matching.siteImage,saved().siteImage)
+        checkPair(30) // A deliberately inconsistent reference must report a discrepancy, not recalibrate.
+        val checked=saved()
+        assertEquals(restored.objects,checked.objects)
+        assertEquals(restored.siteImage!!.metresPerPixel,checked.siteImage!!.metresPerPixel,0.0)
+        assertEquals(-10*0.3048,checked.siteImage!!.distanceReading!!.differenceMetres,0.001)
+        ui.onNodeWithTag("site-check-result").performScrollTo().assertTextContains("difference -10.00 ft (-33.33%)",substring=true)
+        capture("site-distance-check")
+        ui.onNodeWithTag("site-close").performScrollTo().performClick()
+        capture("site-checked-workspace")
+        File(evidence,"site-expected.json").writeText(DesignJsonCodec.encode(checked))
     }
     @Test fun siteReopenAndExport() = runBlocking {
         val expected=DesignJsonCodec.decode(File(evidence,"site-expected.json").readText())
         open();assertEquals(expected,saved())
+        assertNotNull(saved().siteImage!!.distanceCheck)
+        assertEquals(-10*0.3048,saved().siteImage!!.distanceReading!!.differenceMetres,0.001)
         ui.waitUntil(10000) { model.state.value.siteBitmap!=null }
         SiteImageStore.inFiles(context.filesDir).load(expected.siteImage!!.asset).recycle()
         capture("site-reopened-workspace")

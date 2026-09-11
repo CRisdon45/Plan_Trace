@@ -6,7 +6,7 @@ import org.json.JSONObject
 
 /** A separate, versioned document format. Does not reinterpret or migrate existing TraceProject data. */
 object DesignJsonCodec {
-    private const val VERSION = 3
+    private const val VERSION = 4
     fun encode(document: ProjectDesign): String = JSONObject().apply {
         put("format", "plan-trace-project-design")
         put("version", VERSION)
@@ -20,6 +20,10 @@ object DesignJsonCodec {
                 put("x", image.topLeft.x); put("y", image.topLeft.y); put("metresPerPixel", image.metresPerPixel)
                 put("visible", image.visible)
                 image.calibration?.let { c -> put("calibration", JSONObject().apply {
+                    put("x1", c.first.x); put("y1", c.first.y); put("x2", c.second.x); put("y2", c.second.y)
+                    put("distanceMetres", c.distanceMetres)
+                }) }
+                image.distanceCheck?.let { c -> put("distanceCheck", JSONObject().apply {
                     put("x1", c.first.x); put("y1", c.first.y); put("x2", c.second.x); put("y2", c.second.y)
                     put("distanceMetres", c.distanceMetres)
                 }) }
@@ -93,8 +97,15 @@ object DesignJsonCodec {
                 ImageCalibration(ImagePoint(numeric(c,"x1"),numeric(c,"y1")),
                     ImagePoint(numeric(c,"x2"),numeric(c,"y2")),numeric(c,"distanceMetres"))
             } else null
+            val check = if (i.has("distanceCheck")) {
+                require(version >= 4) { "An older document cannot contain unrecognized distance-check evidence" }
+                i.getJSONObject("distanceCheck").let { c ->
+                    ImageDistanceCheck(ImagePoint(numeric(c,"x1"),numeric(c,"y1")),
+                        ImagePoint(numeric(c,"x2"),numeric(c,"y2")),numeric(c,"distanceMetres"))
+                }
+            } else null
             SiteImage(SiteImageAsset(i.getString("sha256"), i.getInt("width"), i.getInt("height")),
-                DesignPoint(numeric(i,"x"), numeric(i,"y")), numeric(i,"metresPerPixel"), calibration, i.getBoolean("visible"))
+                DesignPoint(numeric(i,"x"), numeric(i,"y")), numeric(i,"metresPerPixel"), calibration, i.getBoolean("visible"), check)
         } else null
         return ProjectDesign(root.getString("id"), result, root.getLong("revision"), image)
     }

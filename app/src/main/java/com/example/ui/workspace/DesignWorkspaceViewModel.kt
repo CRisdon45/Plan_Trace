@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
 
-enum class SiteTool { NONE, CALIBRATE, MOVE }
+enum class SiteTool { NONE, CALIBRATE, CHECK, MOVE }
 
 data class WorkspaceState(
     val document: ProjectDesign? = null,
@@ -37,7 +37,8 @@ data class WorkspaceState(
     val siteError: String? = null,
     val siteImporting: Boolean = false,
     val siteTool: SiteTool = SiteTool.NONE,
-    val referencePoints: List<ImagePoint> = emptyList()
+    val referencePoints: List<ImagePoint> = emptyList(),
+    val referencePurpose: SiteTool = SiteTool.CALIBRATE
 ) {
     val shownDocument: ProjectDesign? get() = preview ?: document
     val saved: Boolean get() = document != null && savedRevision == document.revision && saveError == null
@@ -117,26 +118,36 @@ class DesignWorkspaceViewModel(application: Application) : AndroidViewModel(appl
     }
     fun startSiteTool(tool: SiteTool) {
         if (session?.document?.siteImage?.visible != true || state.value.siteBitmap == null) return
+        if (tool == SiteTool.CHECK && session?.document?.siteImage?.calibration == null) {
+            feedback("Set the image scale before checking another distance"); return
+        }
         cancelPreview()
-        _state.update { it.copy(siteTool=tool, referencePoints=emptyList(), message=null) }
+        // Checking and calibration collect the same two-pointer reference geometry. Purpose is
+        // retained separately when the gesture completes and the distance panel reopens.
+        _state.update { it.copy(siteTool=if(tool == SiteTool.CHECK) SiteTool.CALIBRATE else tool,
+            referencePurpose=tool, referencePoints=emptyList(), message=null) }
     }
     fun stopSiteTool() { cancelPreview(); _state.update { it.copy(siteTool=SiteTool.NONE,referencePoints=emptyList()) } }
     fun markSiteReference(point: DesignPoint) {
         val source = session?.document?.siteImage ?: return
-        if (state.value.siteTool != SiteTool.CALIBRATE) return
+        if (state.value.siteTool !in setOf(SiteTool.CALIBRATE, SiteTool.CHECK)) return
         val pixel = source.toImage(point)
         if (!source.contains(pixel)) { feedback("Choose a point inside the source image"); return }
         val points = state.value.referencePoints + pixel
         if (points.size==2 && points[0].distanceTo(points[1])<8.0) { feedback("Choose points farther apart"); return }
-        _state.update { it.copy(referencePoints=points,siteTool=if(points.size==2) SiteTool.NONE else SiteTool.CALIBRATE) }
+        _state.update { it.copy(referencePoints=points,siteTool=if(points.size==2) SiteTool.NONE else state.value.siteTool) }
     }
     fun calibrateSite(distanceMetres: Double) {
         val source = session?.document?.siteImage ?: return
         val points = state.value.referencePoints
         if(points.size!=2) return
         try {
-            execute(DesignCommand.SetSiteImage(source.calibrated(points[0],points[1],distanceMetres),source))
-            _state.update { it.copy(referencePoints=emptyList()) }; fit()
+            val checking = state.value.referencePurpose == SiteTool.CHECK
+            val next = if (checking) source.checked(points[0], points[1], distanceMetres)
+                else source.calibrated(points[0], points[1], distanceMetres)
+            execute(DesignCommand.SetSiteImage(next,source))
+            _state.update { it.copy(referencePoints=emptyList()) }
+            if (!checking) fit()
         } catch (error: IllegalArgumentException) { feedback(error.message) }
     }
     fun select(id: String?) { stopSiteTool(); _state.update { it.copy(selectedId = id, message = null) } }

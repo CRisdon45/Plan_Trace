@@ -71,8 +71,9 @@ object DesignOutput {
             val r = sourceRect(source, settings)
             listOf(TextElement(id = "site-source-notice", layerId = layer.id,
                 text = if (source.calibration == null) "SOURCE SCALE NOT SET - reference image only"
-                    else "Source scaled from reference distance - site accuracy unverified",
-                position = Point2D(r.left, r.top - 25f), fontSizeSp = 8f))
+                    else "Source scaled from reference distance - site accuracy unverified" +
+                        (source.distanceReading?.let { "\n" + it.summary() } ?: ""),
+                position = Point2D(r.left, r.top - if(source.distanceCheck == null) 25f else 50f), fontSizeSp = 8f))
         } ?: emptyList()
         return TraceProject(id = document.id, title = "Project geometry study", createdAt = 0L, updatedAt = document.revision,
             backgroundType = BackgroundType.BLANK_PAPER, backgroundResourceOrUri = "", backgroundOpacity = 1f,
