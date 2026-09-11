@@ -1,6 +1,8 @@
 package com.example.model.design
 
 import kotlin.math.*
+import org.locationtech.jts.geom.Envelope
+import org.locationtech.jts.index.strtree.STRtree
 
 /** Geometric references are read-only. A snap is a one-time placement, not an attachment. */
 data class GeometrySnapSource(val objectId: String, val boundary: DesignBoundary)
@@ -21,13 +23,19 @@ private fun cross(ax: Double, ay: Double, bx: Double, by: Double) = ax*by-ay*bx
 /** Immutable index of canonical corners and edges, never image pixels or sampled display paths.
  * The budget is all-or-nothing: a large design is not silently indexed only in part.
  */
-class GeometrySnapIndex(sources: List<GeometrySnapSource>) {
+class GeometrySnapIndex internal constructor(sources: List<GeometrySnapSource>, private val spatialLookup: Boolean) {
+    constructor(sources: List<GeometrySnapSource>) : this(sources, true)
+    // The internal exhaustive mode is an oracle for broad-phase equivalence tests. The UI always
+    // uses the indexed constructor; both modes retain the same exact resolver and priority rules.
     companion object { const val MAX_EDGES = 8192 }
     val supported = sources.sumOf { it.boundary.nodes.size.toLong() } <= MAX_EDGES
     private data class PointRef(val key: GeometrySnapKey, val point: DesignPoint)
     private data class EdgeRef(val key: GeometrySnapKey, val edge: BoundaryEdge)
     private val points: List<PointRef>
     private val edges: List<EdgeRef>
+    private val pointTree = STRtree()
+    private val edgeTree = STRtree()
+    private val spatialBoundsFinite: Boolean
     init {
         require(sources.map { it.objectId }.distinct().size == sources.size) { "Duplicate snap-source identity" }
         val ordered = if(supported) sources.sortedBy { it.objectId } else emptyList()
@@ -38,6 +46,48 @@ class GeometrySnapIndex(sources: List<GeometrySnapSource>) {
         edges = ordered.flatMap { source -> source.boundary.edges().map {
             EdgeRef(GeometrySnapKey(source.objectId,it.id,GeometrySnapKind.EDGE),it)
         } }
+        val edgeBounds = edges.map { edgeEnvelope(it.edge) }
+        spatialBoundsFinite = edgeBounds.all { it != null }
+        if (spatialBoundsFinite) {
+            points.forEachIndexed { index, ref ->
+                pointTree.insert(Envelope(ref.point.x, ref.point.x, ref.point.y, ref.point.y), index)
+            }
+            edgeBounds.forEachIndexed { index, bounds -> edgeTree.insert(bounds!!, index) }
+        }
+        // Build once before publishing the immutable index; query never inserts or removes items.
+        pointTree.build()
+        edgeTree.build()
+    }
+
+    /** Conservative bounds for arcs up to a semicircle: the chord box expanded by the sagitta.
+     * A chord-only box misses bulging arcs; sampling bounds could miss extrema. These bounds only
+     * shortlist candidates. Nearest points and measurements still use exact line/circular-arc math.
+     */
+    private fun edgeEnvelope(edge: BoundaryEdge): Envelope? {
+        val a = edge.start.point
+        val b = edge.end
+        val sagitta = edge.chordMetres * abs(edge.start.bulge) / 2.0
+        val magnitude = maxOf(abs(a.x), abs(a.y), abs(b.x), abs(b.y), sagitta)
+        val padding = sagitta + 8.0 * Math.ulp(magnitude) + 1e-9
+        val bounds = Envelope(a.x, b.x, a.y, b.y).apply { expandBy(padding) }
+        return bounds.takeIf { listOf(it.minX, it.maxX, it.minY, it.maxY).all(Double::isFinite) }
+    }
+
+    private fun finiteCandidates(query: DesignPoint, tolerance: Double): Pair<Set<Int>, Set<Int>> {
+        require(tolerance.isFinite() && tolerance > 0)
+        val radius = tolerance * 1.6 + 8.0 * Math.ulp(max(abs(query.x), abs(query.y))) + 1e-9
+        val limits = listOf(query.x-radius, query.x+radius, query.y-radius, query.y+radius)
+        if (!spatialLookup || !spatialBoundsFinite || limits.any { !it.isFinite() })
+            return points.indices.toSet() to edges.indices.toSet()
+        val envelope = Envelope(limits[0], limits[1], limits[2], limits[3])
+        return pointTree.query(envelope).map { it as Int }.toSet() to
+            edgeTree.query(envelope).map { it as Int }.toSet()
+    }
+
+    /** Diagnostic counts used to verify work reduction, not a device-speed measurement. */
+    internal fun finiteCandidateCounts(query: DesignPoint, toleranceMetres: Double): Pair<Int, Int> {
+        val (pointCandidates, edgeCandidates) = finiteCandidates(query, toleranceMetres)
+        return pointCandidates.size to edgeCandidates.size
     }
 
     /** Tolerances are provided in metres from a fixed screen-space radius, not a fixed yard distance.
@@ -50,6 +100,7 @@ class GeometrySnapIndex(sources: List<GeometrySnapSource>) {
         require(toleranceMetres.isFinite() && toleranceMetres > 0)
         require(abs(hypot(guideDirection.x,guideDirection.y)-1.0) < 1e-8)
         if(!supported) return null
+        val (pointCandidates, edgeCandidates) = finiteCandidates(query, toleranceMetres)
         var best: GeometrySnapMatch? = null
         var bestDistance = Double.POSITIVE_INFINITY
         var held: GeometrySnapMatch? = null
@@ -68,9 +119,11 @@ class GeometrySnapIndex(sources: List<GeometrySnapSource>) {
                 best=candidate;bestDistance=distance
             }
         }
-        points.forEach { ref ->
+        points.forEachIndexed { index, ref ->
             if(ref.key.objectId!=excludeObjectId) {
-                offer(ref.key,ref.point,ref.point)
+                if (index in pointCandidates) offer(ref.key,ref.point,ref.point)
+                // Alignment rays can originate far away. They must not be culled by a local
+                // rectangle, including when a rotated construction axis is active.
                 if(ref.key.kind==GeometrySnapKind.CORNER) {
                     listOf(guideDirection,DesignPoint(-guideDirection.y,guideDirection.x)).forEachIndexed { i,direction ->
                         val line=SnapAxis(ref.point,direction)
@@ -80,7 +133,9 @@ class GeometrySnapIndex(sources: List<GeometrySnapSource>) {
                 }
             }
         }
-        edges.forEach { ref ->
+        // Restore insertion order after the tree query so near-tie behavior is unchanged.
+        edgeCandidates.sorted().forEach { index ->
+            val ref = edges[index]
             if(ref.key.objectId!=excludeObjectId) {
                 val p=if(axis==null) closestOnEdge(ref.edge,query) else constrainedEdge(ref.edge,axis,query)
                 offer(ref.key,p,p ?: ref.edge.start.point)
