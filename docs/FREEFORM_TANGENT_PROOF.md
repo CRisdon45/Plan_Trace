@@ -1,6 +1,6 @@
 # Freeform tangent editing: Kotlin integration proof
 
-Checkpoint: 2026-09-11. **Tested geometry and project-command integration, not a finished pen interaction or a pool generator.**
+Checkpoint: 2026-09-11. **The bounded geometry proof now has a verified pen-facing Android workflow; it is not a pool generator or physical-tablet acceptance.**
 
 ## Decision and isolation
 
@@ -8,7 +8,13 @@ Continue with Plan Trace's existing canonical `DesignBoundary`, not a replacemen
 
 Work is isolated on `research/freeform-tangent-kotlin`, draft [PR #5](https://github.com/CRisdon45/Plan_Trace/pull/5), branched from `80224295df4f972d0c2bd1531bcab8015e552e01` on `feat/project-geometry-seam`. That source already contained whole-straight-side editing, although its then-current handoff still described the earlier checkpoint. Source and tests, not stale prose, informed this base selection. This work does not overwrite later application/UI work. No application PR was merged.
 
-Implementation is `a852497b3a2ca7123d77b3903d90601b440e2c2c`. The two additional adversarial/quantity tests are at `2ee37169fa74f4a8c565e7b16ca1fcbd90f0614b`; production code is unchanged between these revisions. Later documentation-only commits do not imply another application validation result.
+The command-only implementation is `a852497b3a2ca7123d77b3903d90601b440e2c2c`. The two additional adversarial/quantity tests are at `2ee37169fa74f4a8c565e7b16ca1fcbd90f0614b`. Pen-facing authoring/editing is `9eb25e57590758c9394ca6d4a8f49c20c297239b`; the tested correction is `2f28ac9d2d6ff873b79450fac95dbf5d950fb7d5`. Later documentation-only commits do not imply another application validation result.
+
+## Pen-facing integration
+
+`SmoothPoolDraft` turns three to thirty-two deliberate guide points into the existing canonical line/arc boundary without storing guide-only state. The real canvas and radial commands now support creating and closing that pool, following coping, selecting one meaningful smooth anchor or radius scope, previewing a valid tangent-preserving edit, cancellation, one-operation commit, Undo/Redo and save/reopen. Shape anchors can use the existing exact object snap before the solve. Radius and shape picking use the existing exact finite-arc projection.
+
+The interaction keeps the existing project command, renderer and format-5 store as authority. It does not expose every internal biarc junction, add a numeric form, persist a second constraint graph or infer hidden points. System-injected stylus tests cover the Android routing path; physical S Pen feel remains pending.
 
 ## What changed
 
@@ -74,11 +80,15 @@ The anchor displacement is `(0.35, 0.40)` metres. Four edges change; the remaini
 
 The before, after and reopened PNGs were produced by the existing `DesignOutput.png` renderer. The before/after images were opened, and reopened images were checked byte-for-byte. The first two differ, and the edited/reopened PNG bytes match exactly. Views automatically frame their content, so the before/after images alone are not evidence of fixed screen positions for distant vertices. The geometry comparisons establish unchanged remote geometry. This is neither a new Northstar style nor visual acceptance of the current rendering.
 
-## Evidence limits and retained issues
+## Final integrated evidence, limits and retained issues
 
-No UI option or pen hit-target exposes the new commands yet. No user can infer a finished freeform tool from this draft PR. No physical-tablet or emulator interaction, stylus timing, palm rejection, snapping integration, camera stability or hand-occlusion evidence was gathered in this slice. No APK was published or installed; no original app, signing key or device data was changed. Release dependencies/manifests were audited but a release build was not assembled.
+At tested source `2f28ac9`, [integrity run 34650212981](https://github.com/CRisdon45/Plan_Trace/actions/runs/34650212981) passed 275 tests in 36 suites with zero failures/errors/skips, the separate nine runtime-policy tests, runtime graph/manifest checks and debug assembly. Its downloaded artifact SHA-256 is `93e4f7ac18d0248f17ec9a1dcb4aac81f7b36586cdca039ef4d5a8906669f478`.
 
-The existing successful-build KSP/AWT background `NullPointerException` appeared again in the initial full run in this slice. It was not fixed or established harmless. Existing compiler/action deprecations remain. Passing tests are not a claim of warning-free builds or a complete security audit.
+[Workspace emulator run 34650212974](https://github.com/CRisdon45/Plan_Trace/actions/runs/34650212974) passed all 18 scenarios, including smooth authoring, local anchor/radius edits, invalid radius rejection, cancellation/flagged pen-up/second-contact safety, Undo/Redo and save/reopen. All 41 active-window records identify the app, the new frames were opened and unobstructed, all seven saved restart pairs match, and no ANR or crash was recorded. The artifact SHA-256 is `c8286d8274bccb017ccd6f0cffeba9cf4d47360f647a0477d8343eadbd05d4f4`. The final format-5 document is revision 63, eight objects and 10,825 bytes with SHA-256 `6311f9c7efb7205dda95a0c92282aee19155c5ae602fd96be2d1791fca1f7a7f`.
+
+This is disposable API-35 emulator evidence using system-injected stylus contacts, not physical-tablet interaction, stylus timing, palm rejection, button/hover feel, hand occlusion, hardware performance or owner visual acceptance. No APK was published or installed on the physical tablet; no original app, signing key or device data was changed. Release dependencies and manifests were resolved/processed, but a release build was not assembled.
+
+The existing successful-build KSP/AWT background `NullPointerException` appeared again in the current full run. It was not fixed or established harmless. Existing compiler/action deprecations remain. Passing tests are not a claim of warning-free builds or a complete security audit.
 
 There are no persistent per-edge radius/tangent locks or general linked/whole-shape solve. Unrelated geometry is held by this selected edit scope, not by a newly implemented complete constraint system. The smoothness helper is bounded; it does not handle all line/arc transitions, arbitrary semicircles, major arcs or general infeasible constraint resolution. Coping/validity retain their previously declared sampled tolerances and limits.
 
@@ -86,9 +96,7 @@ Cavalier Contours was not integrated or executed. Do not install multiple candid
 
 ## Next outcome
 
-Reconcile with the then-current `feat/project-geometry-seam` before any integration. Do not reset that branch to this base or replace its newer UI/straight-side work. The next product slice should establish one complete pen workflow: create/select a genuinely smooth closed pool, choose a local smooth edit through the existing radial interaction, drag without an initial shape jump, optionally change one radius, see a valid ghost with dimensions/coping, cancel safely, commit once, Undo and save/reopen.
-
-Present meaningful handles rather than every technical biarc junction. Keep a selected edit scope explicit. Include snapping in the requested target before solving, not as a coordinate rewrite after a valid solve. Do not expose a numeric form as the main workflow. Add actual UI tests and target-tablet evidence before calling this a usable meeting tool. A synthetic fixture injection alone is not proof of the authoring workflow.
+Reconcile and integrate this verified draft with `feat/project-geometry-seam`. Do not reset that branch or discard its straight-side history. The next separate slice is the coherent expert workspace UI/visual hierarchy pass across straight and smooth authoring/editing. The current screenshots prove interaction, not an accepted shell or Northstar appearance. Keep physical-tablet testing explicit.
 
 Once manual authoring/editing is dependable, proceed to rectangle/convex-polygon generation with target water area and outside-coping containment. Use these same editable objects. Broader linked locks, concave envelopes and specialist arc operations each need their own concrete acceptance cases; avoid another open-ended library survey.
 
