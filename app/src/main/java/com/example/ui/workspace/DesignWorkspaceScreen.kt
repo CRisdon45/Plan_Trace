@@ -55,9 +55,9 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
         val selected=doc.objects.firstOrNull { it.id==model.state.value.selectedId }
         when(action) {
             RadialAction.SITE -> { model.stopSiteTool(); inspector="site" }
-            RadialAction.POOL -> model.addOutline(false)
+            RadialAction.POOL -> model.beginProposedOutline(DesignObjectKind.POOL)
             RadialAction.CURVED -> model.addOutline(true)
-            RadialAction.PAVING -> model.addOutline(false,DesignObjectKind.PAVING)
+            RadialAction.PAVING -> model.beginProposedOutline(DesignObjectKind.PAVING)
             RadialAction.SIZE -> if(selected!=null && !selected.locked) inspector="size"
             RadialAction.COPING -> if(selected!=null && !selected.locked) inspector="coping"
             RadialAction.DELETE -> selected?.let { model.execute(DesignCommand.Remove(it.id)) }
@@ -121,6 +121,7 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
                     { sitePicker.launch(arrayOf("image/png","image/jpeg")) }, { inspector="site" },
                     Modifier.weight(1f).fillMaxWidth())
                 state.siteDraft?.let { draft -> SiteOutlineControls(draft,state.draftOrthogonal,model) }
+                state.proposedDraft?.let { draft -> ProposedOutlineControls(draft,state.draftOrthogonal,model) }
                 val selected = doc.objects.firstOrNull { it.id == state.selectedId }
                 WorkspaceTraceStatus(state)
 
@@ -128,7 +129,7 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
                     ?: "Add an outline, then select its edge to edit.", style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("workspace-selection"))
                 Text(state.message ?: "Commands opens the tool wheel. " + (if(touchEdit) "Touch editing on. " else "Pen edits; fingers navigate. ") + (if(gridSnap) "1 ft snap: vertices and moves." else "Round handles reshape; amber handles change curves."),
-                    style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+                    style = MaterialTheme.typography.labelMedium, maxLines=1, overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
                 Text("Coping follows the pool. Surface checks are resolution-limited; steps, site clearances and Northstar styling are still in development.",
                     style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))

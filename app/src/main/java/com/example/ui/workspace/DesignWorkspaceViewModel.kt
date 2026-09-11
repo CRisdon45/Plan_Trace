@@ -41,8 +41,12 @@ data class WorkspaceState(
     val referencePurpose: SiteTool = SiteTool.CALIBRATE,
     val siteDraft: SiteOutlineDraft? = null,
     val draftCursor: DesignPoint? = null,
+    val draftTarget: DrawingTarget? = null,
+    val proposedDraft: ProposedOutlineDraft? = null,
     val draftOrthogonal: Boolean = false
 ) {
+    val isDrawing: Boolean get() = siteDraft != null || proposedDraft != null
+    val drawingPoints: List<DesignPoint>? get() = siteDraft?.points ?: proposedDraft?.points
     val shownDocument: ProjectDesign? get() = preview ?: document
     val saved: Boolean get() = document != null && savedRevision == document.revision && saveError == null
 }
@@ -130,7 +134,7 @@ class DesignWorkspaceViewModel(application: Application) : AndroidViewModel(appl
         _state.update { it.copy(siteTool=if(tool == SiteTool.CHECK) SiteTool.CALIBRATE else tool,
             referencePurpose=tool, referencePoints=emptyList(), message=null) }
     }
-    fun stopSiteTool() { cancelPreview(); _state.update { it.copy(siteTool=SiteTool.NONE,referencePoints=emptyList(),siteDraft=null,draftCursor=null) } }
+    fun stopSiteTool() { cancelPreview(); _state.update { it.copy(siteTool=SiteTool.NONE,referencePoints=emptyList(),siteDraft=null,proposedDraft=null,draftCursor=null,draftTarget=null) } }
     fun beginSiteOutline(role: SiteOutlineRole) {
         stopSiteTool()
         val doc=session?.document ?: return
@@ -141,39 +145,53 @@ class DesignWorkspaceViewModel(application: Application) : AndroidViewModel(appl
         val draft=SiteOutlineDraft(role,source,doc.id,doc.revision)
         _state.update { it.copy(siteDraft=draft,selectedId=null,draftOrthogonal=role==SiteOutlineRole.HOUSE,message=null) }
     }
-    fun toggleSiteOrthogonal() { _state.update { it.copy(draftOrthogonal=!it.draftOrthogonal,draftCursor=null) } }
-    fun previewSiteCorner(point: DesignPoint?, grid: Boolean=false) {
-        val draft=state.value.siteDraft ?: return
-        _state.update { it.copy(draftCursor=point?.let { p -> draft.candidate(p,it.draftOrthogonal,grid) }) }
+    fun beginProposedOutline(kind: DesignObjectKind) {
+        stopSiteTool()
+        val doc=session?.document ?: return
+        _state.update { it.copy(proposedDraft=ProposedOutlineDraft(kind,doc.id,doc.revision),
+            selectedId=null,draftOrthogonal=true,message=null) }
+    }
+    fun toggleSiteOrthogonal() { _state.update { it.copy(draftOrthogonal=!it.draftOrthogonal,draftCursor=null,draftTarget=null) } }
+    fun previewSiteCorner(point: DesignPoint?, grid: Boolean=false, closeToleranceMetres: Double=0.0) {
+        val points=state.value.drawingPoints ?: return
+        val target=point?.let { CornerTarget.resolve(points,it,state.value.draftOrthogonal,grid,closeToleranceMetres) }
+        _state.update { it.copy(draftCursor=target?.point,draftTarget=target) }
     }
     fun markSiteCorner(point: DesignPoint, closeToleranceMetres: Double, grid: Boolean=false) {
-        val draft=state.value.siteDraft ?: return
-        if(session?.document?.revision!=draft.revision || session?.document?.id!=draft.documentId) {
-            stopSiteTool(); feedback("The design changed. Start the site outline again"); return
+        val current=state.value; val points=current.drawingPoints ?: return
+        val id=current.siteDraft?.documentId ?: current.proposedDraft!!.documentId
+        val revision=current.siteDraft?.revision ?: current.proposedDraft!!.revision
+        if(session?.document?.revision!=revision || session?.document?.id!=id) {
+            stopSiteTool(); feedback("The design changed. Start the outline again"); return
         }
-        if(draft.points.size>=3 && draft.points.first().distanceTo(point)<=closeToleranceMetres) {
-            finishSiteOutline(); return
-        }
+        val target=CornerTarget.resolve(points,point,current.draftOrthogonal,grid,closeToleranceMetres)
+        if(target.closing) { finishSiteOutline();return }
         try {
-            val next=draft.append(draft.candidate(point,state.value.draftOrthogonal,grid))
-            _state.update { it.copy(siteDraft=next,draftCursor=null,message=null) }
+            val site=current.siteDraft?.append(target.point)
+            val proposed=current.proposedDraft?.append(target.point)
+            _state.update { it.copy(siteDraft=site,proposedDraft=proposed,draftCursor=null,draftTarget=null,message=null) }
         } catch(e:IllegalArgumentException) { feedback(e.message) }
     }
     fun backSiteCorner() {
-        _state.update { it.copy(siteDraft=it.siteDraft?.back(),draftCursor=null,message=null) }
+        _state.update { it.copy(siteDraft=it.siteDraft?.back(),proposedDraft=it.proposedDraft?.back(),
+            draftCursor=null,draftTarget=null,message=null) }
     }
     fun finishSiteOutline() {
-        val draft=state.value.siteDraft ?: return
+        val current=state.value
+        if(!current.isDrawing) return
         val doc=session?.document ?: return
+        val site=current.siteDraft;val proposed=current.proposedDraft
         try {
-            require(doc.id==draft.documentId && doc.revision==draft.revision && doc.siteImage==draft.source) {
+            require(doc.id==(site?.documentId ?: proposed!!.documentId) &&
+                doc.revision==(site?.revision ?: proposed!!.revision) && (site==null || doc.siteImage==site.source)) {
                 "The source or design changed. Cancel and restart the outline"
             }
-            val objectToAdd=draft.finish()
+            val objectToAdd=site?.finish() ?: proposed!!.finish()
             execute(DesignCommand.Add(objectToAdd))
             if(session?.document?.objects?.any { it.id==objectToAdd.id }==true) {
-                _state.update { it.copy(siteDraft=null,draftCursor=null,selectedId=objectToAdd.id,
-                    message="${objectToAdd.name} created as traced and locked. Use Site controls to unlock it deliberately") }
+                _state.update { it.copy(siteDraft=null,proposedDraft=null,draftCursor=null,draftTarget=null,selectedId=objectToAdd.id,
+                    message=if(site!=null) "${objectToAdd.name} created as traced and locked. Use Site controls to unlock it deliberately"
+                        else if(objectToAdd.coping!=null) "Pool created with following coping" else "Deck outline created. Shared surface cutouts are not implemented yet") }
             }
         } catch(e:IllegalArgumentException) { feedback(e.message) }
     }
@@ -239,8 +257,8 @@ class DesignWorkspaceViewModel(application: Application) : AndroidViewModel(appl
             if (before != next) publishAndSave()
         } catch (error: IllegalArgumentException) { feedback(error.message ?: "This edit is not valid") }
     }
-    fun undo() { if(state.value.siteDraft!=null) { backSiteCorner();return }; cancelPreview(); if (session?.canUndo == true) { session!!.undo(); publishAndSave() } }
-    fun redo() { if(state.value.siteDraft!=null) return; cancelPreview(); if (session?.canRedo == true) { session!!.redo(); publishAndSave() } }
+    fun undo() { if(state.value.isDrawing) { backSiteCorner();return }; cancelPreview(); if (session?.canUndo == true) { session!!.undo(); publishAndSave() } }
+    fun redo() { if(state.value.isDrawing) return; cancelPreview(); if (session?.canRedo == true) { session!!.redo(); publishAndSave() } }
     fun retrySave() { session?.document?.let { _state.update { s -> s.copy(saveError = null) }; writes.trySend(it) } }
     fun fit() { _state.update { it.copy(fitRequest = it.fitRequest + 1) } }
     fun feedback(message: String?) { _state.update { it.copy(message = message) } }
@@ -248,7 +266,7 @@ class DesignWorkspaceViewModel(application: Application) : AndroidViewModel(appl
         val current = session ?: return
         _state.update { it.copy(document = current.document, preview = null, message = null, saveError = null,
             canUndo = current.canUndo, canRedo = current.canRedo,
-            siteTool = SiteTool.NONE, referencePoints = emptyList(), siteDraft=null, draftCursor=null,
+            siteTool = SiteTool.NONE, referencePoints = emptyList(), siteDraft=null, proposedDraft=null, draftCursor=null, draftTarget=null,
             selectedId = it.selectedId?.takeIf { id -> current.document.objects.any { obj -> obj.id == id } }) }
         refreshSource()
         check(writes.trySend(current.document).isSuccess)

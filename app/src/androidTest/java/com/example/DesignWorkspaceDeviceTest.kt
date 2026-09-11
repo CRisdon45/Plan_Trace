@@ -7,6 +7,9 @@ import android.view.MotionEvent
 import android.view.InputDevice
 import com.example.model.design.DesignDimensions
 import com.example.model.design.DesignPoint
+import com.example.model.design.DesignViewport
+import com.example.ui.workspace.DesignWorkspaceViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -64,7 +67,19 @@ class DesignWorkspaceDeviceTest {
     @Test fun createEditUndoPersist() {
         assertNull("Use a fresh emulator, never erase an existing draft", store.load())
         openWorkspace()
+        command("assist","touch")
         command("draw","pool")
+        ui.waitForIdle()
+        val model=ViewModelProvider(ui.activity)[DesignWorkspaceViewModel::class.java]
+        val bounds=ui.onNodeWithTag("workspace-canvas").fetchSemanticsNode().boundsInRoot
+        val view=DesignViewport.fit(model.state.value.document!!,bounds.width.toDouble(),bounds.height.toDouble())
+        listOf(DesignPoint(0.0,0.0),DesignPoint(6.096,0.0),DesignPoint(6.096,3.6576),DesignPoint(0.0,3.6576)).forEach { point ->
+            val at=view.toScreen(point)
+            ui.onNodeWithTag("workspace-canvas").performTouchInput { click(Offset(at.x.toFloat(),at.y.toFloat())) }
+        }
+        ui.onNodeWithTag("proposed-outline-finish").performClick()
+        saved()
+        command("assist","touch")
         val starting = saved()
         assertEquals(1, starting.objects.size)
         // Category expansion and closing are not edits, and unavailable actions remain in place.

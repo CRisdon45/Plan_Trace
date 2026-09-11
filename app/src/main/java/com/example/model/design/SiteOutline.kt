@@ -55,18 +55,9 @@ class SiteOutlineDraft(
         require(points.size <= SiteOutlineGeometry.MAX_CORNERS)
     }
     fun candidate(raw: DesignPoint, orthogonal: Boolean, grid: Boolean): DesignPoint {
-        var p = if(grid) GridAssist.snapPoint(raw) else raw
-        if(orthogonal && points.size>=2) {
-            val first=points[0]; val second=points[1]; val last=points.last()
-            val angle=atan2(second.y-first.y, second.x-first.x)
-            val ux=cos(angle); val uy=sin(angle)
-            val dx=p.x-last.x; val dy=p.y-last.y
-            val along=dx*ux+dy*uy; val across=-dx*uy+dy*ux
-            p=if(abs(along)>=abs(across)) DesignPoint(last.x+along*ux,last.y+along*uy)
-                else DesignPoint(last.x-across*uy,last.y+across*ux)
-        }
-        return p
+        return CornerTarget.resolve(points,raw,orthogonal,grid).point
     }
+
     fun append(point: DesignPoint): SiteOutlineDraft {
         require(source.contains(source.toImage(point))) { "Choose the corner inside the source image" }
         require(points.size < SiteOutlineGeometry.MAX_CORNERS) { "Finish the outline before adding more corners" }
