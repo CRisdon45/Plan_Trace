@@ -1,35 +1,35 @@
 # Current state and next-session handoff
 
-Updated 2026-09-11 after protected existing-site outline authoring. Active work: **feat/project-geometry-seam**, PR #4 into feat/off-tablet-integrity; PR #3 targets the 2D foundation, PR #2 main. Verify live refs and concurrent changes. No application PR was merged and the interrupted physical tablet test, installed app, data and signing key were not changed.
+Updated 2026-09-11. Active implementation: feat/project-geometry-seam, PR #4 into feat/off-tablet-integrity; PR #3 targets the 2D foundation and PR #2 main. Verify live refs and concurrent work. No application PR was merged; the interrupted physical-tablet session, installed app, data and signing key remain untouched.
 
 ## Owner direction
 
-Pen manipulation and dependable snapping are the primary workflow. Cody rarely wants to type dimensions; numeric text remains an occasional fallback. Do not turn new drawing features into forms. Current flat graphics and temporary controls are not the final Northstar presentation or interaction design. No runtime AI; 3D stays paused.
+Cody wants the current line distance visible beside the moving target while drawing, so he can be precise without routinely typing. Target, guide, displayed length and eventual endpoint must agree after constraints/snapping. Pen manipulation remains primary; typed values are an occasional fallback. No runtime AI, 3D paused, Northstar is still the visual target.
 
-## Latest verified outcome
+## New working behavior
 
-Tested application: **571a28c97c9ad8be7666f25eb5bbba5d83fc94a9**. Unit/build run **34616514170** passed **182 tests, zero failures/errors/skips**, and debug assembly. Android run **34616514212** built the real app/instrumentation and passed **nine scenarios**. Downloaded XML and scenario results were checked, along with all 20 active-window capture records. Actual reopened, raster-hidden, registration-warning and vector-export captures were opened.
+Draw -> Pool and Draw -> Paving now start hand-placed corner outlines, not fixed-position presets. Closure creates one object/Undo step; a pool includes following coping, while paving is a deck boundary only, without shared cutouts or filled-surface/quantity promises. The existing Curved starter remains available. Back a corner/Cancel, optional first-edge-relative right angles and explicit one-foot snapping operate on temporary drafts.
 
-The new four-object design is format 5, revision 41 and 4,955 bytes. It was byte-identical across completed-save force-stop/reopen. The new 17 unit tests cover site geometry/provenance/history/storage and stable notice layout; two new virtual-device scenarios extend the previous seven. SITE_OUTLINE_IMPLEMENTATION.md contains run links, hashes, exact coverage and limitations.
+After the first corner, a floating readout follows the actual constrained endpoint. Returning near the start resolves to the exact first corner and shows the closing-edge length. The same feedback serves existing-house/property corner drawing. During boundary edits it reports both incident edges at a vertex, analytic arc length/radius for a curve, and displacement labeled Move for translation. Rejected edits do not retain misleading placed-length feedback.
 
-## What this adds
+Readings use feet and fractional inches rounded to eighths for display, marked approximate when appropriate. Display precision is not snapping or source/survey accuracy; canonical geometry is not rounded. The badge is a noninteractive, clamped canvas overlay and not a saved/exported annotation. Coverage does not yet include the legacy page-sketch canvas or source-calibration/movement tools.
 
-View -> Site -> House or Property starts a transient corner sequence over a visible calibrated source. Tap or drag to each corner, optionally use right-angle assistance relative to the first segment, then close by tapping the first corner or choosing Close outline. No typed dimensions are required. Back a corner/Undo modifies only the unfinished sequence; Cancel or workspace/lifecycle exit discards it. Closure commits one validated straight-edged object and one document Undo step.
+## Verified checkpoint
 
-Closed site objects are TRACED, locked by default, and distinct from proposed pool/landscape objects. Select their chip and use Site controls to deliberately unlock, edit and relock. Stable IDs, original image registration and adjusted-after-tracing evidence survive saving. Moving/rescaling/removing a source never silently moves these objects; it reports an alignment-review or unavailable-source notice. Hiding the source leaves actual house/property vectors visible through the same renderer and output model.
+Application/test revision da3a2a1aba197b80d9fd4e0205209a1297ebbf7b contains production implementation c69a148 plus a test-only navigation correction. Unit/build run 34622090828 passed 195 tests, zero failures/errors/skips, and debug assembly. Android run 34622090815 built app/instrumentation and passed eleven scenarios. Downloaded XML, scenario results, archive hashes and 26 capture-window records were checked. Actual live line, vertex edit, site-line, reopened workspace and PNG output were opened.
 
-The first Android replay exposed a real interaction defect: a preview-driven mismatch warning resized the canvas and canceled source movement. Status now uses committed facts, with two layout regressions and a successful full replay. No failed assertion was dropped. The export review also found the house notice touching the property outline; label collision handling remains an explicit presentation gap, not accepted polish.
+The held-pointer test observed 10-to-12-foot feedback, matched the committed endpoint to its target, and closed a 12-by-9-foot pool with a 9-foot final edge and following coping. It checked transient vertex/site feedback and canceled edits, then created a concave deck. Existing objects remained unchanged. The format-5, six-object document was byte-identical across completed-save force-stop/reopen at revision 45. No live label or unfinished draft is stored in it.
 
-## Existing scope and compatibility
+The first replay stopped because the test attempted to use handles without selecting the pool restored by Redo. The correction explicitly selects that object through its chip. Production behavior and all assertions were retained. LIVE_DRAWING_IMPLEMENTATION.md records actual results and limitations. The successful initial build still logged the known KSP/AWT exception; no tooling repair is claimed.
 
-The same workspace retains connected pool/coping edits, radial commands, source-image intake/calibration, independent distance comparisons and serial verified atomic saves. Format 5 reads 1–4 without inventing site identities; older builds cannot read later saves. Legacy Room projects remain separate. One draft, session-only Undo and app-owned images are not multi-project or portable recovery. Tests terminate only after verified Saved.
+## Remaining work
 
-## Next bounded outcome
+The readout is legible and leaves the target visible in reviewed captures. Existing automatic export labels still overlap in the deliberately overlapping test scene; source/house notice placement remains a presentation gap. These are technical captures, not Northstar acceptance.
 
-Use this editable site to create proposed pool/deck geometry **where the pen indicates**, instead of always inserting a predefined starter. Preserve following coping, stable IDs, the protected existing site, dependable snapping, one-operation Undo and save/reopen/output. Reuse this authority and renderer; do not grow another disconnected tracing editor, a generic toolbar or a keyboard-first workflow. Keep the Northstar bar visible alongside the next useful authoring slice.
+Protected site objects, source calibration/checks, radial commands and verified atomic saving remain. Format 5 is unchanged; legacy Room projects are separate. One draft, session-only Undo and owned images are not portable backup or multi-project management. Tests stop the app only after verified Saved.
 
-## Remaining limits and safety
+New construction is a straight-edged corner workflow, not freehand recognition or direct curved authoring. Deck exclusions, shared surfaces, attached shelves/steps, broader snapping, source PDF/rotation, alternatives and landscape scope remain unfinished. Physical S Pen/palm/barrel and hover feel, hand occlusion, latency and full drafting across every window size are unverified.
 
-Site outlines currently have 3–128 straight-edged corners, not curved/open wall paths, automatic image recognition or a survey. Final-closing-edge orthogonality is not solved automatically. PDF source intake, rotation, broader snapping, attached shelves/steps, shared surfaces, alternatives, multiple-project recovery and full landscape design are unfinished. Physical S Pen/palm/barrel delivery, draft authoring in portrait/compact views, full accessibility/handedness, hardware performance, fixed output frames and Northstar quality remain unverified. Existing portrait/compact command tests are not full drafting acceptance.
+Next: improve pen-guided alignment and edge manipulation against existing house/property/pool geometry using this same resolved target and live measurements, not more mandatory numeric forms. Preserve site locks, one-operation Undo, recovery and real-renderer visual review. Shared decking and direct curved construction are follow-ons, not accomplished by a label.
 
-Only disposable emulator data was installed/force-stopped. No user-data clearing, signing workaround, release/APK publication, private client/reference publication, permission change, runtime AI, framework/repository merger or 3D work occurred. Prior tooling/service warnings remain open absent a cause-specific fix. Keep main's router and this checkpoint tied to successful read-back-verified commits, with historical reports as evidence rather than competing directions.
+No physical app/data clearing, signing workaround, release/APK publication, private client/reference publication, permission change, runtime AI, framework/repository merger or 3D work is included. Keep routing and evidence tied to successful read-back-verified writes.
