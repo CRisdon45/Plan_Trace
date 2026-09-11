@@ -2,7 +2,7 @@ name: Android 2D integrity
 
 on:
   push:
-    branches: [research/freeform-tangent-kotlin, feat/project-geometry-seam, feat/off-tablet-integrity, feat/2d-foundation-northstar]
+    branches: [research/freeform-tangent-kotlin, feat/project-geometry-seam, feat/expert-workspace-ui, feat/off-tablet-integrity, feat/2d-foundation-northstar]
     paths:
       - 'app/**'
       - 'gradle/**'
