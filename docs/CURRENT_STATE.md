@@ -1,31 +1,33 @@
 # Current state and next-session handoff
 
-Updated 2026-09-11. Main contains this routing context, not the unfinished application. Independent development and GitHub virtual-device tests are authorized; preserve the interrupted physical tablet test, installed app, data and signing key. Verify live refs and concurrent work.
+Updated 2026-09-11. Main carries routing context, not the unfinished application. Independent implementation and GitHub virtual-device testing are authorized. Preserve the interrupted physical tablet test, installed app, data and signing key; check live refs and concurrent work.
 
-## Continue on the active branch
+## Where to continue
 
-**feat/project-geometry-seam**, PR #4 into feat/off-tablet-integrity. PR #3 targets the 2D foundation and PR #2 targets main. No application PR was merged in this session.
+Active branch: feat/project-geometry-seam, PR #4 into feat/off-tablet-integrity. PR #3 targets the 2D foundation and PR #2 main. No application PR was merged this session.
 
-Read the [active checkpoint](https://github.com/CRisdon45/Plan_Trace/blob/feat/project-geometry-seam/docs/CURRENT_STATE.md). Saved documentation commit: **0bf4fa0dab824ec92d65866355934dc9e4cb6950**. Tested application: **571a28c97c9ad8be7666f25eb5bbba5d83fc94a9**. The documentation report was read back successfully; it is not a new application build.
+Read the [active checkpoint](https://github.com/CRisdon45/Plan_Trace/blob/feat/project-geometry-seam/docs/CURRENT_STATE.md). Saved, read-back-verified documentation checkpoint: **2d708ec0c5da91b72153353c9c106aae005280d9**. Verified app/test revision: **da3a2a1aba197b80d9fd4e0205209a1297ebbf7b**. Production code is unchanged from c69a148; da3a2a1 corrects one test's object-selection step. Documentation is not a new application build.
 
-## Latest outcome
+## Latest owner requirement and outcome
 
-View -> Site -> House or Property now creates real existing-site vectors over the calibrated image. Mark corners with the pen, optionally align successive edges to the first segment, and deliberately close. No typed dimensions are required. Draft corners remain temporary; closure is one object and one Undo step.
+Cody wants the line distance beside the moving drawing target, so he can be precise without routinely typing. This is recorded in the active checkpoint and decision D19. The guide, value and eventual endpoint must use the same actual snapped/constrained target.
 
-The house/property objects start locked and marked TRACED. Site controls provide deliberate unlock/edit/relock. Their original image registration remains provenance; moving/rescaling/removing the raster does not silently move these vectors. Alignment-review notices preserve that distinction. Hiding the image leaves the house and property outlines in the actual renderer and export.
+Draw -> Pool and Draw -> Paving now begin hand-placed corner outlines. Pool closure includes following coping; paving remains a deck boundary, not a shared filled surface. Closure is one Add/Undo step. The existing curved starter remains available. No dimension typing is required.
 
-## Verified evidence
+A floating readout shows the current line and closing-edge length beside the actual endpoint. It also serves existing-site corner drawing, both incident lengths during vertex edits, analytic arc/radius during curve edits and displacement during object movement. It is a noninteractive canvas overlay, not a saved/exported annotation. Feet/inches display is rounded to eighths and marked approximate when appropriate; stored coordinates are unchanged. This does not add eighth-inch snapping or certify physical/source accuracy.
 
-[Unit/build run 34616514170](https://github.com/CRisdon45/Plan_Trace/actions/runs/34616514170): **182 tests, zero failures/errors/skips, successful debug assembly**. [Android run 34616514212](https://github.com/CRisdon45/Plan_Trace/actions/runs/34616514212): real app/instrumentation builds and **nine scenarios passed**. Downloaded XML/results and all 20 active-window capture records were checked. The completed four-object, format-5 draft was byte-identical across saved force-stop/reopen. Actual reopened, source-hidden, warning and vector-export images were opened.
+## Verification
 
-The first replay exposed source-drag cancellation caused by a preview-driven warning resizing the canvas. Committed-state notices and two layout regressions corrected it. The vector export still has a house notice touching a property line; label layout is not accepted presentation polish. Scope, failures and hashes are in the [site-outline report](https://github.com/CRisdon45/Plan_Trace/blob/0bf4fa0dab824ec92d65866355934dc9e4cb6950/docs/SITE_OUTLINE_IMPLEMENTATION.md).
+[Unit/build run 34622090828](https://github.com/CRisdon45/Plan_Trace/actions/runs/34622090828): **195 tests, zero failures/errors/skips; debug assembly succeeded**. [Android run 34622090815](https://github.com/CRisdon45/Plan_Trace/actions/runs/34622090815): app/instrumentation builds and **all eleven scenarios passed**. Downloaded XML, results, archive hashes and 26 capture-window records were checked. Actual live line, vertex, site-line, reopened-workspace and PNG images were opened.
 
-## Direction and next outcome
+The new held-pointer test observed 10-to-12-foot feedback, matched the placed endpoint, displayed a 9-foot closing edge, and created a 12-by-9-foot pool with coping. It checked edit cancellation, site-line feedback and a concave deck. The completed six-object format-5 document was byte-identical across saved force-stop/reopen. Existing protected-site, source, radial and command-layout cases remain.
 
-Cody rarely wants to type dimensions. Direct pen manipulation, dependable snapping and context are primary, with typed values only a fallback. Next, use this editable site to author proposed pool/deck geometry where the pen indicates instead of always inserting predefined starters. Preserve coping, site protection, one-operation Undo and save/reopen through the same authority. Do not grow a disconnected tracing editor or another numeric form.
+Scope, hashes and the corrected initial test-navigation failure are in the [live-drawing report](https://github.com/CRisdon45/Plan_Trace/blob/2d708ec0c5da91b72153353c9c106aae005280d9/docs/LIVE_DRAWING_IMPLEMENTATION.md). Source code and assertions were not weakened to fix the test. Earlier tooling exceptions remain open.
 
-## Boundaries
+## Next outcome and limits
 
-Format 5 reads 1–4 without inventing site metadata; older builds cannot read newer saves. Legacy Room projects remain separate. One local draft and session-only Undo are not multi-project/portable recovery. Site outlines are straight, closed references, not automatic recognition, curved/open wall paths, survey boundaries or certified quantities. PDF intake, rotation, full landscape scope, attached features and Northstar quality remain unfinished.
+Improve pen-based alignment and edge manipulation against actual house/property/pool geometry using this same measured target, not more mandatory numeric forms. Preserve locks, one-operation Undo, recovery and real-renderer visual review.
 
-Physical S Pen/palm/barrel feel, full draft creation in portrait/compact layouts, accessibility/handedness and hardware performance remain unverified. Existing command-layout tests are not complete drafting acceptance. No physical installation, user-data clearing, signing workaround, app merge, release/APK publication, private client/reference publication, permission change, runtime AI, framework/repository merger or 3D work occurred. Earlier tooling/service warnings remain open. Update this router only from actual successful writes and checked evidence.
+This is corner-based straight authoring, not freehand recognition or direct curved construction. The legacy page-sketch editor and source-calibration/movement modes did not receive the new overlay. Shared decking, attached features, source PDF/rotation, alternatives, landscape scope and portable recovery remain unfinished. Format 5 is unchanged; legacy Room plans remain separate. One draft and session-only Undo are not multi-project/portable backup.
+
+Physical S Pen/palm/hover/barrel feel, hand occlusion, hardware latency and final Northstar style remain unverified. The synthetic overlapping scene still has automatic export-label collisions; it is not a polished presentation sheet or collision-aware layout. No physical installation, data clearing, signing workaround, app merge, release/APK publication, private client/reference publication, permission change, runtime AI, framework/repository merger or 3D work occurred.
