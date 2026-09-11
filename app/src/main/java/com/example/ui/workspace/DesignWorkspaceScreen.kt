@@ -114,14 +114,7 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
             }
             val doc = state.shownDocument
             if (doc != null) {
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("${doc.objects.size} objects", modifier = Modifier.testTag("workspace-object-count"), style = MaterialTheme.typography.labelMedium)
-                    doc.objects.forEachIndexed { index, obj ->
-                        FilterChip(selected = obj.id == state.selectedId, onClick = { model.select(obj.id) },
-                            label = { Text(obj.name + if(obj.locked) " · Locked" else "") }, modifier = Modifier.testTag("workspace-object-$index"))
-                    }
-                }
+                WorkspaceObjectNavigator(doc.objects, state.selectedId, model::select)
                 WorkspaceCanvas(state, model, touchEdit, showGrid, gridSnap, geometrySnap, commandRequest, inspector,
                     !exporting && !leaveUnsaved, { inspector=null; model.stopSiteTool() }, ::command,
                     { sitePicker.launch(arrayOf("image/png","image/jpeg")) }, { inspector="site" },
@@ -131,7 +124,6 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
                 state.smoothDraft?.let { draft -> SmoothOutlineControls(draft,model) }
                 val selected = doc.objects.firstOrNull { it.id == state.selectedId }
                 WorkspaceTraceStatus(state)
-
                 WorkspaceContextBar(selected, state.message)
             } else if (state.loading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         }
