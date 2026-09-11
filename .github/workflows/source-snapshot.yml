@@ -18,7 +18,7 @@ jobs:
         shell: bash
         run: |
           mkdir snapshot
-          git archive --format=tar HEAD app/src app/build.gradle.kts app/proguard-rules.pro gradle gradlew gradlew.bat build.gradle.kts settings.gradle.kts gradle.properties .env.example .github README.md AGENTS.md docs tools metadata.json .gitignore > snapshot/source.tar
+          git archive --format=tar HEAD app/src app/build.gradle.kts app/proguard-rules.pro gradle gradlew gradlew.bat build.gradle.kts settings.gradle.kts gradle.properties .github README.md AGENTS.md docs tools metadata.json .gitignore > snapshot/source.tar
           git rev-parse HEAD > snapshot/REVISION.txt
           sha256sum snapshot/source.tar > snapshot/SHA256SUMS.txt
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
