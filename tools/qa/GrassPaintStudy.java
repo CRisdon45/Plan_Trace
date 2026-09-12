@@ -22,6 +22,7 @@ public final class GrassPaintStudy {
         });
         save(dir,"grass",1024,717,pixels);
         sheet(dir,stages);
+        finishingSheet(dir,stages);
         System.out.printf("Production grass paint: %.3f s, %s%n",(System.nanoTime()-start)/1e9,dir);
     }
     static BufferedImage save(File dir,String name,int w,int h,int[] pixels)throws Exception{
@@ -39,11 +40,28 @@ public final class GrassPaintStudy {
         g.drawString("GRASS / PAINT BUILDUP",25,42);
         g.setFont(new Font("SansSerif",Font.PLAIN,15));
         g.drawString("Five cumulative stages from the production renderer. Same surface and seed; full frames shown.",25,68);
-        String[] labels={"1  BASE WASH","2  MIDTONE GLAZES","3  DRYING FRONTS","4  SMALL DEPOSITS","5  FINAL GRASS"};
+        String[] labels={"1  BASE WASH","2  MIDTONE GLAZES","3  DRYING FRONTS","4  LIFTED TEXTURE","5  FINAL GRASS"};
         for(int i=0;i<stages.size();i++){
             int x=25+i*374;g.drawImage(stages.get(i),x,92,354,248,null);
             g.setFont(new Font("SansSerif",Font.BOLD,16));g.drawString(labels[i],x,369);
         }
         g.dispose();ImageIO.write(sheet,"png",new File(dir,"grass-layer-progression.png"));
+    }
+    static void finishingSheet(File dir,List<BufferedImage> stages)throws Exception{
+        BufferedImage sheet=new BufferedImage(1800,545,BufferedImage.TYPE_INT_RGB);
+        java.awt.Graphics2D g=sheet.createGraphics();
+        g.setColor(new Color(249,247,239));g.fillRect(0,0,1800,545);
+        g.setColor(new Color(44,57,38));
+        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+        g.setFont(new Font("Serif",Font.PLAIN,28));g.drawString("GRASS / FROM WASH TO FINISHED DETAIL",25,42);
+        String[] labels={"3  SHADOW WASHES","4  LIFTED TEXTURE","5  FINAL DETAIL"};
+        for(int i=0;i<3;i++){
+            int x=25+i*592;g.drawImage(stages.get(i+2),x,70,566,396,null);
+            g.setFont(new Font("SansSerif",Font.BOLD,19));g.drawString(labels[i],x,497);
+        }
+        g.setFont(new Font("SansSerif",Font.PLAIN,14));
+        g.drawString("Cumulative production paint. Same seed and scale, full frames. Boundary ink is added in the Android renderer.",25,525);
+        g.dispose();ImageIO.write(sheet,"png",new File(dir,"grass-stages-3-4-5.png"));
     }
 }

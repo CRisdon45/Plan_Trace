@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import com.example.data.ProjectJsonConverter
 import com.example.engine.NorthstarGroundMaterials
+import com.example.engine.NorthstarGrassPaint
 import com.example.engine.WatercolorRenderer
 import com.example.model.*
 import org.junit.Assert.*
@@ -20,6 +21,35 @@ import kotlin.math.abs
 @Config(sdk = [35])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class GroundMaterialTest {
+    @Test fun `texture lifts paint and final detail adds a distinct dark range`() {
+        var seed = 0xCBF29CE484222325uL.toLong()
+        for (c in "ground-study") seed = (seed xor c.code.toLong()) * 0x100000001B3L
+        val stages = linkedMapOf<String, IntArray>()
+        NorthstarGrassPaint.render(1024, 717, seed) { name, width, height, pixels ->
+            if (name.startsWith("03") || name.startsWith("04") || name.startsWith("05")) {
+                stages[name] = pixels
+                val bitmap = Bitmap.createBitmap(pixels, width, height, Bitmap.Config.ARGB_8888)
+                save(bitmap, "grass-stage-$name.png")
+                bitmap.recycle()
+            }
+        }
+        val shadow = stages.getValue("03-drying-fronts")
+        val texture = stages.getValue("04-lifted-texture")
+        val finished = stages.getValue("05-final-grass")
+        fun light(c: Int) = (Color.red(c) + Color.green(c) + Color.blue(c)) / 3f
+        var lifted = 0; var repainted = 0; var textureDark = 0; var finalDark = 0
+        for (i in shadow.indices) {
+            if (light(texture[i]) - light(shadow[i]) > 12) lifted++
+            if (light(shadow[i]) - light(texture[i]) > 8) repainted++
+            if (light(texture[i]) < 90) textureDark++
+            if (light(finished[i]) < 90) finalDark++
+        }
+        // These prove distinct paint operations, not a subjective quality score.
+        assertTrue("Texture must materially lift existing washes", lifted > shadow.size * .07)
+        assertTrue("Texture must also deposit smaller paint forms", repainted > shadow.size * .10)
+        assertTrue("Final accents must create a distinct dark range", finalDark > textureDark + shadow.size * .02)
+    }
+
     private fun element(material: SurfaceMaterial, id: String = "ground-study") = RectangleElement(
         id = id, layerId = "base", left = 50f, top = 50f, right = 1050f, bottom = 750f,
         strokeWidth = 1.7f, material = material, style = StrokeStyle.WATERCOLOR_WASH)

@@ -66,6 +66,7 @@ internal object NorthstarGroundMaterials {
         // imply incorrect cross-pool coping joints, so only the stone wash applies.
         if (!grass && !id.endsWith(":coping-outer")) drawJoints(canvas, bounds, scale, alpha, id)
         drawDryBoundary(canvas, path, bounds, grass, alpha, id)
+        if (grass) drawGrassEdgeDetail(canvas, path, bounds, alpha, id)
     }
 
     private fun generate(key: Key): Wash {
@@ -290,6 +291,50 @@ internal object NorthstarGroundMaterials {
         val v = FloatArray(9); matrix.getValues(v)
         return max(hypot(v[Matrix.MSCALE_X], v[Matrix.MSKEW_Y]) * bounds.width(),
             hypot(v[Matrix.MSKEW_X], v[Matrix.MSCALE_Y]) * bounds.height()).coerceAtLeast(1f)
+    }
+
+    /** Final grass accents belong to the actual silhouette, including concave edges.
+     * The caller's exact clip contains every mark; no rectangle border is baked into paint.
+     */
+    private fun drawGrassEdgeDetail(canvas: Canvas, path: Path, bounds: RectF, alpha: Float, id: String) {
+        val unit = max(bounds.width(), bounds.height()) / SIDE
+        val measure = PathMeasure(path, true)
+        val random = Random(seed(id) xor 82041L)
+        val position = FloatArray(2)
+        val tangent = FloatArray(2)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeCap = Paint.Cap.ROUND }
+        var distance = 0f
+        var count = 0
+        while (distance < measure.length && count++ < 800) {
+            measure.getPosTan(distance, position, tangent)
+            val grouping = .5f + .5f * sin(distance / unit * .023f)
+            if (random.nextFloat() < .32f + .5f * grouping) repeat(3) {
+                val offset = (random.nextFloat() - .5f) * 30f * unit
+                val along = (random.nextFloat() - .5f) * 8f * unit
+                val x = position[0] - tangent[1] * offset + tangent[0] * along
+                val y = position[1] + tangent[0] * offset + tangent[1] * along
+                val r = (.65f + random.nextFloat() * 2.3f) * unit
+                paint.color = if (random.nextInt(3) == 0) Color.rgb(35, 56, 15) else Color.rgb(71, 100, 25)
+                paint.alpha = ((90 + random.nextInt(130)) * alpha).toInt()
+                val mark = Path()
+                if (random.nextInt(4) == 0) {
+                    val length = (3f + random.nextFloat() * 5f) * unit
+                    mark.moveTo(x, y)
+                    mark.quadTo(x + tangent[0] * length * .4f, y + tangent[1] * length * .4f,
+                        x - tangent[1] * length, y + tangent[0] * length)
+                    paint.style = Paint.Style.STROKE
+                    paint.strokeWidth = (.65f + random.nextFloat() * .6f) * unit
+                } else {
+                    mark.moveTo(x - r, y)
+                    mark.quadTo(x - r * 1.2f, y - r, x + r * .3f, y - r * .7f)
+                    mark.quadTo(x + r * 1.3f, y + r * .4f, x, y + r)
+                    mark.close()
+                    paint.style = Paint.Style.FILL
+                }
+                canvas.drawPath(mark, paint)
+            }
+            distance += max((4f + random.nextFloat() * 5f) * unit, measure.length / 750f)
+        }
     }
     private fun seed(id: String): Long {
         var hash = 0xCBF29CE484222325uL.toLong()

@@ -7,7 +7,15 @@ targets the merged straight- and smooth-pool interaction seam in
 **feat/project-geometry-seam**. Do not reset the application branch to an older
 documentation checkpoint.
 
-## Active owner correction: grass only
+## Active owner correction: grass finishing steps 4 and 5
+
+The latest owner feedback accepts the improvement at `5bf421b` but identifies
+it as approximately step 3 of the supplied close-up study. Current work extends
+it through texture lifting and final detail. The first three paint stages are
+preserved. The added passes and exact-path edge accents are described in
+[the grass study](GRASS_PAINT_STUDY.md). New CI evidence is pending for this
+follow-up; the earlier evidence below still refers to `5bf421b`.
+
 
 The owner rejected the grass at `f52ea32` as **5/10** and explicitly set a **9/10**
 visual goal. The earlier checks below establish technical behavior, not accepted

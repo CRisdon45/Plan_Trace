@@ -5,6 +5,27 @@ honest **9/10**, including the minute paint details in the supplied close-ups.
 Passing regression tests does not establish that score. Water, decking and the
 rest of Northstar are outside this revision.
 
+## Steps 4 and 5 follow-up
+
+The owner found `5bf421b` much better, but judged it to have reached only step 3.
+The finishing stages now have substantive, separate jobs. The first three stages
+remain pixel-identical in the local full-resolution study. Step 4 lifts selected
+parts of existing glazes back toward the retained underpainting, then deposits
+smaller, connected scalloped forms with their own drying fronts. Step 5 adds
+middle-sized green marks, a stronger near-black range, fine curved strokes and
+small lighter marks. Density follows the painted islands and varies spatially.
+Final perimeter deposits follow the actual Android path, including concave
+edges, rather than a rectangle baked into the texture.
+
+The first follow-up attempt used a warped scalar field and produced stretched
+ribbons. It was rejected on visual inspection. Related polygon masks create the
+final lifting structure instead. Three local iterations adjusted connectivity
+and final mark strength; two object seeds were inspected. The desktop adapter
+now includes a full-frame 3/4/5 comparison. A renderer test captures those stages
+and checks substantial lifting, new deposition and an increased dark range.
+Those tests establish distinct operations, not a 9/10 quality score. Android CI
+verification for this follow-up is pending at this source checkpoint.
+
 ## What the reference requires
 
 The supplied study depicts thin yellow-green underpainting; connected, rounded

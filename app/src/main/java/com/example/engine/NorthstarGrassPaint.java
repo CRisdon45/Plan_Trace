@@ -8,7 +8,7 @@ import java.util.Random;
 /**
  * Deterministic grass pigment, shared by Android and the desktop inspection tool.
  * Independent implementation of recursive polygon glazes (Hobbs, 2017), with
- * finite-volume edge redistribution and Kubelka-Munk layering (Curtis et al., 1997).
+ * mass-conserving edge redistribution and Kubelka-Munk layering (Curtis et al., 1997).
  * This is an artistic drying approximation, not a shallow-water fluid solver.
  * Coordinates and the paper field belong to the object, never to the viewport.
  */
@@ -61,6 +61,7 @@ public final class NorthstarGrassPaint {
         final float[][] color;
         final float[] paper;
         float[][] underpainting;
+        float[] textureField;
         Studio(int w,int h,long seed) {
             this.w=w; this.h=h; this.seed=seed; random=new Random(seed);
             color=new float[3][w*h]; paper=new float[w*h];
@@ -92,6 +93,7 @@ public final class NorthstarGrassPaint {
             for (int j=0;j<14;j++) wash(between(w*.50,w*1.05),between(-h*.10,h*1.1),
                     between(40,115),j%3==0?GREEN:OLIVE,between(.20,.46),.30,32,2,true);
             snapshot(o,"03-drying-fronts");
+            liftAndRepaintTexture();
             // Smaller deposits follow the same wet-front construction, with much less load.
             for (int j=0;j<340;j++) {
                 double x=between(0,w),y=between(0,h);
@@ -99,15 +101,75 @@ public final class NorthstarGrassPaint {
                 if (density<.33) continue;
                 wash(x,y,between(3,23),j%5==0?EARTH:OLIVE,between(.04,.21),.12,12,1,true);
             }
-            snapshot(o,"04-granulation");
-            for (int j=0;j<6500;j++) {
+            snapshot(o,"04-lifted-texture");
+            // Mid-sized green marks bridge the wash masses and the final ink. Their
+            // density follows the painted islands, leaving the lifted passages open.
+            for (int j=0;j<2800;j++) {
                 double x=between(0,w),y=between(0,h);
-                double density=noise(x*.012,y*.012,45);
-                double side=.55+.65*x/w;
-                if (random.nextDouble()>Math.max(0,(density-.25)*side)) continue;
-                wash(x,y,between(.65,3.8),j%7==0?null:j%5==0?INK:GREEN,between(.38,1.6),.06,4,1,false);
+                double density=detailDensity(x,y);
+                if(random.nextDouble()>density*1.15)continue;
+                wash(x,y,between(2,8),j%4==0?EARTH:GREEN,between(.12,.48),.14,8,1,true);
+            }
+            for (int j=0;j<12000;j++) {
+                double x=between(0,w),y=between(0,h);
+                if(random.nextDouble()>detailDensity(x,y))continue;
+                double radius=between(.65,4.8);
+                Pigment pigment=j%8==0?null:j%2==0?INK:GREEN;
+                if(j%6==0)blade(x,y,between(4,11),between(.6,1.6),pigment,between(.6,1.8));
+                else wash(x,y,radius,pigment,between(.45,2.1),.10,4,1,false);
             }
             snapshot(o,"05-final-grass");
+        }
+
+        /** Lift an irregular network back to the retained underpainting, then glaze
+         * the adjoining islands. This changes the middle-scale paint structure; it
+         * is not white speckle added over the finished image. Scalloped polygons define the reserves.
+         * Earlier glazes remain underneath.
+         */
+        void liftAndRepaintTexture() {
+            // A union of related scalloped paint shapes leaves branching reserves
+            // between islands without stretching them into contour-map ribbons.
+            float[] difference=new float[(w+1)*h];
+            int islands=Math.max(1,(int)(145.0*w*h/(1024*717)));
+            for(int j=0;j<islands;j++) {
+                List<Vertex> base=deform(contour(between(-25,w+25),between(-25,h+25),between(22,65)),1);
+                for(int k=0;k<8;k++)raster(deform(base,2),0,0,w,h,difference);
+            }
+            float[] mask=new float[w*h];
+            textureField=new float[w*h];
+            for(int y=0;y<h;y++) {
+                float sum=0;
+                for(int x=0;x<w;x++) {
+                    int i=y*w+x;
+                    sum+=difference[y*(w+1)+x];
+                    mask[i]=Math.max(0,Math.min(1,sum/8));
+                    textureField[i]=mask[i];
+                    double lifting=(1-mask[i])*(.70+.16*paper[i]);
+                    for(int c=0;c<3;c++)color[c][i]+=(underpainting[c][i]-color[c][i])*lifting;
+                }
+            }
+            float[] deposited=dry(mask,w,h,.22);
+            for(int i=0;i<mask.length;i++) {
+                double tooth=.55+.9*paper[i];
+                apply(i,.24*deposited[i]*tooth,OLIVE);
+            }
+        }
+        void blade(double x,double y,double length,double width,Pigment pigment,double load) {
+            double angle=between(0,Math.PI*2),curve=between(-.4,.4)*length;
+            List<Vertex> outline=new ArrayList<>();
+            for(int side=0;side<2;side++)for(int j=0;j<=8;j++) {
+                double t=(side==0?j:8-j)/8.0;
+                double u=t*length,v=curve*t*t+(side==0?1:-1)*width*Math.sin(Math.PI*t)*.5;
+                outline.add(new Vertex(x+u*Math.cos(angle)-v*Math.sin(angle),
+                        y+u*Math.sin(angle)+v*Math.cos(angle),.04));
+            }
+            deposit(outline,pigment,load,.03,4,false);
+        }
+        double detailDensity(double x,double y) {
+            int i=Math.min(h-1,(int)y)*w+Math.min(w-1,(int)x);
+            double islands=textureField[i];
+            double grouping=noise(x*.026,y*.026,401);
+            return Math.max(.025,(.055+.36*islands)*(.35+1.05*grouping)*(.60+.65*x/w));
         }
 
         List<Vertex> contour(double x,double y,double radius) {
@@ -156,7 +218,9 @@ public final class NorthstarGrassPaint {
 
         void wash(double cx,double cy,double radius,Pigment pigment,double load,double drying,
                   int layers,int refinements,boolean reservePaper) {
-            List<Vertex> base=deform(contour(cx,cy,radius),refinements);
+            deposit(deform(contour(cx,cy,radius),refinements),pigment,load,drying,layers,reservePaper);
+        }
+        void deposit(List<Vertex> base,Pigment pigment,double load,double drying,int layers,boolean reservePaper) {
             double minX=w,minY=h,maxX=0,maxY=0;
             for(Vertex v:base) { minX=Math.min(minX,v.x); maxX=Math.max(maxX,v.x);
                 minY=Math.min(minY,v.y); maxY=Math.max(maxY,v.y); }
