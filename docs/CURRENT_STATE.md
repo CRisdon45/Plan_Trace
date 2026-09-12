@@ -1,8 +1,8 @@
 # Current state and next-session handoff
 
-Updated 2026-09-12 after the verified presentation-mode selector slice. The
+Updated 2026-09-12 after the verified water/coping/deck hierarchy slice. The
 current branch is **feat/expert-workspace-ui**; its verified application head is
-`ecfb845`, followed only by this checkpoint documentation. Draft PR #6
+`59ff0e0`, followed only by this checkpoint documentation. Draft PR #6
 targets the merged straight- and smooth-pool interaction seam in
 **feat/project-geometry-seam**. Do not reset the application branch to an older
 documentation checkpoint.
@@ -32,8 +32,11 @@ presentation role: pool and spa use water, paving uses paving, turf uses turf,
 gravel uses gravel, walls use masonry, and coping uses paving. Site outlines
 remain unfilled. Ground surfaces render beneath pools and spas, with walls
 above them. Technical removes material fills, Graphic uses flat material fills,
-and Northstar adds one broad deterministic tonal cue clipped to the exact object
-path. Northstar is the current default for both the real workspace canvas and
+and Northstar adds deterministic tonal structure clipped to the exact object
+path. Water now uses a calm sheet-directed depth field and a restrained inner
+edge cue; paving and coping use a much quieter field. Northstar line weight also
+establishes deck below coping below water without changing Technical or Graphic
+weights. Northstar is the current default for both the real workspace canvas and
 PNG/PDF output. These styles are transient projection data: changing appearance
 does not change saved geometry, object ordering, IDs, hit testing or revision.
 
@@ -48,52 +51,53 @@ authoritative project JSON and does not consume Undo/Redo.
 
 ## Verified evidence
 
-[Android 2D integrity run 34663149927](https://github.com/CRisdon45/Plan_Trace/actions/runs/34663149927)
-at `ecfb845` passed **287 tests with zero failures, errors or skips**, including
-the appearance-only projection contract, deterministic clipped tonal rendering,
-safe preference decoding, immediate selector behavior, current-mode semantics,
-unchanged learned radial directions, the compact drawing-strip
-behavior/accessibility contract, live drawing and
-object navigation, the separate nine-test runtime policy audit, resolved-runtime
-and manifest checks, and debug assembly.
+[Android 2D integrity run 34664674103](https://github.com/CRisdon45/Plan_Trace/actions/runs/34664674103)
+at `59ff0e0` passed **288 tests with zero failures, errors or skips**, including
+the appearance-only projection contract, deterministic clipped sheet-directed
+water depth, quieter paving, preserved Technical/Graphic weights and the
+Northstar deck/coping/water edge hierarchy. Selector semantics, learned radial
+directions, compact workspace behavior, geometry, persistence and export tests
+also remain green. The separate nine-test runtime policy audit, resolved-runtime
+and manifest checks, and debug assembly passed.
 The downloaded report archive digest is
-`ed39bf88d7e5b7830698695c5ba749fe76a560895250d42fd5faf98e22d049b1`.
+`1105556cf5227f1abdcd9b58cc75bf9eebba6fd1934a8f85bdb51cc6d0241a64`.
+The generated connected-coping PNG digest is
+`59fdba3fc43a7182d23306800e7542af284b8cc90051d04cde1b37ed2366e0a9`.
 
-[Android workspace emulator run 34663149892](https://github.com/CRisdon45/Plan_Trace/actions/runs/34663149892)
+[Android workspace emulator run 34664674104](https://github.com/CRisdon45/Plan_Trace/actions/runs/34664674104)
 passed **all 19 scenarios**, including hand-placed pool/deck outlines,
 held-pointer live distances, exact snapping, rejected/cancelled side edits,
 smooth-pool creation and editing, save/restart and reopening, plus Technical,
 Graphic and Northstar selection through the real View command. Its artifact
-digest is `c2bee666509b936a45b1aa4f071382307d66e96d0ebdc9537a4b3db6224d2dbb`.
+digest is `e802200815a717bd32d43260284f2e73ca60a67ea8f315edc1aba798d21eb626`.
 The downloaded archive matched that digest. Visual inspection of the real
 workspace, selector and three 1400x1000 vector PNGs confirms that Technical is
-linework-only, Graphic is flat material color and Northstar adds the same clipped
-tonal cue in canvas and export. All three use identical smooth/concave project
-geometry. Project JSON before and after the selector scenario was byte-identical
-with SHA-256 `610f0f6a4211b1032f3dd59d56f7547dce01eaa0b11d52f4ed940293bd536ab4`.
+linework-only and Graphic remains the prior flat material baseline. Northstar
+now gives the water stronger directional depth and inner edge definition while
+the exact coping band and paving stay subordinate in both canvas and export.
+All three use identical smooth/concave project geometry. Project JSON before and
+after the selector scenario was byte-identical with SHA-256
+`9c864d95df3e9a224974793c72ef8f35d6fa684f6d9e6241d7b56486b3bebc25`.
+Technical and Graphic export digests are unchanged from the prior verified slice;
+the Northstar export digest is
+`65c7f509db30cedd9b21ab96270dbd72cbde0bfa41409a8b3eeb27d00422c1a4`.
 The site raster remains a reference layer behind projected objects.
 
 This remains synthetic Android-emulator evidence, not physical S Pen, palm
 rejection, hardware latency or owner visual acceptance. The synthetic reference
-scene is intentionally not a client property. The current tonal cue is a
-deliberately elementary first material layer, not a claim of private-reference
-matching, full material language or Northstar renderer parity.
+scene is intentionally not a client property. These broad deterministic cues
+are still an early material layer, not a claim of private-reference matching,
+complete paving joints, full material language or Northstar renderer parity.
 
 ## Next outcome
 
 Review this bounded slice into **feat/project-geometry-seam** without merging it
-implicitly. The next bounded visual outcome is stronger water/coping/deck
-hierarchy using deterministic, orientation-stable rendering primitives in the
-shared canvas/export path. Use approved Northstar reference evidence when it is
-available; do not substitute arbitrary texture or claim reference matching from
-the synthetic scene. Preserve the now-verified Technical and Graphic baselines,
-exact clipping and view-only appearance state while comparing the same
-rectilinear, concave and smooth geometry.
-
-After dependable manual authoring and the coherent interaction pass, continue
-rectangle/convex-polygon pool generation using the same editable objects, target
-water area and explicit outside-coping containment. Do not replace this with a
-numeric-form milestone or restart solver/library research.
+implicitly. The next bounded product outcome is rectangle/convex-polygon pool
+generation using the same editable objects, target water area and explicit
+outside-coping containment. Preserve direct pen placement, exact geometry,
+whole-action Undo, and the now-verified Technical/Graphic/Northstar rendering
+path. Do not replace this with a numeric-form milestone or restart solver/library
+research.
 
 ## Boundaries still in force
 
