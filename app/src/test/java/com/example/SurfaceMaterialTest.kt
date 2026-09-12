@@ -156,6 +156,38 @@ class SurfaceMaterialTest {
             android.graphics.Color.red(bitmap.getPixel(160, 90)) + 40)
     }
 
+    @Test fun `caustic light has fine and broad crests while preserving open water`() {
+        fun render(id: String): Bitmap = Bitmap.createBitmap(1000, 600, Bitmap.Config.ARGB_8888).also {
+            NorthstarWaterDetails.drawCaustics(Canvas(it), id, android.graphics.RectF(0f, 0f, 1000f, 600f), 1f)
+        }
+        val first = render("caustic-study")
+        NorthstarWaterDetails.clearCache()
+        assertTrue(first.sameAs(render("caustic-study")))
+        assertFalse(first.sameAs(render("neighbor-caustics")))
+        val pixels = IntArray(1000 * 600)
+        first.getPixels(pixels, 0, 1000, 0, 0, 1000, 600)
+        val core = pixels.count { android.graphics.Color.alpha(it) > 140 }
+        val crests = pixels.count { android.graphics.Color.alpha(it) > 220 }
+        val widths = mutableListOf<Int>()
+        for (y in 30 until 570 step 13) {
+            var run = 0
+            for (x in 20 until 980) {
+                if (android.graphics.Color.alpha(first.getPixel(x, y)) > 140) run++
+                else if (run > 0) { widths += run; run = 0 }
+            }
+        }
+        val output = java.io.File("build/reports/northstar-watercolor").apply { mkdirs() }
+        java.io.File(output, "caustic-light-only.png").outputStream().use {
+            first.compress(Bitmap.CompressFormat.PNG, 100, it)
+        }
+        java.io.File(output, "caustic-light-metrics.txt").writeText(
+            "core pixels=$core/${pixels.size}\ncrest pixels=$crests\nscan widths=${widths.sorted()}\n")
+        assertTrue("light should remain fine enough to expose the paint", core in pixels.size / 40..pixels.size / 4)
+        assertTrue("some concentrated crests should be bright", crests > 100)
+        assertTrue("retain fine threads", widths.count { it in 1..2 } > 20)
+        assertTrue("retain broader folds and confluences", widths.count { it in 4..9 } > 20)
+    }
+
     @Test fun `polygon glazes retain broad washes and fine blooms independently of caustics`() {
         fun wash(id: String): Bitmap = Bitmap.createBitmap(768, 480, Bitmap.Config.ARGB_8888).also {
             it.eraseColor(android.graphics.Color.rgb(120, 199, 221))

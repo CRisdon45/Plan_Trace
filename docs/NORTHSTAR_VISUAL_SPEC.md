@@ -39,6 +39,13 @@ translucent edges and delicate bright caustics all matter. Their density and
 contrast need composition, not omission. Work may be staged, but tests passing
 or a smooth blue gradient do not establish Northstar visual acceptance.
 
+Caustics should read as folded light: flowing boundaries, tapered crests, soft
+shoulders, small luminous confluences and uneven cell size. Uniformly stroked
+polygon grids, hard-ended white dashes, identical junctions and heavy all-over
+glow do not meet that target. Keep painterly blue visible between the highlights.
+The owner's current sequence is to finish caustics, then develop grass and decking
+with the staged watercolor layering shown in the supplied material study.
+
 Turf uses broad irregular tonal variation, retained paper highlights and soft pigment edges. A diagonal gradient alone does not achieve the reference. Do not add high-frequency speckles or visible repeated tile seams.
 
 Paving/coping maintain exact boundaries and coherent pattern orientation/scale. Joints are subordinate to outer geometry and simplify at sheet zoom without changing design dimensions. Gravel stays a quiet field. Planting eligibility does not require a decorative bed boundary.

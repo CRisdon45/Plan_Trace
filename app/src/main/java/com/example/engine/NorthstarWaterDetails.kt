@@ -12,11 +12,13 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import kotlin.math.sqrt
+import kotlin.math.pow
 
 /** Deterministic highlight and edge-detail passes layered above the pigment field. */
 internal object NorthstarWaterDetails {
     private data class WebKey(val stableId: String, val aspect: Float)
-    private data class Web(val quiet: Path, val strong: Path, val glints: Path)
+    private data class Web(val halo: Path, val quiet: Path, val strong: Path, val glints: Path)
     // Fixed normalized coordinates keep tessellation independent of zoom/output.
     // Bounded to 24 objects; cached paths are only read after construction.
     private val webs = LruCache<WebKey, Web>(24)
@@ -40,7 +42,7 @@ internal object NorthstarWaterDetails {
      * covering the entire pool in a repeated texture. The irregular cells are
      * generated in object-local space, so moving the pool moves the same drawing.
      */
-    private fun drawCaustics(canvas: Canvas, stableId: String, bounds: RectF, alpha: Float) {
+    internal fun drawCaustics(canvas: Canvas, stableId: String, bounds: RectF, alpha: Float) {
         if (bounds.width() <= 0f || bounds.height() <= 0f) return
         val longest = max(bounds.width(), bounds.height())
         val normalized = RectF(0f, 0f, bounds.width() / longest * 1000f, bounds.height() / longest * 1000f)
@@ -50,24 +52,20 @@ internal object NorthstarWaterDetails {
         }
         val pale = Color.rgb(239, 253, 255)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.STROKE
-            strokeCap = Paint.Cap.ROUND
-            strokeJoin = Paint.Join.ROUND
+            style = Paint.Style.FILL
         }
         canvas.save()
         try {
             canvas.translate(bounds.left, bounds.top)
             canvas.scale(longest / 1000f, longest / 1000f)
-            fun pass(path: Path, width: Float, strength: Int) {
+            fun pass(path: Path, strength: Int) {
                 paint.color = colorWithScaledAlpha(pale, strength, alpha)
-                paint.strokeWidth = width
                 canvas.drawPath(path, paint)
             }
-            pass(web.quiet, 5.0f, 24)
-            pass(web.strong, 5.8f, 34)
-            pass(web.quiet, 1.15f, 112)
-            pass(web.strong, 1.7f, 172)
-            pass(web.glints, 2.3f, 205)
+            pass(web.halo, 24)
+            pass(web.quiet, 76)
+            pass(web.strong, 155)
+            pass(web.glints, 205)
         } finally {
             canvas.restore()
         }
@@ -81,6 +79,10 @@ internal object NorthstarWaterDetails {
         val stableSeed = stableHash(stableId)
         val sites = ArrayList<WaterPoint>(columns * rows)
         for (row in 0 until rows) for (column in 0 until columns) {
+            // Leave occasional open areas and introduce close pairs elsewhere.
+            // A cell per lattice position otherwise reads as a regular mosaic.
+            val occupancy = stableUnit(stableSeed, column, row, 19)
+            if (occupancy < 0.10f) continue
             val stagger = if (row % 2 == 0) -stepX * 0.08f else stepX * 0.08f
             val jitterX = (stableUnit(stableSeed, column, row, 11) - 0.5f) * stepX * 0.92f
             val jitterY = (stableUnit(stableSeed, column, row, 17) - 0.5f) * stepY * 0.92f
@@ -88,8 +90,15 @@ internal object NorthstarWaterDetails {
                 (column + 0.5f) * stepX + stagger + jitterX,
                 (row + 0.5f) * stepY + jitterY,
             )
+            if (occupancy > 0.80f) {
+                val center = sites.last()
+                val angle = stableUnit(stableSeed, column, row, 23) * 6.283185f
+                sites += WaterPoint(center.x + cos(angle) * stepX * 0.36f,
+                    center.y + sin(angle) * stepY * 0.36f)
+            }
         }
 
+        val halo = Path()
         val quiet = Path()
         val strong = Path()
         val glints = Path()
@@ -112,18 +121,14 @@ internal object NorthstarWaterDetails {
                 val localMidX = ((start.x + end.x) * 0.5f).roundToInt()
                 val localMidY = ((start.y + end.y) * 0.5f).roundToInt()
                 val presence = stableUnit(stableSeed, localMidX, localMidY, 61)
-                if (presence < 0.07f) continue
+                if (presence < 0.035f) continue
                 val emphasis = stableUnit(stableSeed, localMidX, localMidY, 67)
-                val target = if (emphasis > 0.38f) strong else quiet
-                appendWaterEdge(target, start, end, stepX, stepY, phase)
-                if (emphasis > 0.80f) {
-                    // A short lifted crest, not a second uniform white outline.
-                    appendWaterEdge(glints, start, end, stepX, stepY, phase, 0.28f, 0.61f)
-                }
+                appendLightRibbon(halo, quiet, strong, glints, start, end,
+                    stepX, stepY, phase, emphasis, presence)
             }
         }
 
-        return Web(quiet, strong, glints)
+        return Web(halo, quiet, strong, glints)
     }
 
     private data class WaterPoint(val x: Float, val y: Float)
@@ -134,24 +139,72 @@ internal object NorthstarWaterDetails {
         return if (first <= second) "$first|$second" else "$second|$first"
     }
 
-    private fun appendWaterEdge(
-        target: Path, start: WaterPoint, end: WaterPoint,
-        stepX: Float, stepY: Float, phase: Float, from: Float = 0f, to: Float = 1f,
+    private fun appendLightRibbon(
+        halo: Path, quiet: Path, strong: Path, glints: Path,
+        start: WaterPoint, end: WaterPoint,
+        stepX: Float, stepY: Float, phase: Float, emphasis: Float, presence: Float,
     ) {
-        // All edges use the same smooth displacement field. Shared junctions
-        // remain joined, while straight polygon edges become flowing light ribbons.
-        for (sample in 0..16) {
-            val t = from + (to - from) * sample / 16f
-            val x = start.x + (end.x - start.x) * t
-            val y = start.y + (end.y - start.y) * t
-            val u = x / stepX
-            val v = y / stepY
-            val warpedX = x + stepX * (0.27f * sin(v * 2.1f + phase) +
-                0.12f * sin(u * 2.8f + v * 1.3f + phase))
-            val warpedY = y + stepY * (0.24f * cos(u * 1.9f + phase) +
-                0.10f * sin(v * 2.7f - u * 1.2f + phase))
-            if (sample == 0) target.moveTo(warpedX, warpedY) else target.lineTo(warpedX, warpedY)
+        val dx = end.x - start.x
+        val dy = end.y - start.y
+        if (dx * dx + dy * dy < 0.01f) return
+        val samples = (sqrt(dx * dx + dy * dy) / 1.8f).roundToInt().coerceIn(16, 160)
+        val points = ArrayList<WaterPoint>(samples + 1)
+        val widths = FloatArray(samples + 1)
+        val crests = FloatArray(samples + 1)
+        for (sample in 0..samples) {
+            val t = sample.toFloat() / samples
+            val point = flowPoint(start.x + dx * t, start.y + dy * t, stepX, stepY, phase)
+            points += point
+            // The broad light field is continuous through junctions. Local crests
+            // swell and taper along each ribbon rather than ending in round dashes.
+            val illumination = (0.62f + 0.25f * sin(point.x * 0.013f + point.y * 0.009f + phase) +
+                0.13f * cos(point.y * 0.024f - point.x * 0.007f + phase)).coerceIn(0.15f, 1f)
+            val crest = sin(t * 3.141593f).coerceAtLeast(0f).pow(1.4f)
+            val rhythm = 0.68f + 0.32f * sin(t * 6.283185f + emphasis * 8f)
+            // Near a node the band widens into a small luminous confluence.
+            val junction = (1f - (sin(t * 3.141593f)).coerceAtLeast(0f)).pow(7f)
+            val fade = if (presence < 0.14f) crest else 1f
+            widths[sample] = (0.35f + illumination * 0.55f + crest * rhythm * emphasis * 0.95f +
+                junction * illumination * 0.80f) * fade
+            crests[sample] = if (emphasis > 0.57f) widths[sample] * crest *
+                ((emphasis - 0.57f) / 0.43f) else 0f
         }
+        appendRibbon(halo, points, FloatArray(widths.size) { widths[it] * 3.4f })
+        appendRibbon(quiet, points, FloatArray(widths.size) { widths[it] * 1.7f })
+        appendRibbon(strong, points, widths)
+        if (emphasis > 0.57f) appendRibbon(glints, points, crests)
+    }
+
+    private fun flowPoint(x: Float, y: Float, stepX: Float, stepY: Float, phase: Float): WaterPoint {
+        var u = x / stepX
+        var v = y / stepY
+        // Successive shears remain invertible. All neighboring edges share the
+        // same map, so stronger curvature cannot tear their common junctions.
+        u += 0.36f * sin(v * 1.8f + phase) + 0.13f * sin(v * 4.4f - phase)
+        v += 0.32f * sin(u * 1.7f + phase) + 0.12f * sin(u * 4.1f + phase)
+        u += 0.10f * sin(v * 5.1f + phase)
+        return WaterPoint(u * stepX, v * stepY)
+    }
+
+    /** A filled ribbon supplies continuous variable width, including tapered ends. */
+    private fun appendRibbon(target: Path, points: List<WaterPoint>, widths: FloatArray) {
+        val normals = points.indices.map { i ->
+            val before = points[(i - 1).coerceAtLeast(0)]
+            val after = points[(i + 1).coerceAtMost(points.lastIndex)]
+            val dx = after.x - before.x
+            val dy = after.y - before.y
+            val length = sqrt(dx * dx + dy * dy).coerceAtLeast(0.001f)
+            WaterPoint(-dy / length, dx / length)
+        }
+        for (i in points.indices) {
+            val x = points[i].x + normals[i].x * widths[i]
+            val y = points[i].y + normals[i].y * widths[i]
+            if (i == 0) target.moveTo(x, y) else target.lineTo(x, y)
+        }
+        for (i in points.indices.reversed()) {
+            target.lineTo(points[i].x - normals[i].x * widths[i], points[i].y - normals[i].y * widths[i])
+        }
+        target.close()
     }
 
     private fun voronoiCell(index: Int, sites: List<WaterPoint>, bounds: RectF): List<WaterPoint> {
