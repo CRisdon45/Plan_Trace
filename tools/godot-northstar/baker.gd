@@ -6,11 +6,11 @@ extends SceneTree
 const WIDTH := 2048
 const HEIGHT := 1434
 const STAGE_NAMES := [
-	"01-base-wash",
-	"02-midtone",
-	"03-drying-fronts",
-	"04-lifted-texture",
-	"05-final-grass",
+	"01-linework",
+	"02-first-wash",
+	"03-second-wash",
+	"04-shadow-planting",
+	"05-final-plan",
 ]
 
 var output_dir := "user://"
@@ -65,7 +65,7 @@ func _process(_dt: float) -> bool:
 	if pending_stage > 5:
 		_write_crops()
 		_write_sheet()
-		print("Godot Northstar grass bake: %s" % output_dir)
+		print("Godot Northstar plan bake: %s" % output_dir)
 		quit()
 		return true
 	material.set_shader_parameter("u_stage", pending_stage)
@@ -92,45 +92,52 @@ func _capture_stage(stage: int) -> void:
 		return
 	if stage == 5:
 		image.save_png("%s/grass.png" % output_dir)
+		image.save_png("%s/plan.png" % output_dir)
 
 func _apply_study_lot(mat: ShaderMaterial) -> void:
-	# L-lawn matching the concave TURF clip in GroundMaterialTest, plus a house
-	# and path hole. Plugin contract: lot + holes in UV, seed, material.
-	var lot := PackedVector2Array([
-		Vector2(0.08, 0.15),
-		Vector2(0.91, 0.15),
-		Vector2(0.91, 0.84),
-		Vector2(0.47, 0.84),
-		Vector2(0.47, 0.52),
-		Vector2(0.08, 0.52),
+	# Backyard study: left lawn strip, residence, L-pool, paving is the remainder.
+	var site := PackedVector2Array([
+		Vector2(0.10, 0.10),
+		Vector2(0.90, 0.10),
+		Vector2(0.90, 0.88),
+		Vector2(0.10, 0.88),
 	])
 	var house := PackedVector2Array([
-		Vector2(0.16, 0.22),
-		Vector2(0.40, 0.22),
-		Vector2(0.40, 0.44),
-		Vector2(0.16, 0.44),
+		Vector2(0.28, 0.52),
+		Vector2(0.72, 0.52),
+		Vector2(0.72, 0.86),
+		Vector2(0.28, 0.86),
 	])
-	var path := PackedVector2Array([
-		Vector2(0.62, 0.52),
-		Vector2(0.70, 0.52),
-		Vector2(0.70, 0.84),
-		Vector2(0.62, 0.84),
+	var lawn := PackedVector2Array([
+		Vector2(0.10, 0.10),
+		Vector2(0.24, 0.10),
+		Vector2(0.24, 0.86),
+		Vector2(0.10, 0.86),
 	])
-	mat.set_shader_parameter("u_lot", lot)
-	mat.set_shader_parameter("u_lot_count", lot.size())
-	mat.set_shader_parameter("u_hole_a", house)
-	mat.set_shader_parameter("u_hole_a_count", house.size())
-	mat.set_shader_parameter("u_hole_b", path)
-	mat.set_shader_parameter("u_hole_b_count", path.size())
+	var pool := PackedVector2Array([
+		Vector2(0.34, 0.16),
+		Vector2(0.70, 0.16),
+		Vector2(0.70, 0.38),
+		Vector2(0.58, 0.38),
+		Vector2(0.58, 0.46),
+		Vector2(0.34, 0.46),
+	])
+	mat.set_shader_parameter("u_site", site)
+	mat.set_shader_parameter("u_site_count", site.size())
+	mat.set_shader_parameter("u_house", house)
+	mat.set_shader_parameter("u_house_count", house.size())
+	mat.set_shader_parameter("u_lawn", lawn)
+	mat.set_shader_parameter("u_lawn_count", lawn.size())
+	mat.set_shader_parameter("u_pool", pool)
+	mat.set_shader_parameter("u_pool_count", pool.size())
 
 func _write_crops() -> void:
 	var image := Image.new()
-	if image.load("%s/grass.png" % output_dir) != OK:
+	if image.load("%s/plan.png" % output_dir) != OK:
 		return
-	# Lawn interior, house/lawn junction, L inner corner (the clip money shot).
-	_crop(image, Vector2i(int(0.68 * WIDTH) - 360, int(0.36 * HEIGHT) - 360), "crop-center.png")
-	_crop(image, Vector2i(int(0.28 * WIDTH) - 360, int(0.28 * HEIGHT) - 360), "crop-left.png")
-	_crop(image, Vector2i(int(0.47 * WIDTH) - 360, int(0.52 * HEIGHT) - 360), "crop-right.png")
+	_crop(image, Vector2i(int(0.50 * WIDTH) - 360, int(0.28 * HEIGHT) - 360), "crop-center.png")
+	_crop(image, Vector2i(int(0.17 * WIDTH) - 360, int(0.40 * HEIGHT) - 360), "crop-left.png")
+	_crop(image, Vector2i(int(0.62 * WIDTH) - 360, int(0.40 * HEIGHT) - 360), "crop-right.png")
 
 func _write_sheet() -> void:
 	var cell := Vector2i(380, 266)

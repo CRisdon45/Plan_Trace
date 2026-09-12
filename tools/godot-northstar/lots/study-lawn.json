@@ -1,27 +1,9 @@
 {
-  "id": "study-lawn",
+  "id": "study-plan",
   "seed": "ground-study",
-  "note": "Plugin contract: UV lot + holes. Matches the concave TURF clip idea in GroundMaterialTest, plus a house and path.",
-  "lot": [
-    [0.08, 0.15],
-    [0.91, 0.15],
-    [0.91, 0.84],
-    [0.47, 0.84],
-    [0.47, 0.52],
-    [0.08, 0.52]
-  ],
-  "holes": [
-    [
-      [0.16, 0.22],
-      [0.40, 0.22],
-      [0.40, 0.44],
-      [0.16, 0.44]
-    ],
-    [
-      [0.62, 0.52],
-      [0.70, 0.52],
-      [0.70, 0.84],
-      [0.62, 0.84]
-    ]
-  ]
+  "note": "Backyard study: site, residence, left lawn, L-pool. Paving is the remainder. Plugin contract: UV polygons.",
+  "site": [[0.10, 0.10], [0.90, 0.10], [0.90, 0.88], [0.10, 0.88]],
+  "house": [[0.28, 0.52], [0.72, 0.52], [0.72, 0.86], [0.28, 0.86]],
+  "lawn": [[0.10, 0.10], [0.24, 0.10], [0.24, 0.86], [0.10, 0.86]],
+  "pool": [[0.34, 0.16], [0.70, 0.16], [0.70, 0.38], [0.58, 0.38], [0.58, 0.46], [0.34, 0.46]]
 }

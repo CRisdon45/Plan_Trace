@@ -22,10 +22,10 @@ pass on those pixels (lift, new deposition, olive-black tail at luminance
 
 A Godot 4.7.2 baker now lives in `tools/godot-northstar`. Browser-viewable
 stills are in [docs/northstar-study](northstar-study/README.md) (no download).
-Guess for Tab S10 FE IPS LCD: more chroma/value split than the Java painter,
-2048 to match 2304×1440, GLES Compatibility later. This is **not** Godot
-inside the Android app and not a 9/10 claim. The live canvas still uses the
-Java painter, which bakes a rectangle and clips it. Water remains paused.
+The current bake is a plan sheet: ink, pale lawn strip, pool, paving,
+simple planting. That is the board's structure, not 9/10 planting/water
+detail, and not Godot inside the APK. Live canvas is still the Java
+painter. Water in production remains paused.
 
 Water and decking remain paused. Godot as a Northstar presentation plugin
 is still the likely path to the remaining quality points; it is not wired
