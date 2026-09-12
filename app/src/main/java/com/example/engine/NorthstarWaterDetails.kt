@@ -86,9 +86,10 @@ internal object NorthstarWaterDetails {
                 Raster(levels).also { synchronized(rasters) { rasters.put(rasterKey, it) } }
             }
             val extent = deviceExtent(canvas, bounds)
-            // Upsample an already integrated level instead of asking hardware to
-            // minify subpixel white bands. Geometry/seed stay independent of zoom.
-            val bitmap = raster.levels.firstOrNull { max(it.width, it.height) <= extent } ?: raster.levels.last()
+            // Keep the nearest prefiltered level at or above display resolution.
+            // Reduction is bounded below 2:1; picking the next smaller level blurred
+            // the fine folds. Geometry and seed stay independent of view zoom.
+            val bitmap = raster.levels.lastOrNull { max(it.width, it.height) >= extent } ?: raster.levels.first()
             canvas.drawBitmap(bitmap, null, bounds, Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG))
             return
         }
