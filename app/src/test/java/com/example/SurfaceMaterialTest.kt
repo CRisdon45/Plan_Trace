@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import com.example.data.ProjectJsonConverter
 import com.example.engine.NorthstarWatercolorField
+import com.example.engine.NorthstarWaterDetails
 import com.example.engine.WatercolorRenderer
 import com.example.model.*
 import org.junit.Assert.*
@@ -61,11 +62,8 @@ class SurfaceMaterialTest {
         assertNotEquals(first.getPixel(35,35),first.getPixel(85,85))
         assertTrue(first.sameAs(render()))
         val moved=render(30f,30f,130f,130f)
-        assertEquals(first.getPixel(35,35),moved.getPixel(55,55))
-        assertEquals(first.getPixel(85,85),moved.getPixel(105,105))
-        // Stay clear of the broken shoreline: native PathMeasure rasterization can
-        // differ by a fringe pixel after translation even though the interior wash
-        // and caustic construction remain anchored to object-local coordinates.
+        // Subpixel antialias coverage can round a color channel after translation.
+        // Sample throughout the interior, keeping the allowed total RGB error tiny.
         for (y in 25 until 96 step 5) for (x in 25 until 96 step 5) {
             val original = first.getPixel(x, y)
             val translated = moved.getPixel(x + 20, y + 20)
@@ -108,19 +106,52 @@ class SurfaceMaterialTest {
 
         fun brightness(color: Int) = android.graphics.Color.red(color) +
             android.graphics.Color.green(color) + android.graphics.Color.blue(color)
-        val baseBrightness = brightness(SurfaceMaterial.WATER.fill.toInt())
         val interior = buildList<Int> {
             for (y in 24 until 116) for (x in 28 until 192) add(bitmap.getPixel(x, y))
         }
         val medianBrightness = interior.map(::brightness).sorted()[interior.size / 2]
-        val bright = interior.count { brightness(it) > medianBrightness + 12 }
-        val dark = interior.count { brightness(it) < baseBrightness - 18 }
+        val bright = interior.count { brightness(it) > medianBrightness + 55 }
+        val dark = interior.count { brightness(it) < medianBrightness - 20 }
+        val blue = interior.count {
+            android.graphics.Color.blue(it) > android.graphics.Color.red(it) + 40 &&
+                android.graphics.Color.blue(it) > android.graphics.Color.green(it) + 5
+        }
 
         assertTrue("expected visible caustic highlights", bright > 20)
         assertTrue("caustics should not cover the field", bright < interior.size / 2)
         assertTrue("expected confidently darker wash masses", dark > interior.size / 8)
         assertTrue("expected layered color variation", interior.distinct().size > 80)
+        assertTrue("Northstar water should be blue, not pale mint", blue > interior.size * 3 / 4)
         assertEquals(0, bitmap.getPixel(0, 0))
+    }
+
+    @Test fun `blue water and caustics survive cold caches without changing saved data`() {
+        val element = rectangle().copy(right = 210f, bottom = 130f,
+            material = SurfaceMaterial.WATER, style = StrokeStyle.WATERCOLOR_WASH)
+        val saved = ProjectJsonConverter.serializeElements(listOf(element))
+        fun render(): Bitmap = Bitmap.createBitmap(230, 150, Bitmap.Config.ARGB_8888).also {
+            WatercolorRenderer.render(Canvas(it), element, 1f, ScaleCalibration(), false)
+        }
+        val first = render()
+        NorthstarWaterDetails.clearCache()
+        NorthstarWatercolorField.clearCache()
+        assertTrue(first.sameAs(render()))
+        assertEquals(saved, ProjectJsonConverter.serializeElements(listOf(element)))
+        java.io.File("build/reports/northstar-watercolor").mkdirs()
+        java.io.File("build/reports/northstar-watercolor/northstar-rectangular-water.png")
+            .outputStream().use { first.compress(Bitmap.CompressFormat.PNG, 100, it) }
+    }
+
+    @Test fun `blue water details stay clipped to concave boundaries`() {
+        val element = PolylineElement(id = "concave-water", layerId = "base",
+            points = listOf(Point2D(10f, 10f), Point2D(210f, 10f), Point2D(210f, 130f),
+                Point2D(110f, 130f), Point2D(110f, 70f), Point2D(10f, 70f)),
+            isClosed = true, material = SurfaceMaterial.WATER, style = StrokeStyle.WATERCOLOR_WASH)
+        val bitmap = Bitmap.createBitmap(230, 150, Bitmap.Config.ARGB_8888)
+        WatercolorRenderer.render(Canvas(bitmap), element, 1f, ScaleCalibration(), false)
+        for (y in 80 until 125) for (x in 20 until 100) assertEquals(0, bitmap.getPixel(x, y))
+        assertTrue(android.graphics.Color.blue(bitmap.getPixel(160, 90)) >
+            android.graphics.Color.red(bitmap.getPixel(160, 90)) + 40)
     }
 
     @Test fun `bounded watercolor field is seeded settles pigment and preserves mass`() {

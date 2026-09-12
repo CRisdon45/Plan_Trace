@@ -30,7 +30,7 @@ Starting physical weights may use the earlier proposal: primary boundaries about
 
 ## Materials and plants
 
-Water is clipped to valid geometry, with restrained blue-green tone and broad depth cues. Shelves, steps and benches remain legible. Avoid animated caustics and photoreal noise in the initial 2D treatment.
+Water is clipped to valid geometry. Owner clarification on 2026-09-12 selects the richer blue/turquoise water and bright interconnected caustics in the uploaded landscape-plan studies, not the pale mint water in the freeform-pool reference. Use varied flowing cells, selective white crests, layered pigment and broad blue depth cues. Preserve readable open water, shelves, steps and benches. Caustics remain deterministic and static, not animated or a photoreal noise overlay. Graphic mode retains its existing flat material palette.
 
 Turf uses broad irregular tonal variation, retained paper highlights and soft pigment edges. A diagonal gradient alone does not achieve the reference. Do not add high-frequency speckles or visible repeated tile seams.
 

@@ -46,7 +46,9 @@ object WatercolorRenderer {
         val material = element.material
         if (material != null && element.supportsSurface()) {
             val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = material.fill.toInt()
+                color = if (material == com.example.model.SurfaceMaterial.WATER &&
+                    element.style == StrokeStyle.WATERCOLOR_WASH) Color.rgb(105, 189, 207)
+                    else material.fill.toInt()
                 alpha = (element.alpha * layerAlpha * 255).toInt().coerceIn(0, 255)
                 style = Paint.Style.FILL
             }
@@ -303,16 +305,19 @@ object WatercolorRenderer {
         outline: Int,
         alpha: Float,
     ) {
-        val deep = colorWithScaledAlpha(outline, 42, alpha)
-        val clear = colorWithScaledAlpha(outline, 0, alpha)
+        // Northstar's blue pool reference is a presentation palette, not a change
+        // to saved materials or Graphic mode's established flat fill.
+        val waterPigment = Color.rgb(24, 91, 130)
+        val deep = colorWithScaledAlpha(waterPigment, 130, alpha)
+        val clear = colorWithScaledAlpha(waterPigment, 0, alpha)
         val depthPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             shader = LinearGradient(
                 bounds.left,
                 bounds.top,
                 bounds.right,
                 bounds.bottom,
-                clear,
                 deep,
+                clear,
                 Shader.TileMode.CLAMP,
             )
             style = Paint.Style.FILL
@@ -325,7 +330,7 @@ object WatercolorRenderer {
             geometryFingerprint = geometryFingerprint,
             path = path,
             bounds = bounds,
-            pigmentColor = outline,
+            pigmentColor = waterPigment,
             alpha = alpha,
         )
 
