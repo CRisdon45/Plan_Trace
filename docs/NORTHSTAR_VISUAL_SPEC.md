@@ -57,6 +57,6 @@ Labels, legends, north direction and graphic scale remain readable at actual out
 
 ## Acceptance
 
-Review actual Technical, Graphic and Northstar output for both ORTHO-01 and ORGANIC-01 at full sheet, normal working zoom and detail zoom, during editing and after reopen. Inspect actual PNG/PDF outputs as well as the canvas. Check unchanged boundaries and quantities, stable patterns, readable plants, coherent shadows, restrained detail, clear water/circulation and collision-free annotations.
+Review actual Technical, Graphic and Northstar output for both ORTHO-01 and ORGANIC-01 at full sheet, normal working zoom and detail zoom, during editing and after reopen. Inspect actual PNG/PDF outputs as well as the canvas. Check unchanged boundaries and quantities, stable patterns, readable plants, coherent shadows, reference-level fine detail with clear hierarchy, clear water/circulation and collision-free annotations.
 
 Style acceptance requires authentic captures tied to a source revision and the actual visual references or an explicit owner-approved replacement. Geometry tests can proceed while image access is missing; do not claim the Northstar is matched in that condition. Visual quality develops alongside the first complete editing workflows, while trustworthy geometry and output remain prerequisites rather than defects hidden by styling.
