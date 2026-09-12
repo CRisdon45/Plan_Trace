@@ -3,6 +3,7 @@ package com.example
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import com.example.data.ProjectJsonConverter
+import com.example.engine.NorthstarWatercolorField
 import com.example.engine.WatercolorRenderer
 import com.example.model.*
 import org.junit.Assert.*
@@ -79,6 +80,41 @@ class SurfaceMaterialTest {
         assertTrue(colorDistance(water.getPixel(85,85),SurfaceMaterial.WATER.fill.toInt()) >
             colorDistance(paving.getPixel(85,85),SurfaceMaterial.PAVING.fill.toInt()))
         assertEquals(0,water.getPixel(0,0));assertEquals(0,paving.getPixel(0,0))
+    }
+
+    @Test fun `bounded watercolor field is seeded settles pigment and preserves mass`() {
+        val first = NorthstarWatercolorField.simulateForEvidence("pool:outline", 72, 48, SurfaceMaterial.WATER.outline.toInt())
+        val repeated = NorthstarWatercolorField.simulateForEvidence("pool:outline", 72, 48, SurfaceMaterial.WATER.outline.toInt())
+        val neighbor = NorthstarWatercolorField.simulateForEvidence("spa:outline", 72, 48, SurfaceMaterial.WATER.outline.toInt())
+
+        assertArrayEquals(first.pixels, repeated.pixels)
+        assertFalse(first.pixels.contentEquals(neighbor.pixels))
+        assertTrue(first.depositedPigmentMass > 0f)
+        assertTrue(first.mobilePigmentMass < first.initialPigmentMass)
+        assertEquals(
+            first.initialPigmentMass,
+            first.mobilePigmentMass + first.depositedPigmentMass,
+            first.initialPigmentMass * 0.12f,
+        )
+        assertTrue(first.pixels.map { android.graphics.Color.alpha(it) }.distinct().size > 12)
+    }
+
+    @Test fun `watercolor simulation never paints outside its material mask`() {
+        val width = 64
+        val height = 40
+        val mask = FloatArray(width * height) { index -> if (index % width < width / 2) 1f else 0f }
+        val field = NorthstarWatercolorField.simulateForEvidence(
+            "masked-pool",
+            width,
+            height,
+            SurfaceMaterial.WATER.outline.toInt(),
+            mask,
+        )
+        for (y in 0 until height) for (x in 0 until width) {
+            val alpha = android.graphics.Color.alpha(field.pixels[y * width + x])
+            if (x >= width / 2) assertEquals(0, alpha)
+        }
+        assertTrue(field.pixels.any { android.graphics.Color.alpha(it) > 0 })
     }
 
     @Test fun `open paths and notes cannot be assigned surfaces from the interface`() {

@@ -54,14 +54,14 @@ object WatercolorRenderer {
                 is RectangleElement -> {
                     canvas.drawRect(element.boundingBox(), fillPaint)
                     if (element.style == StrokeStyle.WATERCOLOR_WASH) {
-                        drawNorthstarSurfaceCue(canvas, rectPath(element.boundingBox()), element.boundingBox(), material, element.alpha * layerAlpha)
+                        drawNorthstarSurfaceCue(canvas, element.id, surfaceGeometryFingerprint(element), rectPath(element.boundingBox()), element.boundingBox(), material, element.alpha * layerAlpha)
                     }
                     element.copy(isFilled = false, material = null, strokeColor = material.outline, style = StrokeStyle.INK)
                 }
                 is EllipseElement -> {
                     canvas.drawOval(element.boundingBox(), fillPaint)
                     if (element.style == StrokeStyle.WATERCOLOR_WASH) {
-                        drawNorthstarSurfaceCue(canvas, ovalPath(element.boundingBox()), element.boundingBox(), material, element.alpha * layerAlpha)
+                        drawNorthstarSurfaceCue(canvas, element.id, surfaceGeometryFingerprint(element), ovalPath(element.boundingBox()), element.boundingBox(), material, element.alpha * layerAlpha)
                     }
                     element.copy(isFilled = false, material = null, strokeColor = material.outline, style = StrokeStyle.INK)
                 }
@@ -69,7 +69,7 @@ object WatercolorRenderer {
                     val path = surfacePath(element.points)
                     canvas.drawPath(path, fillPaint)
                     if (element.style == StrokeStyle.WATERCOLOR_WASH) {
-                        drawNorthstarSurfaceCue(canvas, path, element.boundingBox(), material, element.alpha * layerAlpha)
+                        drawNorthstarSurfaceCue(canvas, element.id, surfaceGeometryFingerprint(element), path, element.boundingBox(), material, element.alpha * layerAlpha)
                     }
                     PolylineElement(id = element.id, layerId = element.layerId, points = element.points, isClosed = true, strokeColor = material.outline, strokeWidth = element.strokeWidth, alpha = element.alpha)
                 }
@@ -77,7 +77,7 @@ object WatercolorRenderer {
                     val path = surfacePath(element.points)
                     canvas.drawPath(path, fillPaint)
                     if (element.style == StrokeStyle.WATERCOLOR_WASH) {
-                        drawNorthstarSurfaceCue(canvas, path, element.boundingBox(), material, element.alpha * layerAlpha)
+                        drawNorthstarSurfaceCue(canvas, element.id, surfaceGeometryFingerprint(element), path, element.boundingBox(), material, element.alpha * layerAlpha)
                     }
                     element.copy(fillColor = null, material = null, strokeColor = material.outline, style = StrokeStyle.INK)
                 }
@@ -273,6 +273,8 @@ object WatercolorRenderer {
      */
     private fun drawNorthstarSurfaceCue(
         canvas: Canvas,
+        stableId: String,
+        geometryFingerprint: Long,
         path: Path,
         bounds: RectF,
         material: com.example.model.SurfaceMaterial,
@@ -283,7 +285,7 @@ object WatercolorRenderer {
         try {
             canvas.clipPath(path)
             when (material) {
-                com.example.model.SurfaceMaterial.WATER -> drawWaterDepthCue(canvas, path, bounds, material.outline.toInt(), alpha)
+                com.example.model.SurfaceMaterial.WATER -> drawWaterDepthCue(canvas, stableId, geometryFingerprint, path, bounds, material.outline.toInt(), alpha)
                 com.example.model.SurfaceMaterial.PAVING -> drawQuietPavingCue(canvas, path, bounds, material.outline.toInt(), alpha)
                 else -> drawBroadMaterialCue(canvas, bounds, material.outline.toInt(), alpha)
             }
@@ -292,7 +294,15 @@ object WatercolorRenderer {
         }
     }
 
-    private fun drawWaterDepthCue(canvas: Canvas, path: Path, bounds: RectF, outline: Int, alpha: Float) {
+    private fun drawWaterDepthCue(
+        canvas: Canvas,
+        stableId: String,
+        geometryFingerprint: Long,
+        path: Path,
+        bounds: RectF,
+        outline: Int,
+        alpha: Float,
+    ) {
         val deep = colorWithScaledAlpha(outline, 42, alpha)
         val clear = colorWithScaledAlpha(outline, 0, alpha)
         val depthPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -309,6 +319,16 @@ object WatercolorRenderer {
         }
         canvas.drawPath(path, depthPaint)
 
+        NorthstarWatercolorField.draw(
+            canvas = canvas,
+            stableId = stableId,
+            geometryFingerprint = geometryFingerprint,
+            path = path,
+            bounds = bounds,
+            pigmentColor = outline,
+            alpha = alpha,
+        )
+
         val shorelinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = colorWithScaledAlpha(outline, 28, alpha)
             strokeWidth = (min(bounds.width(), bounds.height()) * 0.055f).coerceIn(4f, 18f)
@@ -316,6 +336,24 @@ object WatercolorRenderer {
             strokeJoin = Paint.Join.ROUND
         }
         canvas.drawPath(path, shorelinePaint)
+    }
+
+    /** Translation is intentionally excluded so moving an object does not repaint its wash. */
+    private fun surfaceGeometryFingerprint(element: VectorElement): Long {
+        val bounds = element.boundingBox()
+        var hash = 0xCBF29CE484222325uL.toLong()
+        fun mix(value: Float) {
+            hash = (hash xor value.toRawBits().toLong()) * 0x100000001B3uL.toLong()
+        }
+        mix(bounds.width())
+        mix(bounds.height())
+        when (element) {
+            is FreehandPath -> element.points.forEach { point -> mix(point.x - bounds.left); mix(point.y - bounds.top) }
+            is PolylineElement -> element.points.forEach { point -> mix(point.x - bounds.left); mix(point.y - bounds.top) }
+            is RectangleElement, is EllipseElement -> Unit
+            else -> mix(element.strokeWidth)
+        }
+        return hash
     }
 
     private fun drawQuietPavingCue(canvas: Canvas, path: Path, bounds: RectF, outline: Int, alpha: Float) {

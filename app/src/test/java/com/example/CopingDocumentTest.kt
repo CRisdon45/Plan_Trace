@@ -6,6 +6,8 @@ import androidx.test.core.app.ApplicationProvider
 import com.example.data.DesignJsonCodec
 import com.example.data.DesignWorkspaceStore
 import com.example.export.DesignOutput
+import com.example.export.DesignAppearance
+import com.example.export.DesignOutputSettings
 import com.example.model.PolylineElement
 import com.example.model.SurfaceMaterial
 import com.example.model.design.*
@@ -73,6 +75,11 @@ class CopingDocumentTest {
         val a=DesignOutput.png(context,doc,1000,700)!!.readBytes()
         val b=DesignOutput.png(context,doc,1000,700)!!.readBytes()
         assertArrayEquals(a,b)
+        val graphic=DesignOutput.png(context,doc,1000,700,
+            DesignOutputSettings(appearance=DesignAppearance.GRAPHIC,includeMeasurements=false))!!.readBytes()
+        val northstar=DesignOutput.png(context,doc,1000,700,
+            DesignOutputSettings(appearance=DesignAppearance.NORTHSTAR,includeMeasurements=false))!!.readBytes()
+        assertFalse(graphic.contentEquals(northstar))
         val bitmap=BitmapFactory.decodeByteArray(a,0,a.size)
         val pixels=IntArray(bitmap.width*bitmap.height);bitmap.getPixels(pixels,0,bitmap.width,0,0,bitmap.width,bitmap.height)
         fun distance(color:Int,target:Int)=kotlin.math.abs(android.graphics.Color.red(color)-android.graphics.Color.red(target))+
@@ -84,5 +91,8 @@ class CopingDocumentTest {
         File("build/reports/design-geometry").mkdirs()
         File("build/reports/design-geometry/connected-coping.png").writeBytes(a)
         File("build/reports/design-geometry/connected-coping.json").writeText(DesignJsonCodec.encode(doc))
+        File("build/reports/northstar-watercolor").mkdirs()
+        File("build/reports/northstar-watercolor/graphic-organic-pool.png").writeBytes(graphic)
+        File("build/reports/northstar-watercolor/northstar-organic-pool.png").writeBytes(northstar)
     }
 }
