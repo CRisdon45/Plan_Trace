@@ -134,7 +134,7 @@ void fragment() {
 	float paper_fine = noise(px * 0.62);
 	float paper_fiber = noise(px * vec2(0.16, 0.34) + 5.1);
 	float paper = mix(paper_fine, paper_fiber, 0.42);
-	vec3 paper_col = vec3(0.988, 0.976, 0.933) + (paper - 0.5) * vec3(0.018, 0.016, 0.012);
+	vec3 paper_col = vec3(0.992, 0.986, 0.958) + (paper - 0.5) * vec3(0.014, 0.012, 0.010);
 	vec3 color = paper_col;
 
 	float lot_sd = sd_lot(uv);
@@ -195,10 +195,10 @@ void fragment() {
 	vec3 INK = vec3(0.11, 0.16, 0.06);
 
 	if (u_stage >= 1) {
-		color = stain(color, YELLOW, inside * (0.11 + 0.05 * paper));
-		color = stain(color, SAP, inside * 0.04);
+		color = stain(color, YELLOW, inside * (0.16 + 0.05 * paper));
+		color = stain(color, SAP, inside * 0.09);
 		color = stain(color, YELLOW, wash * 0.14 * grain);
-		color = stain(color, SAP, wash * 0.07 * grain);
+		color = stain(color, SAP, wash * 0.09 * grain);
 	}
 	if (u_stage >= 2) {
 		color = stain(color, OLIVE, wash_mid * 0.17 * grain);
@@ -223,8 +223,8 @@ void fragment() {
 		color = stain(color, INK, dark * 0.30);
 		float fleck = smoothstep(0.88, 0.97, noise(px * vec2(0.08, 0.17) + clump));
 		color = stain(color, mix(GREEN, INK, 0.4), fleck * in_mass * 0.12);
-		color = stain(color, OLIVE, lot_front * 0.22 * grain);
-		color = stain(color, EARTH, hole_front * 0.16 * grain);
+		color = stain(color, OLIVE, lot_front * 0.38 * grain);
+		color = stain(color, EARTH, hole_front * 0.22 * grain);
 	}
 
 	COLOR = vec4(clamp(color, 0.0, 1.0), 1.0);

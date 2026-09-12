@@ -20,17 +20,12 @@ seeds were inspected at full frame and close crop. Stage-operation checks
 pass on those pixels (lift, new deposition, olive-black tail at luminance
 110). That is not owner acceptance, tablet timing, or an emulator gate.
 
-A Godot 4.7.2 baker now lives in `tools/godot-northstar`. It ran in this
-sandbox under Xvfb + llvmpipe OpenGL (not `--headless`, which is a dummy
-device and writes empty images). The shader takes a UV lot polygon plus
-holes (house, path). Pixel checks: house/path/L-notch stay paper; the lawn
-is a pale wash with darker overlapping masses and an inset drying front so
-a later `clipPath` is not a cookie cutter. Two earlier full-frame seeds and
-this study-lawn composition were inspected. GitHub Actions
-`godot-watercolor-bake.yml` already passed on `91b23c7`. This is **not**
-Godot inside the Android app and not a 9/10 claim. The live canvas still
-uses the Java painter, which bakes a rectangle and clips it. Water remains
-paused.
+A Godot 4.7.2 baker now lives in `tools/godot-northstar`. Browser-viewable
+stills are in [docs/northstar-study](northstar-study/README.md) (no download).
+Guess for Tab S10 FE IPS LCD: more chroma/value split than the Java painter,
+2048 to match 2304×1440, GLES Compatibility later. This is **not** Godot
+inside the Android app and not a 9/10 claim. The live canvas still uses the
+Java painter, which bakes a rectangle and clips it. Water remains paused.
 
 Water and decking remain paused. Godot as a Northstar presentation plugin
 is still the likely path to the remaining quality points; it is not wired
