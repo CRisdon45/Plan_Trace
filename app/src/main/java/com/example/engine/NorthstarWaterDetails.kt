@@ -1,5 +1,6 @@
 package com.example.engine
 
+import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -19,11 +20,21 @@ import kotlin.math.pow
 internal object NorthstarWaterDetails {
     private data class WebKey(val stableId: String, val aspect: Float)
     private data class Web(val halo: Path, val quiet: Path, val strong: Path, val glints: Path)
+    private data class RasterKey(val web: WebKey, val alpha: Float)
     // Fixed normalized coordinates keep tessellation independent of zoom/output.
     // Bounded to 24 objects; cached paths are only read after construction.
     private val webs = LruCache<WebKey, Web>(24)
+    // Thin filled paths on the hardware canvas can fall between coverage samples
+    // at sheet zoom. A mipmapped texture integrates that light before minification.
+    // Export retains the vector ribbons. This cache is byte-bounded, not per-frame.
+    private val rasters = object : LruCache<RasterKey, Bitmap>(24 * 1024 * 1024) {
+        override fun sizeOf(key: RasterKey, value: Bitmap) = value.allocationByteCount
+    }
 
-    internal fun clearCache() = synchronized(webs) { webs.evictAll() }
+    internal fun clearCache() {
+        synchronized(webs) { webs.evictAll() }
+        synchronized(rasters) { rasters.evictAll() }
+    }
 
     fun draw(
         canvas: Canvas,
@@ -42,33 +53,54 @@ internal object NorthstarWaterDetails {
      * covering the entire pool in a repeated texture. The irregular cells are
      * generated in object-local space, so moving the pool moves the same drawing.
      */
-    internal fun drawCaustics(canvas: Canvas, stableId: String, bounds: RectF, alpha: Float) {
-        if (bounds.width() <= 0f || bounds.height() <= 0f) return
+    internal fun drawCaustics(
+        canvas: Canvas, stableId: String, bounds: RectF, alpha: Float,
+        rasterize: Boolean = canvas.isHardwareAccelerated,
+    ) {
+        if (bounds.width() <= 0f || bounds.height() <= 0f || alpha <= 0f) return
         val longest = max(bounds.width(), bounds.height())
         val normalized = RectF(0f, 0f, bounds.width() / longest * 1000f, bounds.height() / longest * 1000f)
         val key = WebKey(stableId, bounds.width() / bounds.height())
         val web = synchronized(webs) { webs.get(key) } ?: buildWeb(stableId, normalized).also {
             synchronized(webs) { webs.put(key, it) }
         }
-        val pale = Color.rgb(239, 253, 255)
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.FILL
+        if (rasterize) {
+            val rasterKey = RasterKey(key, alpha.coerceIn(0f, 1f))
+            val bitmap = synchronized(rasters) { rasters.get(rasterKey) } ?: run {
+                val width = (normalized.width() * 1.024f).roundToInt().coerceIn(1, 1024)
+                val height = (normalized.height() * 1.024f).roundToInt().coerceIn(1, 1024)
+                val generated = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                val surface = Canvas(generated)
+                surface.scale(width / normalized.width(), height / normalized.height())
+                drawWeb(surface, web, rasterKey.alpha)
+                generated.setHasMipMap(true)
+                synchronized(rasters) { rasters.put(rasterKey, generated) }
+                generated
+            }
+            canvas.drawBitmap(bitmap, null, bounds, Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG))
+            return
         }
         canvas.save()
         try {
             canvas.translate(bounds.left, bounds.top)
             canvas.scale(longest / 1000f, longest / 1000f)
-            fun pass(path: Path, strength: Int) {
-                paint.color = colorWithScaledAlpha(pale, strength, alpha)
-                canvas.drawPath(path, paint)
-            }
-            pass(web.halo, 18)
-            pass(web.quiet, 58)
-            pass(web.strong, 130)
-            pass(web.glints, 220)
+            drawWeb(canvas, web, alpha)
         } finally {
             canvas.restore()
         }
+    }
+
+    private fun drawWeb(canvas: Canvas, web: Web, alpha: Float) {
+        val pale = Color.rgb(239, 253, 255)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+        fun pass(path: Path, strength: Int) {
+            paint.color = colorWithScaledAlpha(pale, strength, alpha)
+            canvas.drawPath(path, paint)
+        }
+        pass(web.halo, 18)
+        pass(web.quiet, 58)
+        pass(web.strong, 130)
+        pass(web.glints, 220)
     }
 
     private fun buildWeb(stableId: String, bounds: RectF): Web {

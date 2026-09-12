@@ -194,6 +194,26 @@ class SurfaceMaterialTest {
         assertTrue("retain broader folds and confluences", widths.count { it in 4..9 } > 20)
     }
 
+    @Test fun `live caustic raster is deterministic clipped and respects opacity`() {
+        fun render(alpha: Float): Bitmap = Bitmap.createBitmap(260, 180, Bitmap.Config.ARGB_8888).also {
+            NorthstarWaterDetails.drawCaustics(Canvas(it), "live-caustics",
+                android.graphics.RectF(20f, 20f, 240f, 160f), alpha, rasterize = true)
+        }
+        val first = render(1f)
+        NorthstarWaterDetails.clearCache()
+        assertTrue(first.sameAs(render(1f)))
+        assertEquals(0, first.getPixel(0, 0))
+        assertEquals(0, render(0f).getPixel(120, 90))
+        fun totalAlpha(bitmap: Bitmap): Long {
+            val pixels = IntArray(bitmap.width * bitmap.height)
+            bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+            return pixels.sumOf { android.graphics.Color.alpha(it).toLong() }
+        }
+        assertTrue(totalAlpha(first) > 20000)
+        val faded = totalAlpha(render(0.5f))
+        assertTrue(faded > 0 && faded < totalAlpha(first))
+    }
+
     @Test fun `polygon glazes retain broad washes and fine blooms independently of caustics`() {
         fun wash(id: String): Bitmap = Bitmap.createBitmap(768, 480, Bitmap.Config.ARGB_8888).also {
             it.eraseColor(android.graphics.Color.rgb(120, 199, 221))
