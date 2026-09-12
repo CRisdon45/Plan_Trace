@@ -6,6 +6,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.example.data.DesignJsonCodec
 import com.example.data.ProjectJsonConverter
 import com.example.export.DesignOutput
+import com.example.export.DesignAppearance
 import com.example.export.DesignOutputSettings
 import com.example.model.*
 import com.example.model.design.*
@@ -62,8 +63,38 @@ class DesignDocumentOutputTest {
         assertTrue(imperial.elements.filterIsInstance<TextElement>().all { it.text.endsWith(" ft") })
         assertEquals(100f, metric.scaleCalibration.pixelsPerUnit, 1e-5f)
         assertEquals(60.96f, imperial.scaleCalibration.pixelsPerUnit, 1e-5f)
-        assertEquals(Point2D(-400f,600f), (imperial.elements.first() as PolylineElement).points.first())
+        assertEquals(Point2D(-400f,600f),
+            imperial.elements.filterIsInstance<PolylineElement>().single { it.id=="pool:outline" }.points.first())
         assertEquals(json, DesignJsonCodec.encode(doc))
+    }
+    @Test fun `appearance changes only transient object driven presentation`() {
+        val boundary = DesignFixtures.rectangle()
+        val doc = ProjectDesign("styles", listOf(
+            DesignObject("wall", "Wall", DesignObjectKind.WALL, boundary.translated(30.0, 0.0)),
+            DesignObject("pool", "Pool", DesignObjectKind.POOL, boundary.translated(20.0, 0.0)),
+            DesignObject("turf", "Turf", DesignObjectKind.TURF, boundary.translated(10.0, 0.0)),
+            DesignObject("paving", "Paving", DesignObjectKind.PAVING, boundary),
+        ))
+        val before = DesignJsonCodec.encode(doc)
+        fun outlines(appearance: DesignAppearance) = DesignOutput.drawing(
+            doc,
+            DesignOutputSettings(appearance=appearance,includeMeasurements=false),
+        ).elements.filterIsInstance<PolylineElement>()
+        val technical = outlines(DesignAppearance.TECHNICAL)
+        val graphic = outlines(DesignAppearance.GRAPHIC)
+        val northstar = outlines(DesignAppearance.NORTHSTAR)
+
+        assertEquals(listOf("turf:outline","paving:outline","pool:outline","wall:outline"),northstar.map { it.id })
+        assertTrue(technical.all { it.material==null && it.style==StrokeStyle.INK })
+        assertEquals(
+            listOf(SurfaceMaterial.TURF,SurfaceMaterial.PAVING,SurfaceMaterial.WATER,SurfaceMaterial.MASONRY),
+            graphic.map { it.material },
+        )
+        assertTrue(graphic.all { it.style==StrokeStyle.INK })
+        assertTrue(northstar.all { it.style==StrokeStyle.WATERCOLOR_WASH })
+        assertEquals(technical.map { it.points },graphic.map { it.points })
+        assertEquals(graphic.map { it.points },northstar.map { it.points })
+        assertEquals(before,DesignJsonCodec.encode(doc))
     }
     @Test fun `distant coordinates require an appropriate projection origin instead of losing precision`() {
         val doc = ProjectDesign("distant", listOf(DesignObject("pool", "Distant", DesignObjectKind.POOL,

@@ -53,18 +53,32 @@ object WatercolorRenderer {
             val outline = when (element) {
                 is RectangleElement -> {
                     canvas.drawRect(element.boundingBox(), fillPaint)
+                    if (element.style == StrokeStyle.WATERCOLOR_WASH) {
+                        drawNorthstarSurfaceCue(canvas, rectPath(element.boundingBox()), element.boundingBox(), material, element.alpha * layerAlpha)
+                    }
                     element.copy(isFilled = false, material = null, strokeColor = material.outline, style = StrokeStyle.INK)
                 }
                 is EllipseElement -> {
                     canvas.drawOval(element.boundingBox(), fillPaint)
+                    if (element.style == StrokeStyle.WATERCOLOR_WASH) {
+                        drawNorthstarSurfaceCue(canvas, ovalPath(element.boundingBox()), element.boundingBox(), material, element.alpha * layerAlpha)
+                    }
                     element.copy(isFilled = false, material = null, strokeColor = material.outline, style = StrokeStyle.INK)
                 }
                 is FreehandPath -> {
-                    drawSurfacePolygon(canvas, element.points, fillPaint)
+                    val path = surfacePath(element.points)
+                    canvas.drawPath(path, fillPaint)
+                    if (element.style == StrokeStyle.WATERCOLOR_WASH) {
+                        drawNorthstarSurfaceCue(canvas, path, element.boundingBox(), material, element.alpha * layerAlpha)
+                    }
                     PolylineElement(id = element.id, layerId = element.layerId, points = element.points, isClosed = true, strokeColor = material.outline, strokeWidth = element.strokeWidth, alpha = element.alpha)
                 }
                 is PolylineElement -> {
-                    drawSurfacePolygon(canvas, element.points, fillPaint)
+                    val path = surfacePath(element.points)
+                    canvas.drawPath(path, fillPaint)
+                    if (element.style == StrokeStyle.WATERCOLOR_WASH) {
+                        drawNorthstarSurfaceCue(canvas, path, element.boundingBox(), material, element.alpha * layerAlpha)
+                    }
                     element.copy(fillColor = null, material = null, strokeColor = material.outline, style = StrokeStyle.INK)
                 }
                 else -> element.withMaterial(null)
@@ -242,13 +256,60 @@ object WatercolorRenderer {
     /**
      * Simulates dynamic watercolor wash for arbitrary paths with organic edge pooling
      */
-    private fun drawSurfacePolygon(canvas: Canvas, points: List<Point2D>, paint: Paint) {
-        val path = Path().apply {
+    private fun surfacePath(points: List<Point2D>) = Path().apply {
             moveTo(points.first().x, points.first().y)
             points.drop(1).forEach { lineTo(it.x, it.y) }
             close()
+    }
+
+    private fun rectPath(bounds: RectF) = Path().apply { addRect(bounds, Path.Direction.CW) }
+    private fun ovalPath(bounds: RectF) = Path().apply { addOval(bounds, Path.Direction.CW) }
+
+    /**
+     * A broad, deterministic tonal cue clipped to exact surface geometry. It is
+     * intentionally sparse: most of the base field stays calm and unchanged.
+     */
+    private fun drawNorthstarSurfaceCue(
+        canvas: Canvas,
+        path: Path,
+        bounds: RectF,
+        material: com.example.model.SurfaceMaterial,
+        alpha: Float,
+    ) {
+        if (bounds.width() <= 0f || bounds.height() <= 0f) return
+        val base = material.outline.toInt()
+        val strength = if (material == com.example.model.SurfaceMaterial.WATER) 46 else 24
+        val cue = Color.argb(
+            (strength * alpha).toInt().coerceIn(0, 255),
+            Color.red(base),
+            Color.green(base),
+            Color.blue(base),
+        )
+        val washBounds = RectF(
+            bounds.left - bounds.width() * 0.10f,
+            bounds.top - bounds.height() * 0.16f,
+            bounds.left + bounds.width() * 0.72f,
+            bounds.top + bounds.height() * 0.72f,
+        )
+        val shader = RadialGradient(
+            washBounds.centerX(),
+            washBounds.centerY(),
+            max(washBounds.width(), washBounds.height()) * 0.52f,
+            cue,
+            Color.TRANSPARENT,
+            Shader.TileMode.CLAMP,
+        )
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            this.shader = shader
+            style = Paint.Style.FILL
         }
-        canvas.drawPath(path, paint)
+        canvas.save()
+        try {
+            canvas.clipPath(path)
+            canvas.drawOval(washBounds, paint)
+        } finally {
+            canvas.restore()
+        }
     }
 
     private fun drawWatercolorPathFill(

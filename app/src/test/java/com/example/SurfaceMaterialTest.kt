@@ -46,6 +46,25 @@ class SurfaceMaterialTest {
         assertTrue(first.sameAs(render()))
     }
 
+    @Test fun `northstar cue is deterministic clipped and leaves a calm base field`() {
+        fun render(): Bitmap {
+            val bitmap = Bitmap.createBitmap(120, 120, Bitmap.Config.ARGB_8888)
+            val element = rectangle().copy(
+                right=110f,
+                bottom=110f,
+                material=SurfaceMaterial.WATER,
+                style=StrokeStyle.WATERCOLOR_WASH,
+            )
+            WatercolorRenderer.render(Canvas(bitmap),element,1f,ScaleCalibration(),false)
+            return bitmap
+        }
+        val first=render()
+        assertEquals(0,first.getPixel(0,0))
+        assertEquals(SurfaceMaterial.WATER.fill.toInt(),first.getPixel(100,100))
+        assertNotEquals(SurfaceMaterial.WATER.fill.toInt(),first.getPixel(38,38))
+        assertTrue(first.sameAs(render()))
+    }
+
     @Test fun `open paths and notes cannot be assigned surfaces from the interface`() {
         assertFalse(LineElement(layerId = "base", start = Point2D(0f, 0f), end = Point2D(50f, 0f)).supportsSurface())
         assertFalse(PolylineElement(layerId = "base", points = listOf(Point2D(0f, 0f), Point2D(10f, 10f))).supportsSurface())
