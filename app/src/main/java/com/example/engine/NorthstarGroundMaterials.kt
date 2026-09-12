@@ -294,7 +294,9 @@ internal object NorthstarGroundMaterials {
     }
 
     /** Final grass accents belong to the actual silhouette, including concave edges.
-     * The caller's exact clip contains every mark; no rectangle border is baked into paint.
+     * They stay in a thin inward band. The baked wash carries the interior; this
+     * is not a second particle field of blades. The caller's exact clip contains
+     * every mark; no rectangle border is baked into paint.
      */
     private fun drawGrassEdgeDetail(canvas: Canvas, path: Path, bounds: RectF, alpha: Float, id: String) {
         val unit = max(bounds.width(), bounds.height()) / SIDE
@@ -305,25 +307,26 @@ internal object NorthstarGroundMaterials {
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeCap = Paint.Cap.ROUND }
         var distance = 0f
         var count = 0
-        while (distance < measure.length && count++ < 800) {
+        while (distance < measure.length && count++ < 220) {
             measure.getPosTan(distance, position, tangent)
             val grouping = .5f + .5f * sin(distance / unit * .023f)
-            if (random.nextFloat() < .32f + .5f * grouping) repeat(3) {
-                val offset = (random.nextFloat() - .5f) * 30f * unit
-                val along = (random.nextFloat() - .5f) * 8f * unit
-                val x = position[0] - tangent[1] * offset + tangent[0] * along
-                val y = position[1] + tangent[0] * offset + tangent[1] * along
-                val r = (.65f + random.nextFloat() * 2.3f) * unit
+            if (random.nextFloat() < .18f + .38f * grouping) repeat(1 + random.nextInt(2)) {
+                val sign = if (random.nextFloat() < .7f) 1f else -1f
+                val inward = sign * (2f + random.nextFloat() * 16f) * unit
+                val along = (random.nextFloat() - .5f) * 6f * unit
+                val x = position[0] - tangent[1] * inward + tangent[0] * along
+                val y = position[1] + tangent[0] * inward + tangent[1] * along
+                val r = (.55f + random.nextFloat() * 1.8f) * unit
                 paint.color = if (random.nextInt(3) == 0) Color.rgb(35, 56, 15) else Color.rgb(71, 100, 25)
-                paint.alpha = ((90 + random.nextInt(130)) * alpha).toInt()
+                paint.alpha = ((70 + random.nextInt(110)) * alpha).toInt()
                 val mark = Path()
-                if (random.nextInt(4) == 0) {
-                    val length = (3f + random.nextFloat() * 5f) * unit
+                if (random.nextInt(3) == 0) {
+                    val length = (3f + random.nextFloat() * 6f) * unit
                     mark.moveTo(x, y)
                     mark.quadTo(x + tangent[0] * length * .4f, y + tangent[1] * length * .4f,
                         x - tangent[1] * length, y + tangent[0] * length)
                     paint.style = Paint.Style.STROKE
-                    paint.strokeWidth = (.65f + random.nextFloat() * .6f) * unit
+                    paint.strokeWidth = (.55f + random.nextFloat() * .55f) * unit
                 } else {
                     mark.moveTo(x - r, y)
                     mark.quadTo(x - r * 1.2f, y - r, x + r * .3f, y - r * .7f)
@@ -333,7 +336,7 @@ internal object NorthstarGroundMaterials {
                 }
                 canvas.drawPath(mark, paint)
             }
-            distance += max((4f + random.nextFloat() * 5f) * unit, measure.length / 750f)
+            distance += max((7f + random.nextFloat() * 9f) * unit, measure.length / 280f)
         }
     }
     private fun seed(id: String): Long {

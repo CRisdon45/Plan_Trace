@@ -41,10 +41,11 @@ class GroundMaterialTest {
         for (i in shadow.indices) {
             if (light(texture[i]) - light(shadow[i]) > 12) lifted++
             if (light(shadow[i]) - light(texture[i]) > 8) repainted++
-            if (light(texture[i]) < 90) textureDark++
-            if (light(finished[i]) < 90) finalDark++
+            if (light(texture[i]) < 110) textureDark++
+            if (light(finished[i]) < 110) finalDark++
         }
         // These prove distinct paint operations, not a subjective quality score.
+        // 110 is an olive-black watercolor tail, not a requirement for burnt near-black fills.
         assertTrue("Texture must materially lift existing washes", lifted > shadow.size * .07)
         assertTrue("Texture must also deposit smaller paint forms", repainted > shadow.size * .10)
         assertTrue("Final accents must create a distinct dark range", finalDark > textureDark + shadow.size * .02)

@@ -1,5 +1,31 @@
 # Current state and next-session handoff
 
+Updated 2026-09-12 after the grass *wash-structure* revision. The current
+branch is **feat/expert-workspace-ui**. This session rewrote the production
+grass recipe in `NorthstarGrassPaint.java` and thinned silhouette accents in
+`NorthstarGroundMaterials`. It did not run Android CI, merge a PR, or claim
+9/10. Draft PR #6 is unchanged.
+
+## Active owner correction: stop covering the washes
+
+The owner set an honest **9/10** bar and rejected stamp-count finishing.
+Close-ups of `f11d5fd` read as digital grass: stages 1–3 were watercolor,
+then 2,800 + 12,000 marks buried the paper. The current painter uses few
+related washes, reserve tongues, broken front sediment and sparse clustered
+deposits. `dry()`, Kubelka-Munk tables, object-space seeds and the 1024-pixel
+cap are unchanged. See [the grass study](GRASS_PAINT_STUDY.md).
+
+Local Java compilation of the production core and adapter succeeded. Two
+seeds were inspected at full frame and close crop. Stage-operation checks
+pass on those pixels (lift, new deposition, olive-black tail at luminance
+110). That is not owner acceptance, tablet timing, or an emulator gate.
+
+Water and decking remain paused. Godot as a Northstar presentation plugin
+is still the likely path to the remaining quality points; it is not in
+this commit. Pen, project authority and Technical/Graphic stay native.
+
+## Previous checkpoint (stamp finishing at `f11d5fd`)
+
 Updated 2026-09-12 after the grass texture and final-detail revision. The current
 branch is **feat/expert-workspace-ui**; its verified application head is
 `f11d5fd271a515a5f868614176f5356175e02e9d`. Draft PR #6
@@ -7,7 +33,7 @@ targets the merged straight- and smooth-pool interaction seam in
 **feat/project-geometry-seam**. Do not reset the application branch to an older
 documentation checkpoint.
 
-## Active owner correction: grass finishing steps 4 and 5
+### Grass finishing steps 4 and 5 (historical)
 
 The latest owner feedback accepts the improvement at `5bf421b` but identifies
 it as approximately step 3 of the supplied close-up study. Current work extends

@@ -1,11 +1,64 @@
-# Grass paint: visual revision, 2026-09-12
+# Grass paint: wash-structure revision, 2026-09-12
 
-The owner rejected the previous `f52ea32` grass as **5/10**. The target is an
-honest **9/10**, including the minute paint details in the supplied close-ups.
-Passing regression tests does not establish that score. Water, decking and the
-rest of Northstar are outside this revision.
+The owner rejected stamp-count finishing. `f11d5fd` still read as digital
+grass at close-up because steps 4 and 5 laid thousands of marks over the
+washes. This revision keeps the Hobbs/Curtis core and changes the *recipe*:
+few related washes, paper showing through, sediment in the fronts, then
+sparse clustered deposits. It does not self-certify 9/10.
+
+Water, decking and Godot integration are outside this pass. A Godot
+presentation baker remains the likely path to the last quality points;
+this CPU painter is the production path until that exists.
+
+## What changed in the painter
+
+`NorthstarGrassPaint.java` still owns every production pixel. `dry()`,
+Kubelka-Munk tables, object-space seeding and the 1024-pixel cap are
+unchanged. The desktop study adapter still has no alternative implementation.
+
+Construction is now:
+
+1. A thin yellow/olive underpainting on shared paper.
+2. Eight large stratified sheets, then mid glazes, then a smaller set of
+   drying-front washes biased toward one side. These replace the previous
+   15+24+14 randomly placed circles.
+3. Overlapping scalloped *keep* islands plus a few reserve tongues. The
+   tongues lift back to the underpainting. This is not the rejected warped
+   scalar field, and not 145 small holes.
+4. Front sediment from the island-mask gradient, broken spatially so
+   adjacent segments are not equally outlined.
+5. Clustered mid marks, sparse specks and blades on the islands, and a
+   selective olive-black tail. There is no 2,800+12,000 stamp loop.
+
+Android silhouette accents stay in `NorthstarGroundMaterials`, but only in
+a thin inward band. They are not a second particle field.
+
+Major glazes use 24 related layers rather than 32. Paper hollows still
+modulate deposition; a fine digital-grain octave was removed because it
+read as noise rather than tooth.
+
+## Inspection
+
+Local Java 11/17 compilation of the production core and adapter remains the
+desktop gate. Typical complete diagnostic generation is about 7.2 s on this
+host, including five PNG stage captures and three close crops. Two object
+seeds were inspected at full frame and at 360-pixel crops. Stage 4 lifts
+more than 7% of pixels relative to stage 3; stage 4 also deposits; stage 5
+extends an olive-black luminance tail (threshold 110). Those checks prove
+distinct operations, not a quality score.
+
+Android unit/emulator CI, physical S Pen timing and owner 9/10 acceptance
+were not run in this session. Do not treat this document as a visual
+sign-off.
+
+The failure table below still applies. In particular: quiet interiors are
+required; equally outlined reserves, confetti, and covering the paper with
+blades are still failures.
 
 ## Steps 4 and 5 follow-up
+
+The following records the previous finishing attempt at `f11d5fd`, which this
+revision replaces. That build kept stages 1–3 and added stamp-density finishing.
 
 The owner found `5bf421b` much better, but judged it to have reached only step 3.
 The finishing stages now have substantive, separate jobs. The first three stages

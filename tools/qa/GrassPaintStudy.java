@@ -23,6 +23,7 @@ public final class GrassPaintStudy {
         save(dir,"grass",1024,717,pixels);
         sheet(dir,stages);
         finishingSheet(dir,stages);
+        crops(dir,stages.get(stages.size()-1));
         System.out.printf("Production grass paint: %.3f s, %s%n",(System.nanoTime()-start)/1e9,dir);
     }
     static BufferedImage save(File dir,String name,int w,int h,int[] pixels)throws Exception{
@@ -63,5 +64,14 @@ public final class GrassPaintStudy {
         g.setFont(new Font("SansSerif",Font.PLAIN,14));
         g.drawString("Cumulative production paint. Same seed and scale, full frames. Boundary ink is added in the Android renderer.",25,525);
         g.dispose();ImageIO.write(sheet,"png",new File(dir,"grass-stages-3-4-5.png"));
+    }
+    static void crops(File dir,BufferedImage image)throws Exception{
+        int w=image.getWidth(),h=image.getHeight();
+        ImageIO.write(image.getSubimage(Math.max(0,w/2-180),Math.max(0,h/2-180),Math.min(360,w),Math.min(360,h)),
+                "png",new File(dir,"crop-center.png"));
+        ImageIO.write(image.getSubimage(40,80,Math.min(360,w-40),Math.min(360,h-80)),
+                "png",new File(dir,"crop-left.png"));
+        ImageIO.write(image.getSubimage(Math.max(0,w-400),80,Math.min(360,w),Math.min(360,h-80)),
+                "png",new File(dir,"crop-right.png"));
     }
 }

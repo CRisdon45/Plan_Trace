@@ -4,6 +4,17 @@ Reviewed 2026-09-11 against Plan Trace at 915017a. Reuse general-purpose machine
 
 ## Adopted now
 
+**Wash-structure grass pigment (2026-09-12).** After stamp-count finishing
+still read as digital grass in close-up, the production Java core keeps
+Hobbs related glazes, mass-conserving `dry()` and RGB Kubelka-Munk, but
+stops covering those washes with thousands of marks. Large stratified
+sheets, reserve tongues, broken front sediment and sparse clustered
+deposits replace the 2,800+12,000 stamp loop. Silhouette accents on the
+Android path stay in a thin inward band. No third-party source, art,
+runtime service or dependency was added. Ground cache bounds, the 1024-pixel
+cap and off-thread preparation remain. See [the grass study](GRASS_PAINT_STUDY.md).
+The older grass descriptions below are historical, not the current model.
+
 **Revised grass pigment model (2026-09-12).** After the owner rejected the earlier
 material pass, independently implement deeper related polygon glazes, finite
 pigment redistribution to each wet front, shared paper deposition and ordered
