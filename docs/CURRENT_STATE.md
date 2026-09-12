@@ -20,9 +20,16 @@ seeds were inspected at full frame and close crop. Stage-operation checks
 pass on those pixels (lift, new deposition, olive-black tail at luminance
 110). That is not owner acceptance, tablet timing, or an emulator gate.
 
+A Godot 4.7.2 baker now lives in `tools/godot-northstar`. It ran in this
+sandbox under Xvfb + llvmpipe OpenGL (not `--headless`, which is a dummy
+device and writes empty images) and produced 2048×1434 grass stages plus
+crops. GitHub Actions workflow `godot-watercolor-bake.yml` repeats that on
+ubuntu-24.04. This is **not** Godot inside the Android app and not a 9/10
+claim. The live canvas still uses the Java painter. Water remains paused.
+
 Water and decking remain paused. Godot as a Northstar presentation plugin
-is still the likely path to the remaining quality points; it is not in
-this commit. Pen, project authority and Technical/Graphic stay native.
+is still the likely path to the remaining quality points; it is not wired
+into the APK. Pen, project authority and Technical/Graphic stay native.
 
 ## Previous checkpoint (stamp finishing at `f11d5fd`)
 

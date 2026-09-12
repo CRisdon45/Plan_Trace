@@ -1,0 +1,55 @@
+name: Godot watercolor bake
+
+on:
+  push:
+    branches: [feat/expert-workspace-ui]
+    paths:
+      - 'tools/godot-northstar/**'
+      - '.github/workflows/godot-watercolor-bake.yml'
+  pull_request:
+    paths:
+      - 'tools/godot-northstar/**'
+      - '.github/workflows/godot-watercolor-bake.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: godot-watercolor-bake-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bake:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Install xvfb and Godot display libs
+        run: sudo apt-get update && sudo apt-get install -y xvfb unzip libxcursor1 libxinerama1 libxi6 libxrandr2 libgl1-mesa-dri
+      - name: Bake grass study
+        shell: bash
+        env:
+          FORCE_XVFB: "1"
+        run: |
+          chmod +x tools/godot-northstar/bake.sh
+          tools/godot-northstar/bake.sh "$PWD/build/godot-grass" ground-study
+          python3 - <<'PY'
+          from pathlib import Path
+          import struct
+          p = Path("build/godot-grass/grass.png")
+          data = p.read_bytes()
+          assert data[:8] == b"\x89PNG\r\n\x1a\n", "not a PNG"
+          assert p.stat().st_size > 50_000, p.stat().st_size
+          width, height = struct.unpack(">II", data[16:24])
+          assert (width, height) == (2048, 1434), (width, height)
+          PY
+      - name: Upload bake
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-northstar-grass
+          path: build/godot-grass
+          if-no-files-found: error

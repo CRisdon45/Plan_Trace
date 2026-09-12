@@ -51,6 +51,11 @@ Android unit/emulator CI, physical S Pen timing and owner 9/10 acceptance
 were not run in this session. Do not treat this document as a visual
 sign-off.
 
+A separate Godot 4.7 GPU baker (`tools/godot-northstar`) now produces a
+2048×1434 field with large related masses and paper gaps. It is the
+presentation experiment, not the live Android painter. CI bakes it under
+Xvfb. `--headless` must not be used for this bake.
+
 The failure table below still applies. In particular: quiet interiors are
 required; equally outlined reserves, confetti, and covering the paper with
 blades are still failures.
