@@ -180,28 +180,36 @@ void fragment() {
 	vec3 LAWN_W = vec3(0.78, 0.82, 0.50);
 	vec3 LAWN_M = vec3(0.62, 0.70, 0.34);
 	vec3 LAWN_S = vec3(0.50, 0.58, 0.26);
-	vec3 WATER_W = vec3(0.45, 0.70, 0.80);
-	vec3 WATER_M = vec3(0.22, 0.52, 0.68);
-	vec3 WATER_D = vec3(0.12, 0.38, 0.55);
+	vec3 WATER_W = vec3(0.72, 0.86, 0.88);
+	vec3 WATER_M = vec3(0.38, 0.68, 0.78);
+	vec3 WATER_D = vec3(0.13, 0.42, 0.56);
 	vec3 STONE_W = vec3(0.86, 0.80, 0.68);
 	vec3 STONE_M = vec3(0.76, 0.68, 0.54);
-	vec3 PLANT_Y = vec3(0.72, 0.74, 0.32);
-	vec3 PLANT_G = vec3(0.38, 0.52, 0.22);
+	vec3 PLANT_Y = vec3(0.78, 0.76, 0.32);
+	vec3 PLANT_G = vec3(0.42, 0.56, 0.24);
 	vec3 PLANT_D = vec3(0.22, 0.34, 0.14);
 	vec3 INK = vec3(0.16, 0.15, 0.13);
 
 	float plants = 0.0;
-	for (int i = 0; i < 8; i++) {
+	float plant_sun = 0.0;
+	for (int i = 0; i < 12; i++) {
 		vec2 rnd = vec2(hash21(vec2(float(i), u_seed + 2.2)), hash21(vec2(float(i) + 4.1, u_seed)));
-		vec2 c = vec2(0.30 + 0.56 * rnd.x, 0.13 + 0.10 * rnd.y);
-		if (i >= 5) {
-			c = vec2(0.82 + 0.06 * rnd.x, 0.22 + 0.50 * rnd.y);
+		vec2 c = vec2(0.28 + 0.58 * rnd.x, 0.12 + 0.08 * rnd.y);
+		if (i >= 7) {
+			c = vec2(0.80 + 0.08 * rnd.x, 0.20 + 0.55 * rnd.y);
 		}
-		vec2 d = (q - vec2(c.x * aspect, c.y)) / vec2(0.055 + 0.04 * rnd.x, 0.048 + 0.03 * rnd.y);
-		float lobe = 0.12 * sin(atan(d.y, d.x) * (5.0 + 3.0 * rnd.y));
-		plants = max(plants, 1.0 - smoothstep(0.75, 1.12, length(d) - lobe));
+		vec2 radii = vec2(0.048 + 0.055 * rnd.x, 0.042 + 0.045 * rnd.y);
+		vec2 d = rotate(q - vec2(c.x * aspect, c.y), (rnd.x - 0.5) * 0.8) / radii;
+		float lobe = 0.16 * sin(atan(d.y, d.x) * (6.0 + 4.0 * rnd.y) + rnd.x * 5.0);
+		float cov = 1.0 - smoothstep(0.62, 1.15, length(d) - lobe);
+		cov *= 0.55 + 0.45 * fbm(q * 7.0 + float(i), 2);
+		plants = max(plants, cov);
+		plant_sun = max(plant_sun, cov * step(0.45, rnd.x));
 	}
-	plants *= site * (1.0 - house) * (1.0 - pool) * (1.0 - lawn * 0.85);
+	plants *= site * (1.0 - house) * (1.0 - pool);
+	plants *= 1.0 - lawn * 0.92;
+	plant_sun *= plants;
+	float rim = smoothstep(0.055, 0.0, -pool_sd);
 
 	if (u_stage >= 1) {
 		color = mix(color, INK, stroke(site_sd, 0.0018) * 0.55);
@@ -212,36 +220,43 @@ void fragment() {
 
 	if (u_stage >= 2) {
 		color = stain(color, LAWN_W, lawn * (0.20 + 0.05 * paper_n) * grain);
-		color = stain(color, WATER_W, pool * 0.28 * grain);
+		color = stain(color, WATER_W, pool * 0.32 * grain);
 		color = stain(color, STONE_W, paving * (0.16 + 0.05 * var) * grain);
-		color = stain(color, PLANT_Y, plants * 0.18 * grain);
+		color = stain(color, mix(PLANT_G, PLANT_Y, plant_sun), plants * 0.22 * grain);
 	}
 	if (u_stage >= 3) {
 		color = stain(color, LAWN_M, lawn * smoothstep(0.4, 0.75, var) * 0.12 * grain);
-		float pool_depth = smoothstep(0.02, 0.10, -pool_sd) * (0.45 + 0.55 * var);
-		color = stain(color, WATER_M, pool * pool_depth * 0.22 * grain);
+		float depth = smoothstep(0.0, 0.07, -pool_sd);
+		color = stain(color, WATER_M, pool * depth * (0.18 + 0.12 * var) * grain);
 		color = stain(color, STONE_M, paving * smoothstep(0.45, 0.8, var2) * 0.10 * grain);
-		color = stain(color, PLANT_G, plants * (0.22 + 0.2 * var) * grain);
+		color = stain(color, PLANT_G, plants * (0.18 + 0.16 * var) * grain);
+		color = stain(color, PLANT_Y, plant_sun * 0.12 * grain);
 	}
 	if (u_stage >= 4) {
 		color = stain(color, LAWN_S, lawn * exp(-lawn_sd * lawn_sd * 700.0) * broken * 0.18);
-		color = stain(color, WATER_D, pool * exp(-pool_sd * pool_sd * 650.0) * 0.35 * grain);
+		color = stain(color, WATER_D, pool * rim * 0.55 * grain);
+		float spa = pool * smoothstep(0.36, 0.42, uv.y);
+		color = stain(color, WATER_D, spa * 0.18 * grain);
 		color = stain(color, STONE_M, paving * exp(-min(abs(pool_sd), abs(house_sd)) * 40.0) * 0.12);
-		color = stain(color, PLANT_D, plants * smoothstep(0.55, 0.9, var2) * 0.20);
-		color = mix(color, paper_col, house * 0.0);
+		color = stain(color, PLANT_D, plants * smoothstep(0.5, 0.9, var2) * 0.28);
 	}
 	if (u_stage >= 5) {
-		float rip = sin(px.x * 0.055 + var * 5.0) * sin(px.y * 0.07 + var2 * 4.0);
-		color = mix(color, vec3(0.92, 0.96, 0.98), pool * smoothstep(0.45, 0.85, rip) * 0.22);
+		vec2 ruv = px * 0.011;
+		ruv += vec2(fbm(ruv * 0.55 + 1.3, 3), fbm(ruv * 0.5 + 4.8, 3)) * 1.4;
+		float caust = pow(0.5 + 0.5 * sin(ruv.x * 7.2) * sin(ruv.y * 5.6 + ruv.x * 1.4), 10.0);
+		color = mix(color, vec3(0.94, 0.98, 0.99), pool * (1.0 - rim) * caust * 0.65);
+		float trough = pow(0.5 + 0.5 * sin(ruv.x * 7.2 + 1.7) * sin(ruv.y * 5.6), 3.0);
+		color = stain(color, WATER_M, pool * (1.0 - caust) * trough * 0.08);
 		float speckle = smoothstep(0.91, 0.97, noise(px * vec2(0.09, 0.16)));
 		color = stain(color, LAWN_S, speckle * lawn * 0.08);
-		vec2 gv = fract(uv * vec2(18.0, 12.5) + 0.02 * var);
-		float joint = (1.0 - smoothstep(0.0, 0.035, min(gv.x, gv.y))) * paving * broken;
-		color = mix(color, INK, joint * 0.22);
+		vec2 gv = fract(uv * vec2(14.0, 10.0) + 0.08 * vec2(var, var2));
+		float joint = (1.0 - smoothstep(0.0, 0.045, min(gv.x, gv.y))) * paving * broken * 0.55;
+		color = mix(color, INK, joint * 0.18);
 		color = mix(color, INK, stroke(site_sd, 0.0016) * 0.75);
 		color = mix(color, INK, stroke(house_sd, 0.0020) * 0.92);
-		color = mix(color, INK, stroke(pool_sd, 0.0015) * 0.80);
-		color = mix(color, INK, plants * stroke(0.55 - plants, 0.08) * 0.25);
+		color = mix(color, INK, stroke(pool_sd, 0.0014) * 0.88);
+		float canopy_edge = smoothstep(0.25, 0.55, plants) * (1.0 - smoothstep(0.55, 0.9, plants));
+		color = mix(color, INK, canopy_edge * broken * 0.28);
 	}
 
 	COLOR = vec4(clamp(color, 0.0, 1.0), 1.0);
