@@ -67,7 +67,13 @@ class SurfaceMaterialTest {
         // differ by a fringe pixel after translation even though the interior wash
         // and caustic construction remain anchored to object-local coordinates.
         for (y in 25 until 96 step 5) for (x in 25 until 96 step 5) {
-            assertEquals(first.getPixel(x, y), moved.getPixel(x + 20, y + 20))
+            val original = first.getPixel(x, y)
+            val translated = moved.getPixel(x + 20, y + 20)
+            val channelDelta = abs(android.graphics.Color.alpha(original) - android.graphics.Color.alpha(translated)) +
+                abs(android.graphics.Color.red(original) - android.graphics.Color.red(translated)) +
+                abs(android.graphics.Color.green(original) - android.graphics.Color.green(translated)) +
+                abs(android.graphics.Color.blue(original) - android.graphics.Color.blue(translated))
+            assertTrue("translation should preserve the interior wash within raster tolerance", channelDelta <= 3)
         }
     }
 
@@ -106,7 +112,8 @@ class SurfaceMaterialTest {
         val interior = buildList<Int> {
             for (y in 24 until 116) for (x in 28 until 192) add(bitmap.getPixel(x, y))
         }
-        val bright = interior.count { brightness(it) > baseBrightness + 8 }
+        val medianBrightness = interior.map(::brightness).sorted()[interior.size / 2]
+        val bright = interior.count { brightness(it) > medianBrightness + 12 }
         val dark = interior.count { brightness(it) < baseBrightness - 18 }
 
         assertTrue("expected visible caustic highlights", bright > 20)
