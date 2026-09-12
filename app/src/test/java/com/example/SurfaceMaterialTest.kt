@@ -63,6 +63,9 @@ class SurfaceMaterialTest {
         val moved=render(30f,30f,130f,130f)
         assertEquals(first.getPixel(35,35),moved.getPixel(55,55))
         assertEquals(first.getPixel(85,85),moved.getPixel(105,105))
+        for (y in 15 until 106 step 5) for (x in 15 until 106 step 5) {
+            assertEquals(first.getPixel(x, y), moved.getPixel(x + 20, y + 20))
+        }
     }
 
     @Test fun `northstar paving remains quieter than water`() {
@@ -82,6 +85,34 @@ class SurfaceMaterialTest {
         assertEquals(0,water.getPixel(0,0));assertEquals(0,paving.getPixel(0,0))
     }
 
+    @Test fun `northstar water carries sparse bright caustics over a darker layered wash`() {
+        val bitmap = Bitmap.createBitmap(220, 140, Bitmap.Config.ARGB_8888)
+        val element = rectangle().copy(
+            left = 10f,
+            top = 10f,
+            right = 210f,
+            bottom = 130f,
+            material = SurfaceMaterial.WATER,
+            style = StrokeStyle.WATERCOLOR_WASH,
+        )
+        WatercolorRenderer.render(Canvas(bitmap), element, 1f, ScaleCalibration(), false)
+
+        fun brightness(color: Int) = android.graphics.Color.red(color) +
+            android.graphics.Color.green(color) + android.graphics.Color.blue(color)
+        val baseBrightness = brightness(SurfaceMaterial.WATER.fill.toInt())
+        val interior = buildList<Int> {
+            for (y in 24 until 116) for (x in 28 until 192) add(bitmap.getPixel(x, y))
+        }
+        val bright = interior.count { brightness(it) > baseBrightness + 8 }
+        val dark = interior.count { brightness(it) < baseBrightness - 18 }
+
+        assertTrue("expected visible caustic highlights", bright > 20)
+        assertTrue("caustics should not cover the field", bright < interior.size / 2)
+        assertTrue("expected confidently darker wash masses", dark > interior.size / 8)
+        assertTrue("expected layered color variation", interior.distinct().size > 80)
+        assertEquals(0, bitmap.getPixel(0, 0))
+    }
+
     @Test fun `bounded watercolor field is seeded settles pigment and preserves mass`() {
         val first = NorthstarWatercolorField.simulateForEvidence("pool:outline", 72, 48, SurfaceMaterial.WATER.outline.toInt())
         val repeated = NorthstarWatercolorField.simulateForEvidence("pool:outline", 72, 48, SurfaceMaterial.WATER.outline.toInt())
@@ -96,7 +127,9 @@ class SurfaceMaterialTest {
             first.mobilePigmentMass + first.depositedPigmentMass,
             first.initialPigmentMass * 0.12f,
         )
-        assertTrue(first.pixels.map { android.graphics.Color.alpha(it) }.distinct().size > 12)
+        val alphaValues = first.pixels.map { android.graphics.Color.alpha(it) }
+        assertTrue(alphaValues.distinct().size > 24)
+        assertTrue(alphaValues.maxOrNull()!! - alphaValues.minOrNull()!! > 36)
     }
 
     @Test fun `watercolor simulation never paints outside its material mask`() {

@@ -329,13 +329,14 @@ object WatercolorRenderer {
             alpha = alpha,
         )
 
-        val shorelinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = colorWithScaledAlpha(outline, 28, alpha)
-            strokeWidth = (min(bounds.width(), bounds.height()) * 0.055f).coerceIn(4f, 18f)
-            style = Paint.Style.STROKE
-            strokeJoin = Paint.Join.ROUND
-        }
-        canvas.drawPath(path, shorelinePaint)
+        NorthstarWaterDetails.draw(
+            canvas = canvas,
+            stableId = stableId,
+            path = path,
+            bounds = bounds,
+            outline = outline,
+            alpha = alpha,
+        )
     }
 
     /** Translation is intentionally excluded so moving an object does not repaint its wash. */

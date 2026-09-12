@@ -8,9 +8,11 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
 import android.util.LruCache
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
@@ -21,7 +23,7 @@ import kotlin.math.sqrt
  * the resulting raster is always clipped by the caller's exact vector path.
  */
 internal object NorthstarWatercolorField {
-    private const val STYLE_VERSION = 1
+    private const val STYLE_VERSION = 2
     private const val MAX_GRID_SIDE = 128
     private const val MIN_GRID_SIDE = 36
     private const val SETTLING_STEPS = 32
@@ -102,7 +104,8 @@ internal object NorthstarWatercolorField {
 
         val count = width * height
         val random = StableRandom(stableSeed(stableId))
-        var paper = FloatArray(count) { random.nextFloat() }
+        val finePaper = FloatArray(count) { random.nextFloat() }
+        var paper = finePaper.copyOf()
         repeat(4) { paper = smoothed(paper, width, height, mask, 0.58f) }
 
         var wetness = FloatArray(count)
@@ -117,38 +120,62 @@ internal object NorthstarWatercolorField {
                 val i = index(x, y, width)
                 if (mask[i] <= 0f) continue
                 val u = x.toFloat() / max(1, width - 1)
-                val grain = paper[i] - 0.5f
-                wetness[i] = mask[i] * (0.68f + 0.13f * (1f - v) + grain * 0.10f)
-                mobile[i] = mask[i] * (0.16f + 0.12f * (u * 0.35f + v * 0.65f) + grain * 0.07f)
+                val coarseGrain = paper[i] - 0.5f
+                val fineGrain = finePaper[i] - 0.5f
+                wetness[i] = mask[i] * (
+                    0.64f + 0.17f * (1f - v) + coarseGrain * 0.13f + fineGrain * 0.035f
+                )
+                mobile[i] = mask[i] * (
+                    0.14f + 0.17f * (u * 0.32f + v * 0.68f) + coarseGrain * 0.09f + fineGrain * 0.025f
+                )
 
                 val px = paper[index((x + 1).coerceAtMost(width - 1), y, width)] -
                     paper[index((x - 1).coerceAtLeast(0), y, width)]
                 val py = paper[index(x, (y + 1).coerceAtMost(height - 1), width)] -
                     paper[index(x, (y - 1).coerceAtLeast(0), width)]
-                velocityX[i] = 0.10f + py * 0.42f
-                velocityY[i] = 0.14f - px * 0.42f
+                velocityX[i] = 0.14f + py * 0.48f
+                velocityY[i] = 0.10f - px * 0.48f
             }
         }
 
-        // A few broad deposits create art-directed wash masses before physical settling.
-        repeat(5) {
+        // Overlapping elliptical charges create deliberate wash masses rather than a
+        // uniformly noisy tint. A soft annular charge gives a few restrained backruns.
+        repeat(6) {
             val centerX = random.nextFloat() * (width - 1)
             val centerY = random.nextFloat() * (height - 1)
-            val radius = min(width, height) * (0.12f + random.nextFloat() * 0.16f)
-            val amount = 0.08f + random.nextFloat() * 0.10f
+            val radiusX = width * (0.13f + random.nextFloat() * 0.19f)
+            val radiusY = height * (0.11f + random.nextFloat() * 0.18f)
+            val amount = 0.10f + random.nextFloat() * 0.14f
             for (y in 0 until height) for (x in 0 until width) {
                 val i = index(x, y, width)
                 if (mask[i] <= 0f) continue
-                val dx = x - centerX
-                val dy = y - centerY
+                val dx = (x - centerX) / radiusX
+                val dy = (y - centerY) / radiusY
                 val distance = sqrt(dx * dx + dy * dy)
-                val influence = (1f - distance / radius).coerceIn(0f, 1f)
-                mobile[i] += influence * influence * amount * mask[i]
-                wetness[i] = max(wetness[i], influence * 0.86f * mask[i])
+                val centerCharge = (1f - distance).coerceIn(0f, 1f)
+                val backrun = (1f - abs(distance - 0.72f) / 0.20f).coerceIn(0f, 1f)
+                mobile[i] += (centerCharge * centerCharge * amount + backrun * amount * 0.18f) * mask[i]
+                wetness[i] = max(wetness[i], max(centerCharge * 0.90f, backrun * 0.76f) * mask[i])
             }
         }
 
         val initialMass = mobile.sum()
+        val edgePhaseX = stablePhase(stableId, 1)
+        val edgePhaseY = stablePhase(stableId, 2)
+        val edgePhaseDiagonal = stablePhase(stableId, 3)
+        val edgeDeposition = FloatArray(count)
+        for (y in 0 until height) for (x in 0 until width) {
+            val i = index(x, y, width)
+            if (mask[i] <= 0f) continue
+            val edgeRhythm = (
+                0.50f +
+                    sin(x * 0.19f + edgePhaseX) * 0.22f +
+                    sin(y * 0.27f + edgePhaseY) * 0.18f +
+                    sin((x + y) * 0.11f + edgePhaseDiagonal) * 0.16f
+                ).coerceIn(0f, 1f)
+            edgeDeposition[i] = boundaryFactor(mask, width, height, x, y) *
+                ((edgeRhythm - 0.34f) / 0.42f).coerceIn(0f, 1f)
+        }
         repeat(SETTLING_STEPS) {
             val nextWetness = FloatArray(count)
             val nextMobile = FloatArray(count)
@@ -174,9 +201,8 @@ internal object NorthstarWatercolorField {
                 val wet = (localWetness + (neighborWetness - localWetness) * (0.07f + paperPull * 0.04f)) * 0.965f
                 nextWetness[i] = wet.coerceIn(0f, 1f) * coverage
 
-                val boundary = boundaryFactor(mask, width, height, x, y)
                 val drying = (1f - wet).coerceIn(0f, 1f)
-                val transferRate = 0.006f + drying * 0.024f + boundary * 0.030f + paperPull * 0.010f
+                val transferRate = 0.006f + drying * 0.029f + edgeDeposition[i] * 0.072f + paperPull * 0.012f
                 val transfer = min(carried, carried * transferRate)
                 carried -= transfer
                 nextMobile[i] = max(0f, carried) * coverage
@@ -193,9 +219,12 @@ internal object NorthstarWatercolorField {
         val blue = Color.blue(pigmentColor)
         for (i in 0 until count) {
             if (mask[i] <= 0f) continue
-            val density = (mobile[i] * 0.72f + deposited[i] * 1.48f).coerceIn(0f, 1f)
-            val grain = (paper[i] - 0.5f) * 7f
-            val opacity = ((4f + density * 66f + grain) * mask[i]).roundToInt().coerceIn(0, 58)
+            val density = (mobile[i] * 0.68f + deposited[i] * 1.72f).coerceIn(0f, 1f)
+            val coarseGrain = (paper[i] - 0.5f) * 13f
+            val fineGrain = (finePaper[i] - 0.5f) * 10f
+            val opacity = ((3f + density * 88f + coarseGrain + fineGrain) * mask[i])
+                .roundToInt()
+                .coerceIn(0, 82)
             pixels[i] = Color.argb(opacity, red, green, blue)
         }
 
@@ -310,6 +339,11 @@ internal object NorthstarWatercolorField {
             hash = (hash xor character.code) * 0x01000193
         }
         return hash xor (STYLE_VERSION * 0x5F356495)
+    }
+
+    private fun stablePhase(value: String, salt: Int): Float {
+        val seed = stableSeed("$value:$salt")
+        return (seed.toUInt().toDouble() / UInt.MAX_VALUE.toDouble() * Math.PI * 2.0).toFloat()
     }
 
     private fun index(x: Int, y: Int, width: Int): Int = y * width + x
