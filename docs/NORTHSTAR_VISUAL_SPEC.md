@@ -43,10 +43,10 @@ Caustics should read as folded light: flowing boundaries, tapered crests, soft
 shoulders, small luminous confluences and uneven cell size. Uniformly stroked
 polygon grids, hard-ended white dashes, identical junctions and heavy all-over
 glow do not meet that target. Keep painterly blue visible between the highlights.
-The owner's current sequence is to finish caustics, then develop grass and decking
-with the staged watercolor layering shown in the supplied material study.
+The owner's latest sequence is grass alone. Water and decking are paused while
+the grass paint is brought toward the focused reference's quality.
 
-Turf uses broad irregular tonal variation, retained paper highlights and soft pigment edges. A diagonal gradient alone does not achieve the reference. The owner's focused grass/travertine study on 2026-09-12 explicitly requires minute sharp detail: selective dry pigment rims, small lifted marks, clustered grass flecks and delicate blades over translucent yellow-green/olive glazes. Avoid uniformly distributed noise or visible repeated texture seams; do not omit the reference's small marks in the name of restraint. Water is paused for a later review while these two materials develop.
+Turf uses broad irregular tonal variation, retained paper highlights, and a mixture of sharply dried and slightly bled pigment edges. A diagonal gradient alone does not achieve the reference. The owner's focused grass/travertine study on 2026-09-12 explicitly requires minute sharp detail: selective dry pigment rims, small lifted marks, clustered grass flecks and delicate blades over translucent yellow-green/olive glazes. Avoid uniformly distributed noise or visible repeated texture seams; do not omit the reference's small marks in the name of restraint. The owner rejected the earlier grass as 5/10 and requires an honest 9/10 target. Study the full layering and sediment at each paint front; do not equate successful tests with that visual acceptance. Water and decking are paused. See [the current grass study](GRASS_PAINT_STUDY.md).
 
 Paving/coping maintain exact boundaries and coherent pattern orientation/scale. Joints are subordinate to outer geometry and simplify at sheet zoom without changing design dimensions. Gravel stays a quiet field. Planting eligibility does not require a decorative bed boundary.
 

@@ -1,8 +1,8 @@
 # Current state and next-session handoff
 
-Updated 2026-09-12 after the layered grass and travertine revision. The current
+Updated 2026-09-12 after the grass-only pigment revision. The current
 branch is **feat/expert-workspace-ui**; its verified application head is
-`f52ea3212ddc283ef4d0be5e3d57e7ce566fc957`. Draft PR #6
+`5bf421bf360c31e8c9c409f905ecdce3b8aa92f6`. Draft PR #6
 targets the merged straight- and smooth-pool interaction seam in
 **feat/project-geometry-seam**. Do not reset the application branch to an older
 documentation checkpoint.
@@ -13,8 +13,8 @@ The owner rejected the grass at `f52ea32` as **5/10** and explicitly set a **9/1
 visual goal. The earlier checks below establish technical behavior, not accepted
 art quality. Water and decking are paused. The current revision replaces the
 old grass paint construction; see [the grass study](GRASS_PAINT_STUDY.md) for the
-reference analysis, mathematical model and honest acceptance criteria. New Android
-verification is pending at this source checkpoint. Do not describe the visual
+reference analysis, mathematical model and honest acceptance criteria. The new build/unit gate passed 302 tests; the real emulator gate passed all
+20 scenarios. Do not describe the visual
 bar as achieved merely because tests pass.
 
 ## Delivered on this branch
@@ -98,17 +98,31 @@ stored in the existing workspace-view preferences, survives activity recreation,
 and is passed to both the live canvas and PNG/PDF output. It remains outside the
 authoritative project JSON and does not consume Undo/Redo.
 
-Grass and travertine now have dedicated material paint through the shared live
-and export renderer. `NorthstarGroundMaterials` reuses the polygon displacement
-helper for overlapping glazes, selective sharp drying fronts, lifted paper,
-fine granulation, clustered grass flecks/blades and mineral pores. Grass uses
-deeper yellow-green/olive washes with uneven concentrations and luminous gaps.
-Travertine uses warm ivory/ochre/taupe with subordinate crisp joint ink. Floating-
-point accumulation prevents faint neutral layers acquiring pink/green casts;
-the finished paint is converted once to ordinary ARGB. Fixed 1024-pixel-longest-
-side textures and their prefiltered levels share a 24 MiB cache. Fine detail
-softens beyond that texture resolution; target-tablet timing is not established.
-Selective dry deposits follow the actual boundary inside its exact clip.
+The current grass painter replaces the earlier polygon/stroke construction with
+related, recursively displaced washes, pigment redistribution to each wash's
+actual drying front, shared paper deposition, small reserves and ordered RGB
+Kubelka-Munk glazes. `NorthstarGrassPaint.java` supplies the production pixels;
+the desktop study adapter uses that same core. Seven local visual revisions
+addressed angular/stamped shapes, yellow cast, flat or excessively grainy
+underpainting, uniform fronts, aligned flecks and regular reserve holes. This
+is an independently implemented artistic approximation informed by Hobbs and
+Curtis et al., not a full fluid solver or measured spectral pigment model.
+
+Hardware grass preparation runs on one worker, with at most three pending washes.
+The initial flat underpainting remains visible until paint completion invalidates
+the actual Compose canvas. Software output waits for or computes the finished
+paint. The baked grass includes its underpainting, so surface opacity is applied
+once. Translation and zoom retain stable pigment. The existing 1024-pixel-longest-
+side cap, prefiltered levels and 24 MiB ground cache remain. Cold generation is
+appreciable; many-surface cache pressure and physical tablet frame times are not
+established. No responsiveness claim follows from the worker alone.
+
+Travertine retains the previous floating-point layered stone paint and joint
+renderer. Its comparison images are byte-identical to `f52ea32`; grass changes do
+not imply acceptance of the paused decking. Exact silhouettes and final linework
+remain in the shared renderer. No reference pixels, runtime service or dependency
+were added. The current source's visual bar remains 9/10, with owner acceptance
+unresolved; see [the grass study](GRASS_PAINT_STUDY.md).
 
 Travertine's initial 12x24-inch running bond respects calibrated drawing units
 and follows object movement. It is a presentation default, not a specified
@@ -122,81 +136,68 @@ implementation. No new dependency, reference pixels or runtime AI was added.
 
 ## Verified evidence
 
-[Android 2D integrity run 34704034341](https://github.com/CRisdon45/Plan_Trace/actions/runs/34704034341)
-at `f52ea32` passed **299 tests with zero failures, errors or skips**, the
-nine-test runtime-policy audit, resolved-runtime/manifest checks and debug
-assembly. Downloaded XML independently confirmed the test totals. The new ground
-checks cover both materials after cache eviction, translation, neighboring seeds,
-concave clipping, unchanged serialized elements, zero opacity, unchanged Graphic
-fills, physical joint calibration equivalence, broad/fine paint variation and
-neutral stone hue. Tests characterize implementation behavior, not visual acceptance.
+[Android 2D integrity run 34706762595](https://github.com/CRisdon45/Plan_Trace/actions/runs/34706762595)
+at `5bf421b` passed **302 tests with zero failures, errors or skips**, the nine-test
+runtime-policy audit, resolved-runtime/manifest checks and debug assembly. The
+downloaded XML independently confirms these totals. Three new pigment tests
+check conserved deposited mass, concentration at external/internal wet fronts,
+unchanged dry paper, no invented image-crop rim, and thin fractional masks. The
+shared-renderer checks also cover cold-cache repeatability, seed variation,
+translation, exact concave clipping, unchanged serialization and correct grass
+opacity. The local production core and PNG adapter compile with Java 11 targets;
+no local Android/Gradle build ran.
 
-Unit artifact `10301162860` ZIP SHA-256:
-`077bb907330b2219acc1fdaeefa69c26fd8ea745c8eb8aec223d443470f864f1`.
-Actual 1150x850 renderer details, composited onto paper for inspection:
+Unit artifact `10302150595` ZIP SHA-256:
+`d71713c087e849424b685c130b75368a56891f25b676aa7874ab73669274636b`.
+The actual 1150x850 turf detail SHA-256 is
+`34595dbd221ab3ccde94b2799f31489007e3d784cef4df2f8a2ed06dc6c7fa23`.
+Its 60px block range is 63.82 and 4px residual is 11.81; these are implementation
+characterization, not quality scores. Actual turf detail and concave images were
+opened and inspected. The water detail, polygon-water wash, caustic study,
+Graphic organic plan, and travertine detail/concave images are byte-identical to
+`f52ea32`. Seven local paint iterations and three inspected seeds informed the
+visual changes; no reference pixels or flattering crops serve as test fixtures.
 
-- Grass PNG: `a17d9dd771f1d45e93c9ce88b584625ffdac356feaf17878a19e4a7388943763`.
-- Travertine PNG: `60fb1e74389a0046e52fa124b6bbaea7e09e8005346dc141020ddc46a0456610`.
+The earlier `00712dd` CI runs were superseded by the final grain adjustment and
+cancelled. They are not reported as passing checks. [Android workspace run 34706762612](https://github.com/CRisdon45/Plan_Trace/actions/runs/34706762612)
+at the same final app revision passed **all 20 scenarios**. Downloaded per-case
+instrumentation logs independently confirm 20 `OK (1 test)` results. The real
+1600x1000 live grass view, 1800x1000 export and reopened view were opened and
+inspected: all contain the completed new paint, not the temporary flat fill.
+Active-window records identify the intended development app. The crash buffer
+is empty, and Android reports no ANR since boot. These are synthetic API-35
+emulator results, not physical-tablet performance or visual acceptance.
 
-The final grass fixture has a 60-pixel block brightness range of 87.44324/255 and
-a four-pixel local residual of 3.971203/255. Travertine measures 32.77011/255 and
-3.101962/255 respectively. These are diagnostic measurements, not reference-match
-scores or tablet performance results. The final details and supplied focused
-material study were opened and inspected. The initial `a2a434f` pass passed 299
-tests but exposed pink/green drift in faint stone glazes and embossed grass marks.
-`9be53af` corrected compositing and deposits; its grass remained too pale.
-`f52ea32` deepens selective olive concentrations while preserving light gaps.
-Earlier emulator runs were superseded by the visual refinements.
+Emulator artifact `10302136925` ZIP SHA-256:
+`7c37ca09508bac95ff78b48782e1478c04eb7bd355a4d121b7e718fe98902222`.
+Actual two-material export SHA-256:
+`79e45b41c0110e40b622871543f4c3232bbe673d27dded35409bd8668a206ca7`.
+Appearance switching preserves saved JSON byte-for-byte at
+`69ec97d1ed89eb324513238c895a52e997a6d5601f6a59a9a12b5c9622520d19`.
+Technical and Graphic exports remain byte-identical to `f52ea32`. The grass
+fixture uses the existing normal save/reopen/export paths and restores the
+preceding synthetic project through monotonically increasing store revisions.
 
-Water-only detail, pigment-only and caustic-study images remain byte-identical
-to `1a0836a`; Graphic organic output is also byte-identical. Its prior caustic
-implementation remains described above and in the previous checkpoint. Northstar
-organic output now includes the new stone treatment on its coping.
-
-[Android workspace run 34704034310](https://github.com/CRisdon45/Plan_Trace/actions/runs/34704034310)
-at the same application revision passed all **20 scenarios**, independently
-counted from the retained instrumentation results. Artifact `10301547860` ZIP
-SHA-256: `48bbbd292899248bde7480fe75646b7580ddbf377b599bef4fabc06f3dd9f861`.
-The new scenario places two synthetic material objects in the actual workspace,
-selects Northstar through the View command, captures the live app, exports the
-same geometry and recreates the activity. It restores the preceding synthetic
-fixture through increasing store revisions without clearing application data.
-The live and reopened images and 1800x1000 export were opened and inspected;
-the active-window records identify the development app. Fine material marks and
-joint ink remain visible at working scale. This is a material study, not a full
-landscape composition or physical-tablet performance result.
-
-The actual two-material export SHA-256 is
-`b03196946e4445dd8399fea195d15d95d8dd9cae24266247a83b85eb29ca1391`.
-Appearance switching preserved saved JSON byte-for-byte at
-`de083f287a3f408447bc60e16f8d96f39cc79312b2eb2c581c2945a8cbbd8e7f`.
-Technical and Graphic exports remain byte-identical to `1a0836a`. The runtime
-crash buffer is empty, and Android reports no ANR since boot.
-
-Android builds ran in CI; no local Android build ran because the Gradle
-distribution is unavailable here. Physical S Pen, palm rejection, hardware frame
-time and owner visual acceptance remain unverified. Synthetic fixtures are not
-client properties, and reference pixels are not published. PDF keeps the shared
-deterministic renderer; a simpler fallback remains acceptable if tablet export
-cost warrants it. No physical tablet, original app, signing key or user data was
-changed. No application PR was merged.
+Physical S Pen, palm rejection, hardware frame time and owner visual acceptance
+remain unverified. No original app/data, tablet installation, signing change or
+application PR merge was performed.
 
 ## Next outcome
 
-Review grass and travertine against the owner's focused layered material study,
-including close detail and actual working scale. Preserve the full reference
-bar: translucent washes, crisp drying fronts, bleed within paint, mineral pores,
-grass detail and coherent joint hierarchy. Owner acceptance and a complete
-Northstar composition remain pending. The water is explicitly paused for later
-review, not reopened by material work. Contextual planting, furniture and cast
-shadows should come from their own objects when that scope is taken up.
+Stay on grass until the owner accepts the focused reference match. Judge the
+full surface and its cumulative layer sheet together with real workspace and
+export captures. The target remains 9/10; do not self-certify it from tests,
+color statistics, increased detail, or the existence of a watercolor algorithm.
+Keep scrutinizing connected wash structure, selectively sharp fronts with
+interior pigment buildup, paper reserves, slightly bled segments and varied
+minute deposits. Do not revert to the rejected `f52ea32` grass or treat its
+technical checks as visual approval. Water and decking remain paused.
 
-Measure cold generation and warm redraw on the target latest-Android tablet
-before claiming pen responsiveness. Review the bounded application slice into
-**feat/project-geometry-seam** without implicitly merging it. The queued
-rectangle/convex-polygon geometry milestone remains behind the current material
-work. Preserve direct pen placement, exact geometry, whole-action Undo and all
-three appearances. Do not restart solver/library research or the paused 3D work.
+Measure cold preparation, cache pressure and warm redraw on the latest-Android
+target tablet before claiming pen responsiveness. Preserve exact geometry,
+whole-action Undo, persistence and all three appearances. The queued geometry,
+planting and 3D work is not reopened by this material study. Draft PR #6 remains
+unmerged, targeting **feat/project-geometry-seam**.
 
 ## Boundaries still in force
 

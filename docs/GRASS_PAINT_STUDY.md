@@ -82,7 +82,9 @@ Local Java compilation and production-pixel inspection run without an Android
 SDK. Typical complete diagnostic generation took about 6.6 seconds on this host,
 including five PNG stage captures; that is not a tablet benchmark. Cold generation
 is appreciable, hence the worker. Actual Android build, clipping/opacity and
-persistence results belong in CURRENT_STATE after CI completes. Hardware frame
+persistence results are recorded in CURRENT_STATE: app `5bf421b` passed 302 unit
+tests, nine policy checks and all 20 emulator scenarios. Its full grass surface,
+concave clip, live workspace, reopened canvas and PNG export were inspected. Hardware frame
 time, physical S Pen behavior and a 9/10 visual acceptance remain unverified.
 
 To reproduce the isolated production study with a JDK:
