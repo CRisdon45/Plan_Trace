@@ -54,7 +54,7 @@ func _initialize() -> void:
 
 func _process(_dt: float) -> bool:
 	frame += 1
-	if frame < 3:
+	if frame < 4:
 		return false
 	if capturing:
 		return false
@@ -63,6 +63,7 @@ func _process(_dt: float) -> bool:
 	pending_stage += 1
 	if pending_stage > 5:
 		_write_crops()
+		_write_sheet()
 		print("Godot Northstar grass bake: %s" % output_dir)
 		quit()
 		return true
@@ -98,6 +99,18 @@ func _write_crops() -> void:
 	_crop(image, Vector2i(image.get_width() / 2 - 360, image.get_height() / 2 - 360), "crop-center.png")
 	_crop(image, Vector2i(80, 160), "crop-left.png")
 	_crop(image, Vector2i(image.get_width() - 800, 160), "crop-right.png")
+
+func _write_sheet() -> void:
+	var cell := Vector2i(380, 266)
+	var sheet := Image.create(25 + 5 * (cell.x + 20), 92 + cell.y + 50, false, Image.FORMAT_RGBA8)
+	sheet.fill(Color(0.976, 0.969, 0.937, 1))
+	for i in 5:
+		var stage := Image.new()
+		if stage.load("%s/%s.png" % [output_dir, STAGE_NAMES[i]]) != OK:
+			continue
+		stage.resize(cell.x, cell.y, Image.INTERPOLATE_LANCZOS)
+		sheet.blit_rect(stage, Rect2i(Vector2i.ZERO, cell), Vector2i(25 + i * (cell.x + 20), 92))
+	sheet.save_png("%s/grass-layer-progression.png" % output_dir)
 
 func _crop(image: Image, origin: Vector2i, name: String) -> void:
 	var region := Rect2i(origin, Vector2i(720, 720))

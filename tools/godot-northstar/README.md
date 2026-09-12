@@ -20,8 +20,10 @@ later integration: same shader, different host.
 tools/godot-northstar/bake.sh build/godot-grass ground-study
 ```
 
-Writes `grass.png`, stages `01`–`05`, and three 720px crops. Default size is
-2048×1434. Typical llvmpipe bake is about 20 seconds here.
+Writes `grass.png`, stages `01`–`05`, three 720px crops, and a five-cell
+progression sheet. Default size is 2048×1434. Typical llvmpipe bake is about
+20 seconds here. The shader is overlapping irregular washes with paper
+gaps, not a metaball noise field.
 
 Godot 4.7.2 is downloaded on demand unless `GODOT` points at a binary.
 
