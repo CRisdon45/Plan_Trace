@@ -78,18 +78,18 @@ internal object NorthstarWaterDetails {
         val minimumSide = min(bounds.width(), bounds.height())
         val pale = Color.rgb(247, 252, 248)
         val halo = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = colorWithScaledAlpha(pale, 20, alpha)
+            color = colorWithScaledAlpha(pale, 28, alpha)
             strokeWidth = (minimumSide * 0.014f).coerceIn(2.2f, 6f)
             style = Paint.Style.STROKE
             strokeCap = Paint.Cap.ROUND
             strokeJoin = Paint.Join.ROUND
         }
         val quietCore = Paint(halo).apply {
-            color = colorWithScaledAlpha(pale, 42, alpha)
+            color = colorWithScaledAlpha(pale, 64, alpha)
             strokeWidth = (minimumSide * 0.0055f).coerceIn(1.0f, 2.8f)
         }
         val strongCore = Paint(quietCore).apply {
-            color = colorWithScaledAlpha(pale, 76, alpha)
+            color = colorWithScaledAlpha(pale, 108, alpha)
             strokeWidth = (minimumSide * 0.0075f).coerceIn(1.3f, 3.6f)
         }
         canvas.save()
