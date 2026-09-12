@@ -125,7 +125,37 @@ internal object NorthstarPolygonWash {
                 canvas.drawPath(path, paint)
             }
         }
+        granulate(bitmap, random)
         return bitmap
+    }
+
+    /** Paper tooth changes how much of the existing layered pigment remains.
+     * It cannot paint a blank pixel or introduce a separate screen-space speckle
+     * overlay. Correlated paper patches accompany the finer grain.
+     */
+    private fun granulate(bitmap: Bitmap, random: Random) {
+        val width = bitmap.width
+        val height = bitmap.height
+        val paperWidth = width / 7 + 2
+        val paperHeight = height / 7 + 2
+        val paper = FloatArray(paperWidth * paperHeight) { random.nextFloat() }
+        val pixels = IntArray(width * height)
+        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+        for (y in 0 until height) for (x in 0 until width) {
+            val index = y * width + x
+            val color = pixels[index]
+            val px = x / 7
+            val py = y / 7
+            val fx = (x % 7) / 7f
+            val fy = (y % 7) / 7f
+            val top = paper[py * paperWidth + px] * (1f - fx) + paper[py * paperWidth + px + 1] * fx
+            val bottom = paper[(py + 1) * paperWidth + px] * (1f - fx) +
+                paper[(py + 1) * paperWidth + px + 1] * fx
+            val tooth = (top * (1f - fy) + bottom * fy) * 0.55f + random.nextFloat() * 0.45f
+            val opacity = (Color.alpha(color) * (0.72f + tooth * 0.58f)).roundToInt().coerceIn(0, 255)
+            pixels[index] = Color.argb(opacity, Color.red(color), Color.green(color), Color.blue(color))
+        }
+        bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
     }
 
     private fun deform(input: List<Vertex>, random: Random, rounds: Int): List<Vertex> {

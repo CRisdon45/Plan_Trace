@@ -10,7 +10,9 @@ code or assets, from Tyler Hobbs's 2017
 (primary essay inspected 2026-09-12). `NorthstarPolygonWash.kt` is an independent
 Kotlin implementation: recursively displaced polygon edges with inherited local
 variance, interleaved translucent blue layers and gaps in individual deposits.
-Four spatial scales provide broad washes through small pigment blooms. The
+Four spatial scales provide broad washes through small pigment blooms. Correlated
+paper-tooth variation modulates existing pigment coverage at the final raster
+resolution, retaining fine granulation without painting outside a glaze. The
 existing bounded deposition field and caustics remain separate complementary
 layers. No external code license or art redistribution grant is assumed; no
 third-party code, image, dependency or runtime service is added.
