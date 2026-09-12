@@ -34,8 +34,11 @@ internal object ProjectVisualStyle {
         val width = when {
             obj.siteTrace != null -> 2.8f
             obj.kind == DesignObjectKind.WALL -> 2.5f
-            obj.kind == DesignObjectKind.POOL || obj.kind == DesignObjectKind.SPA -> 2.0f
-            else -> 1.6f
+            obj.kind == DesignObjectKind.POOL || obj.kind == DesignObjectKind.SPA ->
+                if (appearance == DesignAppearance.NORTHSTAR) 2.35f else 2.0f
+            obj.kind == DesignObjectKind.PAVING ->
+                if (appearance == DesignAppearance.NORTHSTAR) 1.25f else 1.6f
+            else -> if (appearance == DesignAppearance.NORTHSTAR) 1.4f else 1.6f
         }
         return ProjectElementStyle(
             material = material,
@@ -49,7 +52,7 @@ internal object ProjectVisualStyle {
     fun forCoping(appearance: DesignAppearance) = ProjectElementStyle(
         material = SurfaceMaterial.PAVING.takeUnless { appearance == DesignAppearance.TECHNICAL },
         strokeColor = if (appearance == DesignAppearance.TECHNICAL) 0xFF4D5149 else SurfaceMaterial.PAVING.outline,
-        strokeWidth = 1.3f,
+        strokeWidth = if (appearance == DesignAppearance.NORTHSTAR) 1.5f else 1.3f,
         strokeStyle = if (appearance == DesignAppearance.NORTHSTAR)
             StrokeStyle.WATERCOLOR_WASH else StrokeStyle.INK,
     )

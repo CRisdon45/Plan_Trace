@@ -10,6 +10,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import kotlin.math.abs
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -46,23 +47,38 @@ class SurfaceMaterialTest {
         assertTrue(first.sameAs(render()))
     }
 
-    @Test fun `northstar cue is deterministic clipped and leaves a calm base field`() {
-        fun render(): Bitmap {
-            val bitmap = Bitmap.createBitmap(120, 120, Bitmap.Config.ARGB_8888)
-            val element = rectangle().copy(
-                right=110f,
-                bottom=110f,
-                material=SurfaceMaterial.WATER,
-                style=StrokeStyle.WATERCOLOR_WASH,
-            )
+    @Test fun `northstar water depth is deterministic clipped and sheet directed`() {
+        fun render(left:Float=10f,top:Float=10f,right:Float=110f,bottom:Float=110f): Bitmap {
+            val bitmap = Bitmap.createBitmap(150, 150, Bitmap.Config.ARGB_8888)
+            val element = rectangle().copy(left=left,top=top,right=right,bottom=bottom,
+                material=SurfaceMaterial.WATER,style=StrokeStyle.WATERCOLOR_WASH)
             WatercolorRenderer.render(Canvas(bitmap),element,1f,ScaleCalibration(),false)
             return bitmap
         }
         val first=render()
         assertEquals(0,first.getPixel(0,0))
-        assertEquals(SurfaceMaterial.WATER.fill.toInt(),first.getPixel(100,100))
-        assertNotEquals(SurfaceMaterial.WATER.fill.toInt(),first.getPixel(38,38))
+        assertNotEquals(first.getPixel(35,35),first.getPixel(85,85))
         assertTrue(first.sameAs(render()))
+        val moved=render(30f,30f,130f,130f)
+        assertEquals(first.getPixel(35,35),moved.getPixel(55,55))
+        assertEquals(first.getPixel(85,85),moved.getPixel(105,105))
+    }
+
+    @Test fun `northstar paving remains quieter than water`() {
+        fun render(material:SurfaceMaterial): Bitmap {
+            val bitmap=Bitmap.createBitmap(120,120,Bitmap.Config.ARGB_8888)
+            val element=rectangle().copy(right=110f,bottom=110f,material=material,style=StrokeStyle.WATERCOLOR_WASH)
+            WatercolorRenderer.render(Canvas(bitmap),element,1f,ScaleCalibration(),false)
+            return bitmap
+        }
+        fun colorDistance(a:Int,b:Int)=abs(android.graphics.Color.red(a)-android.graphics.Color.red(b))+
+            abs(android.graphics.Color.green(a)-android.graphics.Color.green(b))+
+            abs(android.graphics.Color.blue(a)-android.graphics.Color.blue(b))
+        val water=render(SurfaceMaterial.WATER)
+        val paving=render(SurfaceMaterial.PAVING)
+        assertTrue(colorDistance(water.getPixel(85,85),SurfaceMaterial.WATER.fill.toInt()) >
+            colorDistance(paving.getPixel(85,85),SurfaceMaterial.PAVING.fill.toInt()))
+        assertEquals(0,water.getPixel(0,0));assertEquals(0,paving.getPixel(0,0))
     }
 
     @Test fun `open paths and notes cannot be assigned surfaces from the interface`() {

@@ -266,8 +266,10 @@ object WatercolorRenderer {
     private fun ovalPath(bounds: RectF) = Path().apply { addOval(bounds, Path.Direction.CW) }
 
     /**
-     * A broad, deterministic tonal cue clipped to exact surface geometry. It is
-     * intentionally sparse: most of the base field stays calm and unchanged.
+     * Broad, deterministic tonal structure clipped to exact surface geometry.
+     * The cues are anchored to sheet-space bounds rather than frame time, zoom,
+     * or render order. Water receives the strongest depth hierarchy; paving is
+     * intentionally quiet so the pool and its coping remain easy to read.
      */
     private fun drawNorthstarSurfaceCue(
         canvas: Canvas,
@@ -277,14 +279,65 @@ object WatercolorRenderer {
         alpha: Float,
     ) {
         if (bounds.width() <= 0f || bounds.height() <= 0f) return
-        val base = material.outline.toInt()
-        val strength = if (material == com.example.model.SurfaceMaterial.WATER) 46 else 24
-        val cue = Color.argb(
-            (strength * alpha).toInt().coerceIn(0, 255),
-            Color.red(base),
-            Color.green(base),
-            Color.blue(base),
-        )
+        canvas.save()
+        try {
+            canvas.clipPath(path)
+            when (material) {
+                com.example.model.SurfaceMaterial.WATER -> drawWaterDepthCue(canvas, path, bounds, material.outline.toInt(), alpha)
+                com.example.model.SurfaceMaterial.PAVING -> drawQuietPavingCue(canvas, path, bounds, material.outline.toInt(), alpha)
+                else -> drawBroadMaterialCue(canvas, bounds, material.outline.toInt(), alpha)
+            }
+        } finally {
+            canvas.restore()
+        }
+    }
+
+    private fun drawWaterDepthCue(canvas: Canvas, path: Path, bounds: RectF, outline: Int, alpha: Float) {
+        val deep = colorWithScaledAlpha(outline, 42, alpha)
+        val clear = colorWithScaledAlpha(outline, 0, alpha)
+        val depthPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            shader = LinearGradient(
+                bounds.left,
+                bounds.top,
+                bounds.right,
+                bounds.bottom,
+                clear,
+                deep,
+                Shader.TileMode.CLAMP,
+            )
+            style = Paint.Style.FILL
+        }
+        canvas.drawPath(path, depthPaint)
+
+        val shorelinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = colorWithScaledAlpha(outline, 28, alpha)
+            strokeWidth = (min(bounds.width(), bounds.height()) * 0.055f).coerceIn(4f, 18f)
+            style = Paint.Style.STROKE
+            strokeJoin = Paint.Join.ROUND
+        }
+        canvas.drawPath(path, shorelinePaint)
+    }
+
+    private fun drawQuietPavingCue(canvas: Canvas, path: Path, bounds: RectF, outline: Int, alpha: Float) {
+        val shade = colorWithScaledAlpha(outline, 14, alpha)
+        val clear = colorWithScaledAlpha(outline, 0, alpha)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            shader = LinearGradient(
+                bounds.left,
+                bounds.top,
+                bounds.right,
+                bounds.bottom,
+                shade,
+                clear,
+                Shader.TileMode.CLAMP,
+            )
+            style = Paint.Style.FILL
+        }
+        canvas.drawPath(path, paint)
+    }
+
+    private fun drawBroadMaterialCue(canvas: Canvas, bounds: RectF, outline: Int, alpha: Float) {
+        val cue = colorWithScaledAlpha(outline, 24, alpha)
         val washBounds = RectF(
             bounds.left - bounds.width() * 0.10f,
             bounds.top - bounds.height() * 0.16f,
@@ -303,14 +356,15 @@ object WatercolorRenderer {
             this.shader = shader
             style = Paint.Style.FILL
         }
-        canvas.save()
-        try {
-            canvas.clipPath(path)
-            canvas.drawOval(washBounds, paint)
-        } finally {
-            canvas.restore()
-        }
+        canvas.drawOval(washBounds, paint)
     }
+
+    private fun colorWithScaledAlpha(color: Int, strength: Int, alpha: Float) = Color.argb(
+        (strength * alpha).toInt().coerceIn(0, 255),
+        Color.red(color),
+        Color.green(color),
+        Color.blue(color),
+    )
 
     private fun drawWatercolorPathFill(
         canvas: Canvas,

@@ -68,6 +68,7 @@ class CopingDocumentTest {
         val doc=document();val elements=DesignOutput.drawing(doc).elements.filterIsInstance<PolylineElement>()
         assertEquals(listOf("pool:coping-outer","pool:outline"),elements.map { it.id })
         assertEquals(listOf(SurfaceMaterial.PAVING,SurfaceMaterial.WATER),elements.map { it.material })
+        assertEquals(listOf(1.5f,2.35f),elements.map { it.strokeWidth })
         val context=ApplicationProvider.getApplicationContext<Context>()
         val a=DesignOutput.png(context,doc,1000,700)!!.readBytes()
         val b=DesignOutput.png(context,doc,1000,700)!!.readBytes()
