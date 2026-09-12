@@ -58,8 +58,8 @@ internal object NorthstarGroundMaterials {
         val canvas = Canvas(wetPaint)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
         val grass = key.grass
-        val palette = if (grass) intArrayOf(Color.rgb(160, 181, 63), Color.rgb(120, 151, 61),
-            Color.rgb(191, 199, 83), Color.rgb(83, 120, 48)) else intArrayOf(
+        val palette = if (grass) intArrayOf(Color.rgb(146, 163, 46), Color.rgb(100, 131, 40),
+            Color.rgb(181, 184, 67), Color.rgb(61, 93, 28)) else intArrayOf(
             Color.rgb(192, 155, 99), Color.rgb(207, 184, 139), Color.rgb(163, 141, 105), Color.rgb(224, 201, 159))
         fun boundary(x: Float, y: Float, radius: Float): List<NorthstarPolygonWash.Vertex> {
             val stretch = between(.7f, 1.4f)
@@ -101,11 +101,17 @@ internal object NorthstarGroundMaterials {
         }
         // Broad yellow-green/ochre glazes, followed by distinct smaller blooms.
         repeat(18) { i -> glaze(between(0f, key.width.toFloat()), between(0f, key.height.toFloat()),
-            between(95f, 210f), palette[i % 4], if (grass) 6 else 3, 9, false) }
+            between(95f, 210f), palette[i % 4], if (grass) 9 else 3, 9, false) }
+        if (grass) repeat(12) { i ->
+            // Uneven deeper pigment toward one side, with lighter open paper
+            // elsewhere. These are wash concentrations, not invented plant shadows.
+            glaze(between(key.width * .58f, key.width * 1.08f), between(0f, key.height.toFloat()),
+                between(60f, 150f), palette[if (i % 3 == 0) 3 else 1], 8, 8, true)
+        }
         repeat(70) { i ->
             val x = between(0f, key.width.toFloat()); val y = between(0f, key.height.toFloat())
             val radius = between(18f, 58f)
-            glaze(x, y, radius, palette[i % 4], if (grass) 7 else 4, 7, i % 3 != 0)
+            glaze(x, y, radius, palette[i % 4], if (grass) 9 else 4, 7, i % 3 != 0)
             repeat(5) {
                 glaze(x + between(-radius, radius), y + between(-radius, radius),
                     between(3f, 19f), palette[i % 4], if (grass) 9 else 5, 4, true)

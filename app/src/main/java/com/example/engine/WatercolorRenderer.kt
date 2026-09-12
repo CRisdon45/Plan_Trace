@@ -48,7 +48,7 @@ object WatercolorRenderer {
             val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = if (element.style == StrokeStyle.WATERCOLOR_WASH) when (material) {
                     com.example.model.SurfaceMaterial.WATER -> Color.rgb(120, 199, 221)
-                    com.example.model.SurfaceMaterial.TURF -> Color.rgb(227, 234, 175)
+                    com.example.model.SurfaceMaterial.TURF -> Color.rgb(218, 225, 151)
                     com.example.model.SurfaceMaterial.PAVING -> Color.rgb(247, 241, 225)
                     else -> material.fill.toInt()
                 } else material.fill.toInt()

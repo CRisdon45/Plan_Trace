@@ -29,7 +29,11 @@ class GroundMaterialTest {
     }
     private fun save(bitmap: Bitmap, name: String) {
         val dir = File("build/reports/northstar-watercolor").apply { mkdirs() }
-        File(dir, name).outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        val paper = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
+        paper.eraseColor(Color.rgb(249,247,238))
+        Canvas(paper).drawBitmap(bitmap, 0f, 0f, null)
+        File(dir, name).outputStream().use { paper.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        paper.recycle()
     }
 
     @Test fun `ground washes survive cold caches translation and concave clipping without data changes`() {
