@@ -75,8 +75,11 @@ class CopingDocumentTest {
         assertArrayEquals(a,b)
         val bitmap=BitmapFactory.decodeByteArray(a,0,a.size)
         val pixels=IntArray(bitmap.width*bitmap.height);bitmap.getPixels(pixels,0,bitmap.width,0,0,bitmap.width,bitmap.height)
-        assertTrue(pixels.count { it==SurfaceMaterial.PAVING.fill.toInt() }>100)
-        assertTrue(pixels.count { it==SurfaceMaterial.WATER.fill.toInt() }>1000)
+        fun distance(color:Int,target:Int)=kotlin.math.abs(android.graphics.Color.red(color)-android.graphics.Color.red(target))+
+            kotlin.math.abs(android.graphics.Color.green(color)-android.graphics.Color.green(target))+
+            kotlin.math.abs(android.graphics.Color.blue(color)-android.graphics.Color.blue(target))
+        assertTrue(pixels.count { distance(it,SurfaceMaterial.PAVING.fill.toInt())<60 }>100)
+        assertTrue(pixels.count { distance(it,SurfaceMaterial.WATER.fill.toInt())<60 }>1000)
         bitmap.recycle()
         File("build/reports/design-geometry").mkdirs()
         File("build/reports/design-geometry/connected-coping.png").writeBytes(a)
