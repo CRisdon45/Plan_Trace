@@ -142,89 +142,43 @@ void fragment() {
 	float hole = min(sd_hole_a(uv), sd_hole_b(uv));
 	float inside = (1.0 - smoothstep(-0.003, 0.006, lot_sd)) * smoothstep(-0.004, 0.006, hole);
 
-	vec2 warp = vec2(
-		fbm(p * 0.95 + 1.4, 3) - 0.5,
-		fbm(p * 0.88 + 6.8, 3) - 0.5
-	);
-	vec2 q = p + 0.22 * warp;
-	q += 0.07 * vec2(fbm(p * 2.5 + 3.1, 2) - 0.5, fbm(p * 2.2 + 8.4, 2) - 0.5);
+	vec2 q = uv * vec2(aspect, 1.0);
+	float var = fbm(q * 2.4 + 1.1, 4);
+	float var2 = fbm(q * 5.5 + 4.8, 3);
+	float even = inside;
+	float mid = smoothstep(0.38, 0.72, var) * inside;
+	float shade = smoothstep(0.58, 0.86, var) * (0.35 + 0.65 * var2) * inside;
+	float lift = smoothstep(0.62, 0.82, var2) * mid;
+	float broken = mix(0.12, 1.0, smoothstep(0.28, 0.7, fbm(uv * 13.0, 2)));
+	float lot_front = exp(-lot_sd * lot_sd * 900.0) * inside * broken;
+	float hole_front = exp(-hole * hole * 1100.0) * inside * mix(0.1, 1.0, 1.0 - broken);
+	float grain = 0.72 + 0.45 * paper;
 
-	float field = 8.0;
-	float field_b = 8.0;
-	for (int i = 0; i < 6; i++) {
-		vec2 rnd = hash22(vec2(float(i) * 2.7, u_seed * 11.0 + 1.8));
-		vec2 center = vec2(
-			(0.10 + 0.78 * rnd.x + 0.04 * float(i)) * aspect,
-			0.14 + 0.70 * rnd.y
-		);
-		vec2 radii = vec2(0.22 + 0.20 * rnd.x, 0.16 + 0.18 * rnd.y);
-		float ang = (rnd.x - 0.5) * 1.4;
-		vec2 d = rotate(q - center, ang) / radii;
-		float lobe = 0.07 * sin(atan(d.y, d.x) * (6.0 + 5.0 * rnd.y) + u_seed * 6.0);
-		float nedge = 0.10 * (fbm(q * 3.4 + float(i), 3) - 0.5);
-		float sd = length(d) - (1.0 + lobe + nedge);
-		field = min(field, sd);
-		if (i >= 2) {
-			field_b = min(field_b, sd + 0.04);
-		}
-	}
-
-	float wash = (1.0 - smoothstep(-0.08, 0.11, field)) * inside;
-	float wash_mid = (1.0 - smoothstep(-0.02, 0.09, field_b)) * inside;
-	float wash_deep = (1.0 - smoothstep(-0.12, 0.02, field - 0.06 + 0.10 * (1.0 - uv.x))) * inside;
-	float keep = wash;
-
-	float reserve = smoothstep(0.58, 0.76, fbm(q * 1.05 + vec2(uv.y * 1.8, 3.3), 3));
-	reserve *= smoothstep(0.12, 0.48, wash);
-	keep *= 1.0 - 0.88 * reserve;
-
-	float island_front = exp(-field * field * 90.0) * mix(0.08, 1.0, smoothstep(0.32, 0.78, fbm(q * 5.4 + 2.2, 2)));
-	island_front *= inside;
-	float front_deep = exp(-pow(field + 0.04, 2.0) * 70.0) * inside;
-	float lot_front = exp(-lot_sd * lot_sd * 1400.0) * inside * mix(0.15, 1.0, smoothstep(0.28, 0.72, fbm(uv * 14.0, 2)));
-	float hole_front = exp(-hole * hole * 1800.0) * inside * mix(0.12, 1.0, smoothstep(0.30, 0.75, fbm(uv * 16.0 + 4.0, 2)));
-	float front = max(island_front, max(lot_front, hole_front * 0.85));
-
-	float grain = mix(1.0, 0.48 + 1.05 * paper, keep);
-
-	vec3 YELLOW = vec3(0.91, 0.86, 0.40);
-	vec3 OLIVE = vec3(0.46, 0.54, 0.18);
-	vec3 GREEN = vec3(0.27, 0.44, 0.13);
-	vec3 SAP = vec3(0.34, 0.50, 0.16);
-	vec3 EARTH = vec3(0.43, 0.37, 0.15);
-	vec3 INK = vec3(0.11, 0.16, 0.06);
+	vec3 WASH = vec3(0.78, 0.82, 0.48);
+	vec3 MID = vec3(0.62, 0.70, 0.32);
+	vec3 SHADE = vec3(0.50, 0.58, 0.24);
+	vec3 EDGE = vec3(0.42, 0.50, 0.18);
 
 	if (u_stage >= 1) {
-		color = stain(color, YELLOW, inside * (0.16 + 0.05 * paper));
-		color = stain(color, SAP, inside * 0.09);
-		color = stain(color, YELLOW, wash * 0.14 * grain);
-		color = stain(color, SAP, wash * 0.09 * grain);
+		color = stain(color, WASH, even * (0.22 + 0.06 * paper) * grain);
 	}
 	if (u_stage >= 2) {
-		color = stain(color, OLIVE, wash_mid * 0.17 * grain);
-		color = stain(color, YELLOW, max(wash - wash_mid, 0.0) * 0.10 * grain);
+		color = stain(color, MID, mid * 0.14 * grain);
+		color = stain(color, WASH, (even - mid) * 0.04);
 	}
 	if (u_stage >= 3) {
-		color = stain(color, GREEN, wash_deep * 0.22 * grain);
-		color = stain(color, OLIVE, front * 0.50 * grain);
-		color = stain(color, GREEN, front_deep * 0.22 * grain);
+		color = stain(color, SHADE, shade * 0.16 * grain);
+		color = stain(color, EDGE, lot_front * 0.28 * grain);
 	}
 	if (u_stage >= 4) {
-		color = mix(color, paper_col, reserve * 0.82);
-		color = stain(color, OLIVE, keep * 0.06 * grain);
-		color = stain(color, EARTH, keep * front_deep * 0.10 * grain);
+		color = mix(color, paper_col, lift * 0.45);
+		color = stain(color, WASH, even * 0.04 * grain);
+		color = stain(color, EDGE, hole_front * 0.18 * grain);
 	}
 	if (u_stage >= 5) {
-		float clump = fbm(q * 4.6 + 4.0, 3);
-		float in_mass = smoothstep(0.35, 0.75, keep);
-		color = stain(color, GREEN, smoothstep(0.64, 0.84, clump) * in_mass * 0.12 * grain);
-		color = stain(color, OLIVE, front * in_mass * 0.14 * grain);
-		float dark = smoothstep(0.78, 0.93, clump) * smoothstep(0.55, 0.95, keep) * step(0.52, paper);
-		color = stain(color, INK, dark * 0.30);
-		float fleck = smoothstep(0.88, 0.97, noise(px * vec2(0.08, 0.17) + clump));
-		color = stain(color, mix(GREEN, INK, 0.4), fleck * in_mass * 0.12);
-		color = stain(color, OLIVE, lot_front * 0.38 * grain);
-		color = stain(color, EARTH, hole_front * 0.22 * grain);
+		float speckle = smoothstep(0.90, 0.97, noise(px * vec2(0.09, 0.16) + var));
+		color = stain(color, EDGE, speckle * even * 0.10);
+		color = stain(color, SHADE, lot_front * 0.12 * grain);
 	}
 
 	COLOR = vec4(clamp(color, 0.0, 1.0), 1.0);

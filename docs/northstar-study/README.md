@@ -1,16 +1,17 @@
 # Northstar grass study (view in the browser)
 
-Stills from the Godot baker on `feat/expert-workspace-ui`. Open this file on
-GitHub — the JPEGs render inline. Nothing to download.
+The previous Godot bake was the wrong material: dark overlapping masses.
+The boards are a **pale, even lawn wash**. This folder is the correction.
 
-This is **not** the live Android canvas. The tablet still uses the Java
-rectangle bake. These frames are the presentation target: an L-lawn, house
-and path left as paper, living wash fronts inset from the clip.
+Open this file on GitHub — JPEGs render inline. Nothing to download.
+This is **not** the live Android canvas and not the full plan (planting, water,
+ink, paving). Grass only.
 
-Guess for a Galaxy Tab S10 FE (10.9" IPS LCD, 2304×1440, 249 ppi, S Pen):
-yellow-on-cream dies on LCD, so the lawn is greener and darker than the Java
-painter. 2048 matches the panel; the live 1024 cap will look soft under S Pen
-zoom. Godot should stay on GLES Compatibility (Xclipse 540).
+## Versus the board
+
+![Board grass process](board-grass-row.jpg)
+
+![Board lawn swatch vs this bake](vs-board-swatch.jpg)
 
 ## Sheet
 
@@ -18,15 +19,15 @@ zoom. Godot should stay on GLES Compatibility (Xclipse 540).
 
 ![Full sheet](lawn-full.jpg)
 
-![16:10 viewport, same aspect as the S10 FE](s10fe-viewport.jpg)
+![16:10 viewport](s10fe-viewport.jpg)
 
-## Close-ups (S Pen zoom)
+## Close-ups
 
 ![Wash interior](crop-closeup.jpg)
 
-![House / lawn junction](crop-house.jpg)
+![House / lawn](crop-house.jpg)
 
-![L inner corner — the clip money shot](crop-corner.jpg)
+![L corner](crop-corner.jpg)
 
 ## Stages
 
