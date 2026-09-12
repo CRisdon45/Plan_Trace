@@ -1,10 +1,17 @@
 shader_type canvas_item;
 
-// GPU landscape-plan grass. Overlapping irregular washes, paper in the
-// gaps, sediment on broken drying fronts. Not metaballs and not a stamp field.
+// GPU landscape-plan grass. Lot polygon + holes are the clip. Washes live
+// inside that silhouette with an inset drying front so a later hard clip
+// still reads as paint. Seeded, object-space. Not a stamp field.
 uniform vec2 u_size = vec2(2048.0, 1434.0);
 uniform float u_seed = 0.37;
 uniform int u_stage = 5;
+uniform vec2 u_lot[16];
+uniform int u_lot_count = 0;
+uniform vec2 u_hole_a[8];
+uniform int u_hole_a_count = 0;
+uniform vec2 u_hole_b[8];
+uniform int u_hole_b_count = 0;
 
 float hash21(vec2 p) {
 	vec3 p3 = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973) + u_seed);
@@ -53,6 +60,71 @@ vec3 stain(vec3 base, vec3 pigment, float thickness) {
 	return mix(base, pigment, t) * (1.0 - 0.14 * t);
 }
 
+float sd_ring(vec2 p, vec2 a, vec2 b, inout float s) {
+	vec2 e = b - a;
+	vec2 w = p - a;
+	vec2 proj = w - e * clamp(dot(w, e) / max(dot(e, e), 1e-6), 0.0, 1.0);
+	bvec3 c = bvec3(p.y >= a.y, p.y < b.y, e.x * w.y > e.y * w.x);
+	if (all(c) || all(not(c))) {
+		s *= -1.0;
+	}
+	return dot(proj, proj);
+}
+
+float sd_lot(vec2 p) {
+	int n = u_lot_count;
+	if (n < 3) {
+		return -1.0;
+	}
+	float d = 1e6;
+	float s = 1.0;
+	int j = n - 1;
+	for (int i = 0; i < 16; i++) {
+		if (i >= n) {
+			break;
+		}
+		d = min(d, sd_ring(p, u_lot[i], u_lot[j], s));
+		j = i;
+	}
+	return s * sqrt(d);
+}
+
+float sd_hole_a(vec2 p) {
+	int n = u_hole_a_count;
+	if (n < 3) {
+		return 1.0;
+	}
+	float d = 1e6;
+	float s = 1.0;
+	int j = n - 1;
+	for (int i = 0; i < 8; i++) {
+		if (i >= n) {
+			break;
+		}
+		d = min(d, sd_ring(p, u_hole_a[i], u_hole_a[j], s));
+		j = i;
+	}
+	return s * sqrt(d);
+}
+
+float sd_hole_b(vec2 p) {
+	int n = u_hole_b_count;
+	if (n < 3) {
+		return 1.0;
+	}
+	float d = 1e6;
+	float s = 1.0;
+	int j = n - 1;
+	for (int i = 0; i < 8; i++) {
+		if (i >= n) {
+			break;
+		}
+		d = min(d, sd_ring(p, u_hole_b[i], u_hole_b[j], s));
+		j = i;
+	}
+	return s * sqrt(d);
+}
+
 void fragment() {
 	vec2 uv = UV;
 	vec2 px = uv * u_size;
@@ -64,6 +136,11 @@ void fragment() {
 	float paper = mix(paper_fine, paper_fiber, 0.42);
 	vec3 paper_col = vec3(0.988, 0.976, 0.933) + (paper - 0.5) * vec3(0.018, 0.016, 0.012);
 	vec3 color = paper_col;
+
+	float lot_sd = sd_lot(uv);
+	lot_sd += 0.011 * (fbm(uv * 9.0 + 1.2, 3) - 0.38);
+	float hole = min(sd_hole_a(uv), sd_hole_b(uv));
+	float inside = (1.0 - smoothstep(-0.003, 0.006, lot_sd)) * smoothstep(-0.004, 0.006, hole);
 
 	vec2 warp = vec2(
 		fbm(p * 0.95 + 1.4, 3) - 0.5,
@@ -92,20 +169,21 @@ void fragment() {
 		}
 	}
 
-	float wash = 1.0 - smoothstep(-0.08, 0.11, field);
-	float wash_mid = 1.0 - smoothstep(-0.02, 0.09, field_b);
-	float wash_deep = 1.0 - smoothstep(-0.12, 0.02, field - 0.06 + 0.10 * (1.0 - uv.x));
+	float wash = (1.0 - smoothstep(-0.08, 0.11, field)) * inside;
+	float wash_mid = (1.0 - smoothstep(-0.02, 0.09, field_b)) * inside;
+	float wash_deep = (1.0 - smoothstep(-0.12, 0.02, field - 0.06 + 0.10 * (1.0 - uv.x))) * inside;
 	float keep = wash;
 
 	float reserve = smoothstep(0.58, 0.76, fbm(q * 1.05 + vec2(uv.y * 1.8, 3.3), 3));
 	reserve *= smoothstep(0.12, 0.48, wash);
 	keep *= 1.0 - 0.88 * reserve;
 
-	float iso = field;
-	float front = exp(-iso * iso * 90.0);
-	float broken = smoothstep(0.32, 0.78, fbm(q * 5.4 + 2.2, 2));
-	front *= mix(0.08, 1.0, broken);
-	float front_deep = exp(-pow(field + 0.04, 2.0) * 70.0) * mix(0.1, 1.0, 1.0 - broken);
+	float island_front = exp(-field * field * 90.0) * mix(0.08, 1.0, smoothstep(0.32, 0.78, fbm(q * 5.4 + 2.2, 2)));
+	island_front *= inside;
+	float front_deep = exp(-pow(field + 0.04, 2.0) * 70.0) * inside;
+	float lot_front = exp(-lot_sd * lot_sd * 1400.0) * inside * mix(0.15, 1.0, smoothstep(0.28, 0.72, fbm(uv * 14.0, 2)));
+	float hole_front = exp(-hole * hole * 1800.0) * inside * mix(0.12, 1.0, smoothstep(0.30, 0.75, fbm(uv * 16.0 + 4.0, 2)));
+	float front = max(island_front, max(lot_front, hole_front * 0.85));
 
 	float grain = mix(1.0, 0.48 + 1.05 * paper, keep);
 
@@ -116,10 +194,10 @@ void fragment() {
 	vec3 EARTH = vec3(0.43, 0.37, 0.15);
 	vec3 INK = vec3(0.11, 0.16, 0.06);
 
-	color = stain(color, YELLOW, 0.07 * (0.7 + 0.5 * paper));
-
 	if (u_stage >= 1) {
-		color = stain(color, YELLOW, wash * 0.16 * grain);
+		color = stain(color, YELLOW, inside * (0.11 + 0.05 * paper));
+		color = stain(color, SAP, inside * 0.04);
+		color = stain(color, YELLOW, wash * 0.14 * grain);
 		color = stain(color, SAP, wash * 0.07 * grain);
 	}
 	if (u_stage >= 2) {
@@ -128,23 +206,25 @@ void fragment() {
 	}
 	if (u_stage >= 3) {
 		color = stain(color, GREEN, wash_deep * 0.22 * grain);
-		color = stain(color, OLIVE, front * 0.55 * grain);
-		color = stain(color, GREEN, front_deep * 0.28 * grain);
+		color = stain(color, OLIVE, front * 0.50 * grain);
+		color = stain(color, GREEN, front_deep * 0.22 * grain);
 	}
 	if (u_stage >= 4) {
 		color = mix(color, paper_col, reserve * 0.82);
 		color = stain(color, OLIVE, keep * 0.06 * grain);
-		color = stain(color, EARTH, keep * front_deep * 0.12 * grain);
+		color = stain(color, EARTH, keep * front_deep * 0.10 * grain);
 	}
 	if (u_stage >= 5) {
 		float clump = fbm(q * 4.6 + 4.0, 3);
 		float in_mass = smoothstep(0.35, 0.75, keep);
 		color = stain(color, GREEN, smoothstep(0.64, 0.84, clump) * in_mass * 0.12 * grain);
-		color = stain(color, OLIVE, front * in_mass * 0.16 * grain);
+		color = stain(color, OLIVE, front * in_mass * 0.14 * grain);
 		float dark = smoothstep(0.78, 0.93, clump) * smoothstep(0.55, 0.95, keep) * step(0.52, paper);
-		color = stain(color, INK, dark * 0.32);
+		color = stain(color, INK, dark * 0.30);
 		float fleck = smoothstep(0.88, 0.97, noise(px * vec2(0.08, 0.17) + clump));
-		color = stain(color, mix(GREEN, INK, 0.4), fleck * in_mass * 0.14);
+		color = stain(color, mix(GREEN, INK, 0.4), fleck * in_mass * 0.12);
+		color = stain(color, OLIVE, lot_front * 0.22 * grain);
+		color = stain(color, EARTH, hole_front * 0.16 * grain);
 	}
 
 	COLOR = vec4(clamp(color, 0.0, 1.0), 1.0);

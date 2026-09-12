@@ -1,0 +1,27 @@
+{
+  "id": "study-lawn",
+  "seed": "ground-study",
+  "note": "Plugin contract: UV lot + holes. Matches the concave TURF clip idea in GroundMaterialTest, plus a house and path.",
+  "lot": [
+    [0.08, 0.15],
+    [0.91, 0.15],
+    [0.91, 0.84],
+    [0.47, 0.84],
+    [0.47, 0.52],
+    [0.08, 0.52]
+  ],
+  "holes": [
+    [
+      [0.16, 0.22],
+      [0.40, 0.22],
+      [0.40, 0.44],
+      [0.16, 0.44]
+    ],
+    [
+      [0.62, 0.52],
+      [0.70, 0.52],
+      [0.70, 0.84],
+      [0.62, 0.84]
+    ]
+  ]
+}

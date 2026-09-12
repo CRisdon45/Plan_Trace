@@ -43,6 +43,7 @@ func _initialize() -> void:
 	material.set_shader_parameter("u_size", Vector2(WIDTH, HEIGHT))
 	material.set_shader_parameter("u_seed", seed_value)
 	material.set_shader_parameter("u_stage", 1)
+	_apply_study_lot(material)
 
 	rect = ColorRect.new()
 	rect.color = Color.WHITE
@@ -92,13 +93,44 @@ func _capture_stage(stage: int) -> void:
 	if stage == 5:
 		image.save_png("%s/grass.png" % output_dir)
 
+func _apply_study_lot(mat: ShaderMaterial) -> void:
+	# L-lawn matching the concave TURF clip in GroundMaterialTest, plus a house
+	# and path hole. Plugin contract: lot + holes in UV, seed, material.
+	var lot := PackedVector2Array([
+		Vector2(0.08, 0.15),
+		Vector2(0.91, 0.15),
+		Vector2(0.91, 0.84),
+		Vector2(0.47, 0.84),
+		Vector2(0.47, 0.52),
+		Vector2(0.08, 0.52),
+	])
+	var house := PackedVector2Array([
+		Vector2(0.16, 0.22),
+		Vector2(0.40, 0.22),
+		Vector2(0.40, 0.44),
+		Vector2(0.16, 0.44),
+	])
+	var path := PackedVector2Array([
+		Vector2(0.62, 0.52),
+		Vector2(0.70, 0.52),
+		Vector2(0.70, 0.84),
+		Vector2(0.62, 0.84),
+	])
+	mat.set_shader_parameter("u_lot", lot)
+	mat.set_shader_parameter("u_lot_count", lot.size())
+	mat.set_shader_parameter("u_hole_a", house)
+	mat.set_shader_parameter("u_hole_a_count", house.size())
+	mat.set_shader_parameter("u_hole_b", path)
+	mat.set_shader_parameter("u_hole_b_count", path.size())
+
 func _write_crops() -> void:
 	var image := Image.new()
 	if image.load("%s/grass.png" % output_dir) != OK:
 		return
-	_crop(image, Vector2i(image.get_width() / 2 - 360, image.get_height() / 2 - 360), "crop-center.png")
-	_crop(image, Vector2i(80, 160), "crop-left.png")
-	_crop(image, Vector2i(image.get_width() - 800, 160), "crop-right.png")
+	# Lawn interior, house/lawn junction, L inner corner (the clip money shot).
+	_crop(image, Vector2i(int(0.68 * WIDTH) - 360, int(0.36 * HEIGHT) - 360), "crop-center.png")
+	_crop(image, Vector2i(int(0.28 * WIDTH) - 360, int(0.28 * HEIGHT) - 360), "crop-left.png")
+	_crop(image, Vector2i(int(0.47 * WIDTH) - 360, int(0.52 * HEIGHT) - 360), "crop-right.png")
 
 func _write_sheet() -> void:
 	var cell := Vector2i(380, 266)
