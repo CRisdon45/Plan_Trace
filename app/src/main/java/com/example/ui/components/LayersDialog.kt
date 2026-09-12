@@ -1,5 +1,7 @@
 package com.example.ui.components
 
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,6 +14,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -97,16 +105,17 @@ fun LayersDialog(
     var newLayerName by remember { mutableStateOf("") }
     var showAddRow by remember { mutableStateOf(false) }
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(
             modifier = Modifier
-                .width(460.dp)
+                .widthIn(max = 560.dp)
+                .fillMaxWidth(0.94f)
                 .clip(RoundedCornerShape(24.dp)),
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 8.dp
         ) {
             Column(
-                modifier = Modifier.padding(20.dp),
+                modifier = Modifier.verticalScroll(rememberScrollState()).padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 // Header
@@ -314,156 +323,57 @@ private fun LayerCardRow(
     onSetBlendMode: (LayerBlendMode) -> Unit,
     onSetColorTag: (Long) -> Unit
 ) {
-    val borderColor = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-    val bg = if (isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.28f) else MaterialTheme.colorScheme.surface
-
+    var showActions by remember(layer.id) { mutableStateOf(false) }
+    val borderColor = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(if (isActive) 1.5.dp else 1.dp, borderColor, RoundedCornerShape(12.dp))
-            .clickable(onClick = onSelect),
-        colors = CardDefaults.cardColors(containerColor = bg),
+        modifier = Modifier.fillMaxWidth().border(if (isActive) 1.5.dp else 1.dp, borderColor, RoundedCornerShape(12.dp)).clickable(onClick = onSelect),
+        colors = CardDefaults.cardColors(containerColor = if (isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.28f) else MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(12.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(8.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            // Main row: Tag color, Name, object count, and actions
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    // Color tag indicator
-                    Box(
-                        modifier = Modifier
-                            .size(12.dp)
-                            .clip(CircleShape)
-                            .background(Color(layer.colorTag))
-                    )
-
-                    Text(
-                        text = layer.name,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium
-                        )
-                    )
-                    Text(
-                        text = "($elementCount obj)",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(12.dp).clip(CircleShape).background(Color(layer.colorTag)))
+                Column(Modifier.weight(1f).padding(start = 8.dp)) {
+                    Text(layer.name, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodyMedium, fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium)
+                    Text("$elementCount objects" + if (isActive) " - Active" else "", style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Reorder up
-                    IconButton(
-                        onClick = onMoveUp,
-                        enabled = !isFirst,
-                        modifier = Modifier.size(26.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.ArrowUpward,
-                            contentDescription = "Move Up",
-                            modifier = Modifier.size(14.dp),
-                            tint = if (!isFirst) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-                        )
+                IconButton(onClick = onToggleVisibility) {
+                    Icon(if (layer.isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                        contentDescription = "Toggle visibility: ${layer.name}")
+                }
+                IconButton(onClick = onToggleLock) {
+                    Icon(if (layer.isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
+                        contentDescription = "Toggle lock: ${layer.name}")
+                }
+                Box {
+                    IconButton(onClick = { showActions = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "Layer actions: ${layer.name}")
                     }
-
-                    // Reorder down
-                    IconButton(
-                        onClick = onMoveDown,
-                        enabled = !isLast,
-                        modifier = Modifier.size(26.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.ArrowDownward,
-                            contentDescription = "Move Down",
-                            modifier = Modifier.size(14.dp),
-                            tint = if (!isLast) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-                        )
-                    }
-
-                    // Duplicate
-                    IconButton(onClick = onDuplicate, modifier = Modifier.size(26.dp)) {
-                        Icon(
-                            Icons.Default.ContentCopy,
-                            contentDescription = "Duplicate Layer",
-                            modifier = Modifier.size(14.dp),
-                            tint = MaterialTheme.colorScheme.outline
-                        )
-                    }
-
-                    // Visibility
-                    IconButton(onClick = onToggleVisibility, modifier = Modifier.size(28.dp)) {
-                        Icon(
-                            imageVector = if (layer.isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            contentDescription = "Toggle Visibility",
-                            modifier = Modifier.size(16.dp),
-                            tint = if (layer.isVisible) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline
-                        )
-                    }
-
-                    // Lock
-                    IconButton(onClick = onToggleLock, modifier = Modifier.size(28.dp)) {
-                        Icon(
-                            imageVector = if (layer.isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
-                            contentDescription = "Toggle Lock",
-                            modifier = Modifier.size(16.dp),
-                            tint = if (layer.isLocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-                        )
-                    }
-
-                    // Delete
-                    IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete Layer",
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
-                        )
+                    DropdownMenu(expanded = showActions, onDismissRequest = { showActions = false }) {
+                        DropdownMenuItem(text = { Text("Move up") }, enabled = !isFirst, onClick = { showActions = false; onMoveUp() })
+                        DropdownMenuItem(text = { Text("Move down") }, enabled = !isLast, onClick = { showActions = false; onMoveDown() })
+                        DropdownMenuItem(text = { Text("Duplicate layer") }, onClick = { showActions = false; onDuplicate() })
+                        DropdownMenuItem(text = { Text("Merge into layer below") }, enabled = !isLast && !layer.isLocked,
+                            onClick = { showActions = false; onMergeDown() })
+                        DropdownMenuItem(text = { Text("Clear layer") }, enabled = !layer.isLocked && layer.isVisible && elementCount > 0,
+                            onClick = { showActions = false; onClear() })
+                        DropdownMenuItem(text = { Text("Delete layer", color = MaterialTheme.colorScheme.error) },
+                            onClick = { showActions = false; onDelete() })
                     }
                 }
             }
-
-            // Controls row: Opacity slider + Blend Mode chips
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = "${(layer.opacity * 100).toInt()}%",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.width(32.dp)
-                )
-
-                Slider(
-                    value = layer.opacity,
-                    onValueChange = onSetOpacity,
-                    valueRange = 0.1f..1.0f,
-                    modifier = Modifier.weight(1f)
-                )
-
-                // Blend mode chips
-                FilterChip(
-                    selected = layer.blendMode == LayerBlendMode.NORMAL,
-                    onClick = { onSetBlendMode(LayerBlendMode.NORMAL) },
-                    label = { Text("Normal", fontSize = 10.sp) },
-                    modifier = Modifier.height(28.dp)
-                )
-                FilterChip(
-                    selected = layer.blendMode == LayerBlendMode.MULTIPLY,
-                    onClick = { onSetBlendMode(LayerBlendMode.MULTIPLY) },
-                    label = { Text("Ink Multiply", fontSize = 10.sp) },
-                    modifier = Modifier.height(28.dp)
-                )
+            if (isActive) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Opacity ${(layer.opacity * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
+                    Slider(value = layer.opacity, onValueChange = onSetOpacity, valueRange = 0.1f..1f,
+                        modifier = Modifier.weight(1f).padding(start = 12.dp))
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(selected = layer.blendMode == LayerBlendMode.NORMAL, onClick = { onSetBlendMode(LayerBlendMode.NORMAL) }, label = { Text("Normal") })
+                    FilterChip(selected = layer.blendMode == LayerBlendMode.MULTIPLY, onClick = { onSetBlendMode(LayerBlendMode.MULTIPLY) }, label = { Text("Multiply") })
+                }
             }
         }
     }

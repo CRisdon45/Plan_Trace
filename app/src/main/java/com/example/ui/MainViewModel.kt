@@ -1,6 +1,7 @@
 package com.example.ui
 
 import android.app.Application
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -15,6 +16,7 @@ import com.example.model.BackgroundType
 import com.example.model.DimensionMarkup
 import com.example.model.DrawingLayer
 import com.example.model.EllipseElement
+import com.example.model.EditHistory
 import com.example.model.FreehandPath
 import com.example.model.LayerBlendMode
 import com.example.model.LineElement
@@ -28,6 +30,9 @@ import com.example.model.TraceProject
 import com.example.model.VectorElement
 import com.example.engine.SnapSettings
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -55,6 +60,7 @@ enum class DrawingTool {
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = ProjectRepository(application)
+    private val pendingSaves = Channel<TraceProject>(Channel.UNLIMITED)
 
     private val _project = MutableStateFlow(TraceProject())
     val project: StateFlow<TraceProject> = _project.asStateFlow()
@@ -62,22 +68,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _projectsList = MutableStateFlow<List<TraceProject>>(emptyList())
     val projectsList: StateFlow<List<TraceProject>> = _projectsList.asStateFlow()
 
+    private val toolPreferences = application.getSharedPreferences("drawing_preferences", Application.MODE_PRIVATE)
+
     // Tool state
-    private val _activeTool = MutableStateFlow(DrawingTool.PEN)
+    private val _activeTool = MutableStateFlow(runCatching { DrawingTool.valueOf(toolPreferences.getString("tool", "PEN")!!) }.getOrDefault(DrawingTool.PEN))
     val activeTool: StateFlow<DrawingTool> = _activeTool.asStateFlow()
 
-    private val _strokeColor = MutableStateFlow(0xFF0F172A) // Drafting Charcoal Black
+    private val _strokeColor = MutableStateFlow(toolPreferences.getLong("color", 0xFF0F172A)) // Drafting Charcoal Black
     val strokeColor: StateFlow<Long> = _strokeColor.asStateFlow()
 
-    private val _strokeWidth = MutableStateFlow(3.5f)
+    private val _strokeWidth = MutableStateFlow(toolPreferences.getFloat("width", 3.5f).takeIf { it.isFinite() && it > 0f } ?: 3.5f)
     val strokeWidth: StateFlow<Float> = _strokeWidth.asStateFlow()
 
-    private val _strokeStyle = MutableStateFlow(StrokeStyle.INK)
+    private val _strokeStyle = MutableStateFlow(runCatching { StrokeStyle.valueOf(toolPreferences.getString("style", "INK")!!) }.getOrDefault(StrokeStyle.INK))
     val strokeStyle: StateFlow<StrokeStyle> = _strokeStyle.asStateFlow()
 
+    private val _barrelTool = MutableStateFlow(if (toolPreferences.getString("barrelTool", "SELECT") == "ERASER") DrawingTool.ERASER else DrawingTool.SELECT)
+    val barrelTool: StateFlow<DrawingTool> = _barrelTool.asStateFlow()
+    fun setBarrelTool(tool: DrawingTool) {
+        if (tool != DrawingTool.SELECT && tool != DrawingTool.ERASER) return
+        _barrelTool.value = tool
+        toolPreferences.edit().putString("barrelTool", tool.name).apply()
+        showToast(if (tool == DrawingTool.SELECT) "Hold the pen button before touching to select" else "Hold the pen button before touching to erase objects")
+    }
+
     // Undo / Redo history
-    private val undoStack = mutableListOf<List<VectorElement>>()
-    private val redoStack = mutableListOf<List<VectorElement>>()
+    private val pageHistories = mutableMapOf<String, EditHistory>()
+    private val editHistory: EditHistory get() = pageHistories.getOrPut(_project.value.pageKey) { EditHistory() }
 
     private val _canUndo = MutableStateFlow(false)
     val canUndo: StateFlow<Boolean> = _canUndo.asStateFlow()
@@ -87,6 +104,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // Background bitmap
     private val _backgroundBitmap = MutableStateFlow<Bitmap?>(null)
+    private var backgroundLoadJob: Job? = null
     val backgroundBitmap: StateFlow<Bitmap?> = _backgroundBitmap.asStateFlow()
 
     // Scale calibration mode
@@ -117,7 +135,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val toastMessage: StateFlow<String?> = _toastMessage.asStateFlow()
 
     // Stylus palm rejection mode
-    private val _stylusOnlyMode = MutableStateFlow(false)
+    private val _stylusOnlyMode = MutableStateFlow(toolPreferences.getBoolean("stylusOnly", false))
     val stylusOnlyMode: StateFlow<Boolean> = _stylusOnlyMode.asStateFlow()
 
     // Object selection state
@@ -163,6 +181,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val current = _project.value.elements
         val targetLayer = _project.value.layers.find { it.id == targetLayerId } ?: return
         val el = current.find { it.id == elementId } ?: return
+        if (!canEditLayer(el.layerId) || !canEditLayer(targetLayerId)) return
         if (el.layerId == targetLayerId) return
 
         pushUndo(current)
@@ -253,11 +272,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // Show persistent dimensions on calibrated plans
-    private val _showDimensions = MutableStateFlow(true)
+    private val _showDimensions = MutableStateFlow(toolPreferences.getBoolean("dimensions", true))
     val showDimensions: StateFlow<Boolean> = _showDimensions.asStateFlow()
 
     fun toggleShowDimensions() {
         _showDimensions.value = !_showDimensions.value
+        toolPreferences.edit().putBoolean("dimensions", _showDimensions.value).apply()
     }
 
     fun selectElement(id: String?) {
@@ -265,7 +285,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateElement(updatedElement: VectorElement) {
+        if (_isCalibratingScale.value) return
         val current = _project.value.elements
+        val original = current.find { it.id == updatedElement.id } ?: return
+        if (original == updatedElement || !canEditLayer(original.layerId) || !canEditLayer(updatedElement.layerId)) return
         pushUndo(current)
         val updatedList = current.map { if (it.id == updatedElement.id) updatedElement else it }
         _project.value = _project.value.copy(elements = updatedList, updatedAt = System.currentTimeMillis())
@@ -274,6 +297,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun duplicateElement(id: String) {
         val element = _project.value.elements.find { it.id == id } ?: return
+        if (!canEditLayer(element.layerId)) return
         val duplicated = when (element) {
             is FreehandPath -> element.copy(id = UUID.randomUUID().toString(), points = element.points.map { Point2D(it.x + 30f, it.y + 30f) })
             is LineElement -> element.copy(id = UUID.randomUUID().toString(), start = Point2D(element.start.x + 30f, element.start.y + 30f), end = Point2D(element.end.x + 30f, element.end.y + 30f))
@@ -290,11 +314,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun sampleColor(color: Long) {
         _strokeColor.value = color
+        toolPreferences.edit().putLong("color", color).apply()
         val hex = String.format("#%06X", (0xFFFFFF and color.toInt()))
         showToast("Eyedropper: sampled $hex")
     }
 
     init {
+        viewModelScope.launch {
+            for (snapshot in pendingSaves) {
+                try {
+                    repository.saveProject(snapshot)
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Exception) {
+                    showToast("Could not save this edit. Please keep the app open and try again.")
+                }
+            }
+        }
         viewModelScope.launch {
             repository.projectsFlow.collect { list ->
                 _projectsList.value = list
@@ -307,17 +343,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun loadProject(p: TraceProject) {
+        cancelEditGesture()
+        cancelScaleCalibration()
+        pageHistories.clear()
         _project.value = p
-        undoStack.clear()
-        redoStack.clear()
+        _selectedElementId.value = null
         updateUndoRedoStates()
         loadBackgroundForProject(p)
     }
 
     private fun loadBackgroundForProject(p: TraceProject) {
-        viewModelScope.launch {
+        backgroundLoadJob?.cancel()
+        _backgroundBitmap.value = null
+        backgroundLoadJob = viewModelScope.launch {
             val context = getApplication<Application>()
-            val bitmap = when (p.backgroundType) {
+            val bitmap = withContext(Dispatchers.IO) { when (p.backgroundType) {
                 BackgroundType.SAMPLE -> {
                     val resId = if (p.backgroundResourceOrUri.contains("deck")) {
                         R.drawable.sample_plan_deck
@@ -344,14 +384,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         null
                     }
                 }
-                BackgroundType.BLANK_GRID -> null
-            }
+                BackgroundType.BLANK_GRID, BackgroundType.BLANK_PAPER -> null
+            } }
+            if (_project.value.id != p.id || _project.value.pageKey != p.pageKey) return@launch
             _backgroundBitmap.value = bitmap
+            if (bitmap == null && p.backgroundType in listOf(BackgroundType.IMAGE_URI, BackgroundType.PDF_URI)) {
+                showToast("Cannot open this plan's source file. Import it again to restore the underlay.")
+            }
         }
     }
 
     fun setTool(tool: DrawingTool) {
         _activeTool.value = tool
+        if (tool != DrawingTool.MEASURE) toolPreferences.edit().putString("tool", tool.name).apply()
         if (tool != DrawingTool.MEASURE) {
             _isCalibratingScale.value = false
         }
@@ -359,18 +404,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setStrokeColor(color: Long) {
         _strokeColor.value = color
+        toolPreferences.edit().putLong("color", color).apply()
     }
 
     fun setStrokeWidth(width: Float) {
+        if (!width.isFinite() || width <= 0f) return
         _strokeWidth.value = width
+        toolPreferences.edit().putFloat("width", width).apply()
     }
 
     fun setStrokeStyle(style: StrokeStyle) {
         _strokeStyle.value = style
+        toolPreferences.edit().putString("style", style.name).apply()
     }
 
     fun toggleStylusOnlyMode() {
         _stylusOnlyMode.value = !_stylusOnlyMode.value
+        toolPreferences.edit().putBoolean("stylusOnly", _stylusOnlyMode.value).apply()
         _toastMessage.value = if (_stylusOnlyMode.value) {
             "S Pen Mode: Stylus draws, fingers pan & zoom"
         } else {
@@ -379,6 +429,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addVectorElement(element: VectorElement) {
+        if (_isCalibratingScale.value || !canEditLayer(element.layerId)) return
         val currentElements = _project.value.elements
         pushUndo(currentElements)
         val updated = currentElements + element
@@ -389,51 +440,57 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun removeVectorElements(idsToRemove: Set<String>) {
         if (idsToRemove.isEmpty()) return
         val currentElements = _project.value.elements
+        val removable = currentElements.filter { it.id in idsToRemove && canEditLayer(it.layerId) }.map { it.id }.toSet()
+        if (_isCalibratingScale.value || removable.isEmpty()) return
         pushUndo(currentElements)
-        val updated = currentElements.filterNot { idsToRemove.contains(it.id) }
+        val updated = currentElements.filterNot { it.id in removable }
         _project.value = _project.value.copy(elements = updated, updatedAt = System.currentTimeMillis())
         saveProjectDebounced()
     }
 
-    private fun pushUndo(elements: List<VectorElement>) {
-        undoStack.add(elements)
-        redoStack.clear()
-        if (undoStack.size > 50) undoStack.removeAt(0)
+    private fun pushUndo(@Suppress("UNUSED_PARAMETER") elements: List<VectorElement> = _project.value.elements) {
+        editHistory.record(_project.value)
         updateUndoRedoStates()
     }
 
     fun undo() {
-        if (undoStack.isNotEmpty()) {
-            val previous = undoStack.removeAt(undoStack.lastIndex)
-            redoStack.add(_project.value.elements)
-            _project.value = _project.value.copy(elements = previous, updatedAt = System.currentTimeMillis())
-            updateUndoRedoStates()
-            saveProjectDebounced()
-        }
+        _project.value = editHistory.undo(_project.value)
+        _selectedElementId.value = null
+        updateUndoRedoStates()
+        saveProjectDebounced()
     }
 
     fun redo() {
-        if (redoStack.isNotEmpty()) {
-            val next = redoStack.removeAt(redoStack.lastIndex)
-            undoStack.add(_project.value.elements)
-            _project.value = _project.value.copy(elements = next, updatedAt = System.currentTimeMillis())
-            updateUndoRedoStates()
-            saveProjectDebounced()
-        }
+        _project.value = editHistory.redo(_project.value)
+        _selectedElementId.value = null
+        updateUndoRedoStates()
+        saveProjectDebounced()
     }
 
     private fun updateUndoRedoStates() {
-        _canUndo.value = undoStack.isNotEmpty()
-        _canRedo.value = redoStack.isNotEmpty()
+        _canUndo.value = editHistory.canUndo
+        _canRedo.value = editHistory.canRedo
     }
+
+    fun beginEditGesture() { editHistory.begin(_project.value) }
+    fun endEditGesture() { editHistory.commit(_project.value); updateUndoRedoStates(); saveProjectDebounced() }
+    fun cancelEditGesture() {
+        if (!editHistory.isGestureActive) return
+        _project.value = editHistory.cancel(_project.value)
+        updateUndoRedoStates()
+        saveProjectDebounced()
+    }
+    private fun canEditLayer(id: String): Boolean = _project.value.layers.any { it.id == id && !it.isLocked && it.isVisible }
 
     // Layer management
     fun setActiveLayer(layerId: String) {
+        if (_project.value.layers.none { it.id == layerId }) return
         _project.value = _project.value.copy(activeLayerId = layerId)
         saveProjectDebounced()
     }
 
     fun toggleLayerVisibility(layerId: String) {
+        pushUndo()
         val updated = _project.value.layers.map {
             if (it.id == layerId) it.copy(isVisible = !it.isVisible) else it
         }
@@ -442,6 +499,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun toggleLayerLock(layerId: String) {
+        pushUndo()
         val updated = _project.value.layers.map {
             if (it.id == layerId) it.copy(isLocked = !it.isLocked) else it
         }
@@ -450,6 +508,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setLayerOpacity(layerId: String, opacity: Float) {
+        if (!canEditLayer(layerId)) return
+        if (_project.value.layers.first { it.id == layerId }.opacity == opacity.coerceIn(0.1f, 1f)) return
+        pushUndo()
         val updated = _project.value.layers.map {
             if (it.id == layerId) it.copy(opacity = opacity.coerceIn(0.1f, 1f)) else it
         }
@@ -458,6 +519,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addLayer(name: String) {
+        pushUndo()
         val newLayer = DrawingLayer(
             id = UUID.randomUUID().toString(),
             name = if (name.isBlank()) "Layer ${_project.value.layers.size + 1}" else name
@@ -468,10 +530,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteLayer(layerId: String) {
+        if (!canEditLayer(layerId)) return
         if (_project.value.layers.size <= 1) {
             _toastMessage.value = "Cannot delete the only layer"
             return
         }
+        pushUndo()
         val updatedLayers = _project.value.layers.filterNot { it.id == layerId }
         val updatedElements = _project.value.elements.filterNot { it.layerId == layerId }
         val newActiveId = if (_project.value.activeLayerId == layerId) {
@@ -491,6 +555,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val layers = _project.value.layers.toMutableList()
         val index = layers.indexOfFirst { it.id == layerId }
         if (index > 0) {
+            pushUndo()
             val item = layers.removeAt(index)
             layers.add(index - 1, item)
             _project.value = _project.value.copy(layers = layers)
@@ -502,6 +567,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val layers = _project.value.layers.toMutableList()
         val index = layers.indexOfFirst { it.id == layerId }
         if (index in 0 until layers.size - 1) {
+            pushUndo()
             val item = layers.removeAt(index)
             layers.add(index + 1, item)
             _project.value = _project.value.copy(layers = layers)
@@ -511,6 +577,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun duplicateLayer(layerId: String) {
         val originalLayer = _project.value.layers.find { it.id == layerId } ?: return
+        pushUndo()
         val newId = UUID.randomUUID().toString()
         val newLayer = originalLayer.copy(
             id = newId,
@@ -544,7 +611,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun mergeLayerDown(layerId: String) {
         val layers = _project.value.layers
         val index = layers.indexOfFirst { it.id == layerId }
-        if (index < layers.size - 1) {
+        if (index >= 0 && index < layers.size - 1 && canEditLayer(layerId) && canEditLayer(layers[index + 1].id)) {
+            pushUndo()
             val targetLayer = layers[index + 1]
             val updatedElements = _project.value.elements.map {
                 if (it.layerId == layerId) {
@@ -571,6 +639,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun clearLayer(layerId: String) {
+        if (!canEditLayer(layerId)) return
         val currentElements = _project.value.elements
         pushUndo(currentElements)
         val updatedElements = currentElements.filterNot { it.layerId == layerId }
@@ -580,6 +649,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setLayerBlendMode(layerId: String, blendMode: LayerBlendMode) {
+        if (!canEditLayer(layerId)) return
+        pushUndo()
         val updated = _project.value.layers.map {
             if (it.id == layerId) it.copy(blendMode = blendMode) else it
         }
@@ -588,6 +659,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setLayerColorTag(layerId: String, colorTag: Long) {
+        if (!canEditLayer(layerId)) return
+        pushUndo()
         val updated = _project.value.layers.map {
             if (it.id == layerId) it.copy(colorTag = colorTag) else it
         }
@@ -596,6 +669,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addPresetLayers(names: List<String>) {
+        pushUndo()
         val colors = listOf(0xFF2563EB, 0xFF059669, 0xFFD97706, 0xFFDC2626, 0xFF7C3AED)
         val newLayers = names.mapIndexed { idx, name ->
             DrawingLayer(
@@ -621,34 +695,36 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun selectSamplePlan(sampleKey: String) {
-        _project.value = _project.value.copy(
-            backgroundType = BackgroundType.SAMPLE,
-            backgroundResourceOrUri = sampleKey
-        )
-        loadBackgroundForProject(_project.value)
-        saveProjectDebounced()
+        openSheet(BackgroundType.SAMPLE, sampleKey)
         _toastMessage.value = "Loaded architectural sample plan"
     }
 
-    fun importPlanUri(uri: Uri, isPdf: Boolean) {
+    fun importPlanUri(uri: Uri) {
+        val importingProjectId = _project.value.id
         viewModelScope.launch {
             val context = getApplication<Application>()
-            if (isPdf) {
-                val totalPages = PdfManager.getPdfPageCount(context, uri)
-                _project.value = _project.value.copy(
-                    backgroundType = BackgroundType.PDF_URI,
-                    backgroundResourceOrUri = uri.toString(),
-                    pdfPageNumber = 0,
-                    pdfTotalPages = totalPages
-                )
-            } else {
-                _project.value = _project.value.copy(
-                    backgroundType = BackgroundType.IMAGE_URI,
-                    backgroundResourceOrUri = uri.toString()
-                )
+            val isPdf: Boolean
+            try {
+                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                isPdf = context.contentResolver.getType(uri) == "application/pdf" ||
+                    uri.lastPathSegment?.endsWith(".pdf", ignoreCase = true) == true
+                val preview = if (isPdf) PdfManager.renderPdfPage(context, uri, 0) else withContext(Dispatchers.IO) {
+                    context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
+                }
+                if (preview == null) {
+                    showToast("Could not read this plan. The current drawing has been kept.")
+                    return@launch
+                }
+                preview.recycle()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                showToast("Could not retain access to this file. Try importing it from Files.")
+                return@launch
             }
-            loadBackgroundForProject(_project.value)
-            saveProjectDebounced()
+            val totalPages = if (isPdf) PdfManager.getPdfPageCount(context, uri) else 1
+            if (_project.value.id != importingProjectId) return@launch
+            openSheet(if (isPdf) BackgroundType.PDF_URI else BackgroundType.IMAGE_URI, uri.toString(), 0, totalPages)
             _toastMessage.value = if (isPdf) "Imported PDF plan" else "Imported image plan"
         }
     }
@@ -656,17 +732,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun nextPdfPage() {
         val p = _project.value
         if (p.backgroundType == BackgroundType.PDF_URI && p.pdfPageNumber < p.pdfTotalPages - 1) {
-            _project.value = p.copy(pdfPageNumber = p.pdfPageNumber + 1)
-            loadBackgroundForProject(_project.value)
+            openSheet(p.backgroundType, p.backgroundResourceOrUri, p.pdfPageNumber + 1, p.pdfTotalPages)
         }
     }
 
     fun prevPdfPage() {
         val p = _project.value
         if (p.backgroundType == BackgroundType.PDF_URI && p.pdfPageNumber > 0) {
-            _project.value = p.copy(pdfPageNumber = p.pdfPageNumber - 1)
-            loadBackgroundForProject(_project.value)
+            openSheet(p.backgroundType, p.backgroundResourceOrUri, p.pdfPageNumber - 1, p.pdfTotalPages)
         }
+    }
+
+    private fun openSheet(type: BackgroundType, source: String, page: Int = 0, count: Int = 1) {
+        cancelEditGesture()
+        cancelScaleCalibration()
+        _selectedElementId.value = null
+        _project.value = _project.value.openSheet(type, source, page, count)
+        updateUndoRedoStates()
+        loadBackgroundForProject(_project.value)
+        saveProjectDebounced()
     }
 
     // Scale calibration
@@ -685,6 +769,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun applyScaleCalibration(realUnits: Float, unit: String) {
+        if (!realUnits.isFinite() || realUnits <= 0f) {
+            showToast("Enter a positive reference distance")
+            return
+        }
         val pts = _calibrationPoints.value
         if (pts != null) {
             val pixelDist = pts.first.distanceTo(pts.second)
@@ -710,12 +798,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // Project management
     fun createNewProject(title: String, sampleKey: String = "sample_pool") {
-        val newProj = TraceProject(
+        val newProj = if (sampleKey == com.example.model.LandscapeExample.TEMPLATE_KEY) com.example.model.LandscapeExample.create(title) else TraceProject(
             title = if (title.isBlank()) "Untitled Plan Sketch" else title,
             backgroundType = BackgroundType.SAMPLE,
             backgroundResourceOrUri = sampleKey,
             scaleCalibration = ScaleCalibration(
-                isCalibrated = true,
+                isCalibrated = false,
                 pixelDistance = 240f,
                 realWorldUnits = 20f,
                 unit = "ft"
@@ -745,20 +833,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun clearAllDrawings() {
-        pushUndo(_project.value.elements)
-        _project.value = _project.value.copy(elements = emptyList())
-        saveProjectDebounced()
-        _toastMessage.value = "Cleared all vector linework"
+        removeVectorElements(_project.value.elements.map { it.id }.toSet())
+        _toastMessage.value = "Cleared editable vector linework"
     }
 
     private fun saveProjectDebounced() {
-        viewModelScope.launch {
-            repository.saveProject(_project.value)
-        }
+        if (editHistory.isGestureActive) return
+        val snapshot = _project.value
+        pendingSaves.trySend(snapshot)
     }
 
     // Export operations
     fun exportProjectWithArchitecturalOptions(options: PdfExportOptions, asPdf: Boolean) {
+        if (backgroundLoadJob?.isActive == true) {
+            showToast("Wait for this sheet to finish loading before exporting.")
+            return
+        }
         viewModelScope.launch {
             val context = getApplication<Application>()
             val file: File? = if (asPdf) {
@@ -773,14 +863,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     context = context,
                     project = _project.value,
                     backgroundBitmap = _backgroundBitmap.value,
-                    includeBackground = options.includeBackground
+                    includeBackground = options.includeBackground,
+                    showDimensions = options.includeDimensions
                 )
             }
 
             if (file != null) {
                 val mimeType = if (asPdf) "application/pdf" else "image/png"
-                ExportManager.shareExportedFile(context, file, mimeType, _project.value.title)
-                _toastMessage.value = "Exported ${file.name}"
+                val shared = ExportManager.shareExportedFile(context, file, mimeType, _project.value.title)
+                _toastMessage.value = if (shared) "Ready to share ${file.name}" else "File created, but sharing could not open. Please try again."
             } else {
                 _toastMessage.value = "Export failed"
             }
@@ -809,8 +900,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             if (file != null) {
                 val mimeType = if (asPdf) "application/pdf" else "image/png"
-                ExportManager.shareExportedFile(context, file, mimeType, _project.value.title)
-                _toastMessage.value = "Exported ${file.name}"
+                val shared = ExportManager.shareExportedFile(context, file, mimeType, _project.value.title)
+                _toastMessage.value = if (shared) "Ready to share ${file.name}" else "File created, but sharing could not open. Please try again."
             } else {
                 _toastMessage.value = "Export failed"
             }

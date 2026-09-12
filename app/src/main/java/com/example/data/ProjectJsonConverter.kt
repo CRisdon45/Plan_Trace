@@ -15,6 +15,7 @@ import com.example.model.ScaleCalibration
 import com.example.model.StrokeStyle
 import com.example.model.TextElement
 import com.example.model.TraceProject
+import com.example.model.PageDrawing
 import com.example.model.VectorElement
 import org.json.JSONArray
 import org.json.JSONObject
@@ -39,7 +40,8 @@ object ProjectJsonConverter {
             unit = project.scaleCalibration.unit,
             layersJson = serializeLayers(project.layers),
             activeLayerId = project.activeLayerId,
-            elementsJson = serializeElements(project.elements)
+            elementsJson = serializeElements(project.elements),
+            pageDrawingsJson = serializePages(project.pageDrawings + (project.pageKey to project.currentPageDrawing()))
         )
     }
 
@@ -72,8 +74,39 @@ object ProjectJsonConverter {
             ),
             layers = if (layers.isNotEmpty()) layers else TraceProject.defaultLayers(),
             activeLayerId = entity.activeLayerId,
-            elements = elements
+            elements = elements,
+            pageDrawings = deserializePages(entity.pageDrawingsJson)
         )
+    }
+
+    fun serializePages(pages: Map<String, PageDrawing>): String = JSONObject().apply {
+        pages.forEach { (key, page) -> put(key, JSONObject().apply {
+            put("layers", JSONArray(serializeLayers(page.layers)))
+            put("activeLayerId", page.activeLayerId)
+            put("elements", JSONArray(serializeElements(page.elements)))
+            put("isCalibrated", page.scale.isCalibrated)
+            put("pixelDistance", page.scale.pixelDistance.toDouble())
+            put("realWorldUnits", page.scale.realWorldUnits.toDouble())
+            put("unit", page.scale.unit)
+            put("backgroundOpacity", page.backgroundOpacity.toDouble())
+            put("isBackgroundLocked", page.isBackgroundLocked)
+        }) }
+    }.toString()
+
+    fun deserializePages(json: String): Map<String, PageDrawing> {
+        val root = JSONObject(json)
+        return root.keys().asSequence().associateWith { key ->
+            val page = root.getJSONObject(key)
+            PageDrawing(
+                layers = deserializeLayers(page.getJSONArray("layers").toString()),
+                activeLayerId = page.getString("activeLayerId"),
+                elements = deserializeElements(page.getJSONArray("elements").toString()),
+                scale = ScaleCalibration(page.getBoolean("isCalibrated"), page.getDouble("pixelDistance").toFloat(),
+                    page.getDouble("realWorldUnits").toFloat(), page.getString("unit")),
+                backgroundOpacity = page.getDouble("backgroundOpacity").toFloat(),
+                isBackgroundLocked = page.getBoolean("isBackgroundLocked")
+            )
+        }
     }
 
     fun serializeLayers(layers: List<DrawingLayer>): String {
@@ -132,6 +165,7 @@ object ProjectJsonConverter {
             obj.put("strokeWidth", el.strokeWidth.toDouble())
             obj.put("style", el.style.name)
             obj.put("alpha", el.alpha.toDouble())
+            el.material?.let { obj.put("material", it.name); obj.put("materialVersion", 1) }
 
             when (el) {
                 is FreehandPath -> {
@@ -218,6 +252,7 @@ object ProjectJsonConverter {
                 } catch (e: Exception) {
                     StrokeStyle.INK
                 }
+                val material = if (obj.optInt("materialVersion", 1) == 1) com.example.model.SurfaceMaterial.entries.firstOrNull { it.name == obj.optString("material") } else null
                 val alpha = obj.optDouble("alpha", 1.0).toFloat()
 
                 when (type) {
@@ -239,6 +274,7 @@ object ProjectJsonConverter {
                         list.add(
                             FreehandPath(
                                 id = id,
+                                material = material,
                                 layerId = layerId,
                                 points = pts,
                                 strokeColor = strokeColor,
@@ -256,6 +292,7 @@ object ProjectJsonConverter {
                         list.add(
                             LineElement(
                                 id = id,
+                                material = material,
                                 layerId = layerId,
                                 start = start,
                                 end = end,
@@ -285,6 +322,7 @@ object ProjectJsonConverter {
                         list.add(
                             PolylineElement(
                                 id = id,
+                                material = material,
                                 layerId = layerId,
                                 points = pts,
                                 isClosed = isClosed,
@@ -300,6 +338,7 @@ object ProjectJsonConverter {
                         list.add(
                             RectangleElement(
                                 id = id,
+                                material = material,
                                 layerId = layerId,
                                 left = obj.getDouble("left").toFloat(),
                                 top = obj.getDouble("top").toFloat(),
@@ -318,6 +357,7 @@ object ProjectJsonConverter {
                         list.add(
                             EllipseElement(
                                 id = id,
+                                material = material,
                                 layerId = layerId,
                                 centerX = obj.getDouble("centerX").toFloat(),
                                 centerY = obj.getDouble("centerY").toFloat(),
@@ -337,6 +377,7 @@ object ProjectJsonConverter {
                         list.add(
                             TextElement(
                                 id = id,
+                                material = material,
                                 layerId = layerId,
                                 text = obj.optString("text", ""),
                                 position = pos,
@@ -354,6 +395,7 @@ object ProjectJsonConverter {
                         list.add(
                             DimensionMarkup(
                                 id = id,
+                                material = material,
                                 layerId = layerId,
                                 start = start,
                                 end = end,

@@ -244,7 +244,7 @@ fun StylusTransparentCanvas(
                         val worldPos = screenToWorld(change.position).copy(pressure = pressure)
 
                         // Air View / Hover detection
-                        if (!change.pressed) {
+                        if (!change.pressed && event.type != PointerEventType.Release) {
                             if (isStylus) {
                                 hoverScreenOffset = change.position
                                 isStylusHovering = true
@@ -337,6 +337,7 @@ fun StylusTransparentCanvas(
                                     DrawingTool.TEXT -> {
                                         onTextRequested(worldPos)
                                     }
+                                    else -> Unit
                                 }
                             }
 

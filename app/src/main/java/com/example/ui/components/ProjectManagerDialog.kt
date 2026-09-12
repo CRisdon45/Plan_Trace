@@ -207,6 +207,12 @@ fun ProjectManagerDialog(
                         }
                     }
 
+                    OutlinedButton(onClick = {
+                        onCreateNewProject("Courtyard study", com.example.model.LandscapeExample.TEMPLATE_KEY)
+                    }, modifier = Modifier.fillMaxWidth()) {
+                        Text("Open editable landscape example")
+                    }
+
                     HorizontalDivider()
 
                     // Existing Projects List

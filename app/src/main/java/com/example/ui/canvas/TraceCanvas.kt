@@ -12,6 +12,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -34,12 +37,21 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FormatColorFill
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Straighten
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import com.example.model.SurfaceMaterial
+import com.example.model.supportsSurface
+import com.example.model.withMaterial
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -58,6 +70,13 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.pointerInteropFilter
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalWindowInfo
+import com.example.ui.input.PenContact
+import com.example.ui.input.routePenPointer
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntSize
+import com.example.export.ExportGeometry
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
@@ -76,11 +95,13 @@ import com.example.model.LineElement
 import com.example.model.Point2D
 import com.example.model.PolylineElement
 import com.example.model.RectangleElement
+import com.example.model.RectangleResize
 import com.example.model.StrokeStyle
 import com.example.model.TextElement
 import com.example.model.TraceProject
 import com.example.model.VectorElement
 import com.example.ui.DrawingTool
+import com.example.ui.components.ShapeSizeDialog
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -97,6 +118,8 @@ import kotlin.math.sin
 @Composable
 fun TraceCanvas(
     modifier: Modifier = Modifier,
+    fitRequest: Int = 0,
+    barrelTool: DrawingTool = DrawingTool.SELECT,
     project: TraceProject,
     backgroundBitmap: Bitmap?,
     activeTool: DrawingTool,
@@ -110,6 +133,9 @@ fun TraceCanvas(
     snapSettings: SnapSettings = SnapSettings(),
     onElementCreated: (VectorElement) -> Unit,
     onElementUpdated: (VectorElement) -> Unit,
+    onEditGestureStarted: () -> Unit = {},
+    onEditGestureEnded: () -> Unit = {},
+    onEditGestureCancelled: () -> Unit = {},
     onElementsDeleted: (Set<String>) -> Unit,
     onElementDuplicated: (String) -> Unit,
     onElementSelected: (String?) -> Unit,
@@ -117,21 +143,23 @@ fun TraceCanvas(
     onColorSampled: (Long) -> Unit,
     onCalibrationSegmentDrawn: (Point2D, Point2D) -> Unit,
     onTextRequested: (Point2D) -> Unit,
-    onShowRadialPalette: (Offset) -> Unit,
-    onHideRadialPalette: () -> Unit,
-    onQuickUndo: () -> Unit = {},
+    onTextEditRequested: (TextElement) -> Unit = {},
     onFeedbackMessage: (String) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
 
     // Transform State (Infinite Pan and Zoom)
-    var zoomScale by remember { mutableFloatStateOf(1.0f) }
-    var panOffset by remember { mutableStateOf(Offset(0f, 0f)) }
+    var viewportSize by remember { mutableStateOf(IntSize.Zero) }
+    val fitPadding = with(LocalDensity.current) { 24.dp.toPx() }
+    val toolDockWidth = with(LocalDensity.current) { 86.dp.toPx() }
+    var zoomScale by remember(project.id, project.pageKey) { mutableFloatStateOf(1.0f) }
+    var panOffset by remember(project.id, project.pageKey) { mutableStateOf(Offset(0f, 0f)) }
 
     // Multi-touch Pan & Pinch Zoom tracking
     var prevCentroid by remember { mutableStateOf<Offset?>(null) }
     var prevSpan by remember { mutableFloatStateOf(0f) }
     var singlePanPrevPos by remember { mutableStateOf<Offset?>(null) }
+    var navigating by remember { mutableStateOf(false) }
 
     // Active Geometry Snap result
     var activeSnapResult by remember { mutableStateOf<SnapResult?>(null) }
@@ -146,6 +174,23 @@ fun TraceCanvas(
 
     // Polyline ongoing points
     val polylinePoints = remember { mutableStateListOf<Point2D>() }
+    var lastPolylineTap by remember { mutableStateOf(0L) }
+
+    fun finishPolyline(closed: Boolean = false) {
+        if (polylinePoints.size >= (if (closed) 3 else 2)) {
+            onElementCreated(PolylineElement(layerId = project.activeLayerId, points = polylinePoints.toList(),
+                isClosed = closed, strokeColor = strokeColor, strokeWidth = strokeWidth, style = strokeStyle))
+        }
+        polylinePoints.clear()
+        lastPolylineTap = 0L
+    }
+
+    LaunchedEffect(project.id, project.pdfPageNumber, project.activeLayerId, activeTool, isCalibratingScale) {
+        if (polylinePoints.isNotEmpty()) {
+            polylinePoints.clear()
+            onFeedbackMessage("Unfinished polyline cancelled")
+        }
+    }
 
     // S Pen Air View / Hover Reticle state
     var hoverScreenPos by remember { mutableStateOf<Offset?>(null) }
@@ -157,11 +202,15 @@ fun TraceCanvas(
     var isHoldLocked by remember { mutableStateOf(false) }
 
     // Barrel button state & double-click tracking for Quick Undo
-    var isBarrelButtonPressed by remember { mutableStateOf(false) }
-    var lastBarrelClickTime by remember { mutableStateOf(0L) }
+    val penContact = remember { PenContact() }
+    var contactTool by remember { mutableStateOf<DrawingTool?>(null) }
+    var temporaryTool by remember { mutableStateOf<DrawingTool?>(null) }
+    var suppressRemainingFingers by remember { mutableStateOf(false) }
 
     // Selection Dragging State
     var dragStartWorldPoint by remember { mutableStateOf<Point2D?>(null) }
+    var rectangleResize by remember { mutableStateOf<RectangleResize?>(null) }
+    var sizingRectangle by remember(project.id) { mutableStateOf<RectangleElement?>(null) }
 
     // Eyedropper sampling loupe position & color
     var eyedropperSampleColor by remember { mutableStateOf<Long?>(null) }
@@ -169,6 +218,48 @@ fun TraceCanvas(
 
     // Live measurement readout
     var liveMeasurementText by remember { mutableStateOf<String?>(null) }
+
+    fun cancelContact() {
+        penContact.end()
+        contactTool = null
+        temporaryTool = null
+        onEditGestureCancelled()
+        currentPoints.clear()
+        currentStartPoint = null
+        currentEndPoint = null
+        rectangleResize = null
+        dragStartWorldPoint = null
+        snappedResult = null
+        isHoldLocked = false
+        holdTimerJob?.cancel()
+        liveMeasurementText = null
+        eyedropperScreenPos = null
+    }
+    val windowInfo = LocalWindowInfo.current
+    LaunchedEffect(windowInfo.isWindowFocused) {
+        if (!windowInfo.isWindowFocused) {
+            cancelContact()
+            suppressRemainingFingers = false
+            navigating = false
+            prevCentroid = null
+            singlePanPrevPos = null
+        }
+    }
+
+    LaunchedEffect(fitRequest, viewportSize, backgroundBitmap) {
+        if (fitRequest > 0 && viewportSize.width > toolDockWidth + fitPadding * 2 && viewportSize.height > fitPadding * 2) {
+            onEditGestureCancelled()
+            currentPoints.clear()
+            currentStartPoint = null
+            currentEndPoint = null
+            rectangleResize = null
+            val bounds = ExportGeometry.contentBounds(project, backgroundBitmap?.width, backgroundBitmap?.height)
+            val fit = ExportGeometry.fit(bounds, RectF(toolDockWidth + fitPadding, fitPadding,
+                viewportSize.width - fitPadding, viewportSize.height - fitPadding))
+            zoomScale = fit.scale
+            panOffset = Offset(fit.translateX, fit.translateY)
+        }
+    }
 
     // Coordinate transforms
     fun screenToWorld(screen: Offset): Point2D {
@@ -210,25 +301,38 @@ fun TraceCanvas(
         return 0xFF0F172A // Default charcoal
     }
 
+    sizingRectangle?.let { rectangle ->
+        ShapeSizeDialog(rectangle, project.scaleCalibration, onDismiss = { sizingRectangle = null }, onApply = onElementUpdated)
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(Color(0xFFF9F7F2))
-            // 2-finger pan & zoom gesture handler
-            .pointerInput(Unit) {
-                detectTransformGestures { _, pan, zoom, _ ->
-                    val newZoom = (zoomScale * zoom).coerceIn(0.20f, 30.0f)
-                    zoomScale = newZoom
-                    panOffset += pan
-                }
-            }
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize().onSizeChanged { viewportSize = it }
+            // Input belongs to the canvas, not the parent of the action toolbar.
             // Stylus, barrel button, pressure & hold-to-straighten pointer filter
             .pointerInteropFilter { motionEvent ->
                 val pointerCount = motionEvent.pointerCount
-                val action = motionEvent.actionMasked
+                val route = routePenPointer(motionEvent)
+                if (route.ignore) return@pointerInteropFilter true
+                val action = route.action
+                val pointerIndex = route.index
+                if (route.canceled) {
+                    cancelContact()
+                    suppressRemainingFingers = pointerCount > 1
+                    return@pointerInteropFilter true
+                }
+                if (!route.isStylus && suppressRemainingFingers) {
+                    if (action == MotionEvent.ACTION_UP) suppressRemainingFingers = false
+                    return@pointerInteropFilter true
+                }
 
                 // If 2 or more fingers are down, allow pan/zoom and don't draw
-                if (pointerCount > 1) {
+                if (pointerCount > 1 && !route.isStylus) {
+                    cancelContact()
+                    navigating = true
                     currentPoints.clear()
                     currentStartPoint = null
                     currentEndPoint = null
@@ -236,10 +340,22 @@ fun TraceCanvas(
                     isHoldLocked = false
                     holdTimerJob?.cancel()
                     eyedropperScreenPos = null
-                    return@pointerInteropFilter false
+                    val centroid = Offset((motionEvent.getX(0) + motionEvent.getX(1)) / 2f,
+                        (motionEvent.getY(0) + motionEvent.getY(1)) / 2f)
+                    val span = hypot(motionEvent.getX(1) - motionEvent.getX(0), motionEvent.getY(1) - motionEvent.getY(0))
+                    val previous = prevCentroid
+                    if (action == MotionEvent.ACTION_MOVE && previous != null && prevSpan > 0f) {
+                        val nextZoom = (zoomScale * span / prevSpan).coerceIn(.01f, 30f)
+                        panOffset = centroid - (previous - panOffset) * (nextZoom / zoomScale)
+                        zoomScale = nextZoom
+                    }
+                    prevCentroid = if (action == MotionEvent.ACTION_POINTER_UP) null else centroid
+                    prevSpan = if (action == MotionEvent.ACTION_POINTER_UP) 0f else span
+                    singlePanPrevPos = null
+                    return@pointerInteropFilter true
                 }
 
-                val toolType = motionEvent.getToolType(0)
+                val toolType = motionEvent.getToolType(pointerIndex)
                 val isStylus = toolType == MotionEvent.TOOL_TYPE_STYLUS || toolType == MotionEvent.TOOL_TYPE_ERASER
                 val isHardwareEraser = toolType == MotionEvent.TOOL_TYPE_ERASER
                 val buttonState = motionEvent.buttonState
@@ -257,39 +373,48 @@ fun TraceCanvas(
                     return@pointerInteropFilter true
                 }
 
-                // S Pen Barrel button: single press opens radial menu, double-click triggers Quick Undo
                 val barrelActive = isStylus && (buttonState and MotionEvent.BUTTON_STYLUS_PRIMARY != 0)
-                if (barrelActive) {
-                    if (!isBarrelButtonPressed) {
-                        isBarrelButtonPressed = true
-                        val now = System.currentTimeMillis()
-                        if (now - lastBarrelClickTime in 50..380) {
-                            onQuickUndo()
-                            onFeedbackMessage("S Pen: Quick Undo")
-                            lastBarrelClickTime = 0L
-                            onHideRadialPalette()
-                        } else {
-                            lastBarrelClickTime = now
-                            onShowRadialPalette(Offset(motionEvent.x, motionEvent.y))
-                        }
-                    }
-                } else if (isBarrelButtonPressed) {
-                    isBarrelButtonPressed = false
-                    onHideRadialPalette()
+                if (action == MotionEvent.ACTION_BUTTON_PRESS || action == MotionEvent.ACTION_BUTTON_RELEASE) {
+                    return@pointerInteropFilter true
                 }
 
                 // If stylusOnlyMode is active and user touches with finger, pan/zoom instead of drawing
-                if (stylusOnlyMode && !isStylus) {
-                    return@pointerInteropFilter false
+                if (!isStylus && (stylusOnlyMode || navigating || activeTool == DrawingTool.PAN)) {
+                    val position = Offset(motionEvent.x, motionEvent.y)
+                    if (action == MotionEvent.ACTION_MOVE) {
+                        singlePanPrevPos?.let { panOffset += position - it }
+                    }
+                    singlePanPrevPos = if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) null else position
+                    if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                        navigating = false
+                        prevCentroid = null
+                        prevSpan = 0f
+                    }
+                    return@pointerInteropFilter true
                 }
 
-                val screenPos = Offset(motionEvent.x, motionEvent.y)
-                val pressure = motionEvent.getPressure(0).coerceIn(0.1f, 1.0f)
+                val screenPos = Offset(motionEvent.getX(pointerIndex), motionEvent.getY(pointerIndex))
+                val pressure = motionEvent.getPressure(pointerIndex).coerceIn(0.1f, 1.0f)
                 val worldPoint = screenToWorld(screenPos).copy(pressure = pressure)
-                val effectiveTool = if (isHardwareEraser) DrawingTool.ERASER else activeTool
+                if (action == MotionEvent.ACTION_DOWN) {
+                    cancelContact()
+                    navigating = false
+                    prevCentroid = null
+                    singlePanPrevPos = null
+                    contactTool = penContact.begin(activeTool, barrelActive, isHardwareEraser, isCalibratingScale, barrelTool)
+                    temporaryTool = contactTool.takeIf { barrelActive && !isCalibratingScale }
+                }
+                val effectiveTool = penContact.current(activeTool)
+                if (action == MotionEvent.ACTION_UP) {
+                    penContact.end()
+                    contactTool = null
+                    temporaryTool = null
+                    suppressRemainingFingers = isStylus && pointerCount > 1
+                }
 
                 when (action) {
                     MotionEvent.ACTION_DOWN -> {
+                        onEditGestureStarted()
                         hoverScreenPos = null
                         isStylusHovering = false
                         snappedResult = null
@@ -327,7 +452,12 @@ fun TraceCanvas(
 
                         // Select Object tool
                         if (effectiveTool == DrawingTool.SELECT) {
-                            val hit = project.elements.asReversed().firstOrNull { it.isPointInside(worldPoint) }
+                            val selected = project.elements.find { it.id == selectedElementId } as? RectangleElement
+                            rectangleResize = selected?.takeIf { rectangle -> project.layers.any { it.id == rectangle.layerId && it.isVisible && !it.isLocked } }
+                                ?.let { RectangleResize.hit(it, worldPoint, zoomScale) }
+                            if (rectangleResize != null) return@pointerInteropFilter true
+                            val hit = project.elements.asReversed().firstOrNull { element ->
+                                project.layers.any { it.id == element.layerId && it.isVisible && !it.isLocked } && element.isPointInside(worldPoint) }
                             onElementSelected(hit?.id)
                             dragStartWorldPoint = worldPoint
                             return@pointerInteropFilter true
@@ -363,6 +493,10 @@ fun TraceCanvas(
 
                     MotionEvent.ACTION_MOVE -> {
                         currentEndPoint = worldPoint
+                        if (effectiveTool == DrawingTool.SELECT && rectangleResize != null) {
+                            onElementUpdated(rectangleResize!!.at(worldPoint))
+                            return@pointerInteropFilter true
+                        }
 
                         // Eyedropper sampling during move
                         if (effectiveTool == DrawingTool.EYEDROPPER) {
@@ -458,6 +592,8 @@ fun TraceCanvas(
                     }
 
                     MotionEvent.ACTION_UP -> {
+                        rectangleResize?.let { onElementUpdated(it.at(worldPoint)) }
+                        rectangleResize = null
                         holdTimerJob?.cancel()
                         eyedropperScreenPos = null
                         dragStartWorldPoint = null
@@ -472,6 +608,25 @@ fun TraceCanvas(
                             currentStartPoint = null
                             currentEndPoint = null
                             liveMeasurementText = null
+                            onEditGestureEnded()
+                            return@pointerInteropFilter true
+                        }
+
+                        if (effectiveTool == DrawingTool.POLYLINE) {
+                            val last = polylinePoints.lastOrNull()
+                            val now = motionEvent.eventTime
+                            if (polylinePoints.size >= 3 && polylinePoints.first().distanceTo(worldPoint) < 18f / zoomScale) {
+                                finishPolyline(closed = true)
+                            } else if (polylinePoints.size >= 2 && now - lastPolylineTap < 350L && last != null && last.distanceTo(worldPoint) < 18f / zoomScale) {
+                                finishPolyline()
+                            } else {
+                                if (last == null || last.distanceTo(worldPoint) > 1f) polylinePoints.add(worldPoint)
+                                lastPolylineTap = now
+                            }
+                            currentPoints.clear()
+                            currentStartPoint = null
+                            currentEndPoint = null
+                            onEditGestureEnded()
                             return@pointerInteropFilter true
                         }
 
@@ -499,10 +654,13 @@ fun TraceCanvas(
                         snappedResult = null
                         isHoldLocked = false
                         liveMeasurementText = null
+                        onEditGestureEnded()
                         true
                     }
 
                     MotionEvent.ACTION_CANCEL -> {
+                        rectangleResize = null
+                        onEditGestureCancelled()
                         holdTimerJob?.cancel()
                         eyedropperScreenPos = null
                         currentPoints.clear()
@@ -517,8 +675,7 @@ fun TraceCanvas(
                     else -> false
                 }
             }
-    ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
+        ) {
             drawIntoCanvas { composeCanvas ->
                 val nativeCanvas = composeCanvas.nativeCanvas
 
@@ -536,6 +693,8 @@ fun TraceCanvas(
                     val src = android.graphics.Rect(0, 0, backgroundBitmap.width, backgroundBitmap.height)
                     val dst = RectF(0f, 0f, backgroundBitmap.width.toFloat(), backgroundBitmap.height.toFloat())
                     nativeCanvas.drawBitmap(backgroundBitmap, src, dst, bgPaint)
+                } else if (project.backgroundType == com.example.model.BackgroundType.BLANK_PAPER) {
+                    nativeCanvas.drawColor(0xFFFBFAF5.toInt())
                 } else {
                     // Draw clean architectural blueprint grid
                     drawArchitecturalGrid(nativeCanvas, 3200f, 2400f)
@@ -560,16 +719,31 @@ fun TraceCanvas(
                     }
                 }
 
+                if (polylinePoints.isNotEmpty()) {
+                    val path = Path().apply {
+                        moveTo(polylinePoints.first().x, polylinePoints.first().y)
+                        polylinePoints.drop(1).forEach { lineTo(it.x, it.y) }
+                        currentEndPoint?.let { lineTo(it.x, it.y) }
+                    }
+                    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        color = AndroidColor.rgb(36, 99, 181)
+                        style = Paint.Style.STROKE
+                        this.strokeWidth = strokeWidth
+                    }
+                    nativeCanvas.drawPath(path, paint)
+                    polylinePoints.forEach { nativeCanvas.drawCircle(it.x, it.y, 5f / zoomScale, paint) }
+                }
+
                 // 3. Draw Active In-Progress Gesture / Stroke Preview
                 if (snappedResult != null) {
                     // Snapped clean geometry preview (Hold-to-Straighten)
                     renderSnappedResultPreview(nativeCanvas, snappedResult!!, strokeColor, strokeWidth, strokeStyle)
-                } else if (currentPoints.size > 1 && activeTool == DrawingTool.PEN) {
+                } else if (currentPoints.size > 1 && (contactTool ?: activeTool) == DrawingTool.PEN) {
                     renderCurrentFreehand(nativeCanvas, currentPoints, strokeColor, strokeWidth, strokeStyle)
                 } else if (currentStartPoint != null && currentEndPoint != null) {
                     renderActiveShapePreview(
                         canvas = nativeCanvas,
-                        tool = activeTool,
+                        tool = contactTool ?: activeTool,
                         start = currentStartPoint!!,
                         end = currentEndPoint!!,
                         color = strokeColor,
@@ -580,6 +754,24 @@ fun TraceCanvas(
                 }
 
                 nativeCanvas.restore()
+            }
+        }
+
+        temporaryTool?.let { tool ->
+            Surface(Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp), shape = RoundedCornerShape(12.dp), tonalElevation = 4.dp) {
+                Text(if (tool == DrawingTool.ERASER) "Pen button: Erase objects" else "Pen button: Select", Modifier.padding(12.dp))
+            }
+        }
+
+        if (polylinePoints.isNotEmpty()) {
+            Surface(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp),
+                shape = RoundedCornerShape(12.dp), tonalElevation = 4.dp) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("${polylinePoints.size} points · unfinished", modifier = Modifier.padding(12.dp))
+                    TextButton(onClick = { finishPolyline() }, enabled = polylinePoints.size >= 2) { Text("Finish") }
+                    TextButton(onClick = { finishPolyline(true) }, enabled = polylinePoints.size >= 3) { Text("Close shape") }
+                    TextButton(onClick = { polylinePoints.clear(); lastPolylineTap = 0L }) { Text("Cancel") }
+                }
             }
         }
 
@@ -641,6 +833,8 @@ fun TraceCanvas(
         if (selectedElementId != null && activeTool == DrawingTool.SELECT) {
             val selectedEl = project.elements.find { it.id == selectedElementId }
             if (selectedEl != null) {
+                var actionBarWidth by remember { mutableStateOf(0) }
+                val actionDensity = LocalDensity.current
                 val bounds = selectedEl.boundingBox()
                 val screenCenter = worldToScreen(Point2D(bounds.centerX(), bounds.top))
 
@@ -648,7 +842,7 @@ fun TraceCanvas(
                     modifier = Modifier
                         .offset {
                             IntOffset(
-                                (screenCenter.x - 110.dp.value * 2.2f).roundToInt().coerceAtLeast(16),
+                                (screenCenter.x - actionBarWidth / 2f).roundToInt().coerceIn(16, (viewportSize.width - actionBarWidth - 16).coerceAtLeast(16)),
                                 (screenCenter.y - 58.dp.value * 2.5f).roundToInt().coerceAtLeast(16)
                             )
                         }
@@ -658,13 +852,27 @@ fun TraceCanvas(
                         color = MaterialTheme.colorScheme.surface,
                         tonalElevation = 8.dp,
                         shadowElevation = 8.dp,
-                        modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(24.dp))
+                        modifier = Modifier
+                            .widthIn(max = with(actionDensity) { (viewportSize.width - 32).coerceAtLeast(1).toDp() })
+                            .onSizeChanged { actionBarWidth = it.width }
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(24.dp))
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             // 1. Delete
+                            if (selectedEl is RectangleElement) {
+                                IconButton(onClick = {
+                                    if (project.layers.any { it.id == selectedEl.layerId && !it.isLocked && it.isVisible }) sizingRectangle = selectedEl
+                                    else onFeedbackMessage("Unlock this layer to resize its objects")
+                                }) { Icon(Icons.Default.Straighten, contentDescription = "Edit size") }
+                            }
+                            if (selectedEl is TextElement) {
+                                IconButton(onClick = { onTextEditRequested(selectedEl) }) {
+                                    Icon(Icons.Default.Edit, contentDescription = "Edit note")
+                                }
+                            }
                             IconButton(onClick = { onElementsDeleted(setOf(selectedElementId)) }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
                             }
@@ -672,13 +880,31 @@ fun TraceCanvas(
                             IconButton(onClick = { onElementDuplicated(selectedElementId) }) {
                                 Icon(Icons.Default.ContentCopy, contentDescription = "Duplicate", tint = MaterialTheme.colorScheme.primary)
                             }
+                            if (selectedEl.supportsSurface()) {
+                                var materialMenu by remember(selectedEl.id) { mutableStateOf(false) }
+                                Box {
+                                    TextButton(onClick = { materialMenu = true }) {
+                                        Text(selectedEl.material?.label ?: "Material")
+                                    }
+                                    DropdownMenu(expanded = materialMenu, onDismissRequest = { materialMenu = false }) {
+                                        DropdownMenuItem(text = { Text("Original style") }, onClick = {
+                                            onElementUpdated(selectedEl.withMaterial(null)); materialMenu = false
+                                        })
+                                        SurfaceMaterial.entries.forEach { material ->
+                                            DropdownMenuItem(text = { Text(material.label) }, onClick = {
+                                                onElementUpdated(selectedEl.withMaterial(material)); materialMenu = false
+                                            })
+                                        }
+                                    }
+                                }
+                            }
                             // 3. Recolor
-                            IconButton(onClick = { onElementUpdated(selectedEl.withStrokeColor(strokeColor)) }) {
+                            IconButton(onClick = { onElementUpdated(selectedEl.withMaterial(null).withStrokeColor(strokeColor)) }) {
                                 Icon(Icons.Default.Palette, contentDescription = "Recolor", tint = Color(strokeColor))
                             }
                             // 4. Watercolor Wash Infill
                             IconButton(onClick = {
-                                val updated = selectedEl.withFillColor(strokeColor)
+                                val updated = selectedEl.withMaterial(null).withFillColor(strokeColor)
                                 onElementUpdated(updated)
                             }) {
                                 Icon(Icons.Default.FormatColorFill, contentDescription = "Watercolor Wash", tint = MaterialTheme.colorScheme.secondary)

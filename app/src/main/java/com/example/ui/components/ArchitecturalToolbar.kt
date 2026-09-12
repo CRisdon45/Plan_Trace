@@ -50,6 +50,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -220,6 +223,7 @@ fun ArchitecturalToolbar(
                     .background(Color(strokeColor))
                     .border(2.dp, MaterialTheme.colorScheme.outline, CircleShape)
                     .clickable { showColorMenu = !showColorMenu }
+                    .semantics { contentDescription = "Choose color" }
                     .testTag("btn_palette_swatch"),
                 contentAlignment = Alignment.Center
             ) {
@@ -251,6 +255,7 @@ fun ArchitecturalToolbar(
                                 .size(28.dp)
                                 .clip(CircleShape)
                                 .background(Color(colorLong))
+                                .semantics { contentDescription = name; selected = isColorSelected }
                                 .border(
                                     if (isColorSelected) 2.5.dp else 1.dp,
                                     if (isColorSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
@@ -272,6 +277,7 @@ fun ArchitecturalToolbar(
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.surfaceVariant)
                     .clickable { showWidthMenu = !showWidthMenu }
+                    .semantics { contentDescription = "Choose stroke width" }
                     .testTag("btn_stroke_width"),
                 contentAlignment = Alignment.Center
             ) {
@@ -299,6 +305,7 @@ fun ArchitecturalToolbar(
                         Box(
                             modifier = Modifier
                                 .size(30.dp)
+                                .semantics { contentDescription = label; selected = isSelected }
                                 .clip(CircleShape)
                                 .background(if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant)
                                 .clickable {
@@ -328,6 +335,7 @@ fun ArchitecturalToolbar(
                         else MaterialTheme.colorScheme.surfaceVariant
                     )
                     .clickable { showStyleMenu = !showStyleMenu }
+                    .semantics { contentDescription = "Choose stroke style" }
                     .testTag("btn_stroke_style"),
                 contentAlignment = Alignment.Center
             ) {
@@ -403,6 +411,7 @@ private fun ToolButton(
             .clip(RoundedCornerShape(12.dp))
             .background(bg)
             .clickable(onClick = onClick)
+            .semantics { selected = isSelected }
             .testTag(testTag),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center

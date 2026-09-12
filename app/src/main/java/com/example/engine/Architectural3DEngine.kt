@@ -250,8 +250,8 @@ object Architectural3DEngine {
         val cosP = cos(radPitch)
         val sinP = sin(radPitch)
 
-        val screenMidX = screenSize.width / 2f + panOffset.x
-        val screenMidY = screenSize.height / 2f + panOffset.y
+        val screenMidX = screenSize.x / 2f + panOffset.x
+        val screenMidY = screenSize.y / 2f + panOffset.y
 
         fun projectPoint(p: Point3D): Pair<Offset, Float> {
             val rx = p.x - viewCenter.x

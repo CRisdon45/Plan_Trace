@@ -25,6 +25,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.key
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -32,7 +33,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.dp
 import com.example.ui.MainViewModel
-import com.example.ui.canvas.RadialPalette
 import com.example.ui.canvas.TraceCanvas
 import com.example.ui.components.ArchitecturalToolbar
 import com.example.ui.components.EditTitleDialog
@@ -49,6 +49,13 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: MainViewModel by viewModels()
 
+    override fun dispatchTouchEvent(event: android.view.MotionEvent): Boolean {
+        // Preserve system rejection before Compose converts the pointer event.
+        val cancellation = com.example.ui.input.cancellationForCompose(event)
+            ?: return super.dispatchTouchEvent(event)
+        return try { super.dispatchTouchEvent(cancellation) } finally { cancellation.recycle() }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -62,9 +69,12 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun PlanTraceApp(viewModel: MainViewModel) {
+    var fitRequest by remember { mutableStateOf(0) }
+    var editingNote by remember { mutableStateOf<com.example.model.TextElement?>(null) }
     val project by viewModel.project.collectAsState()
     val projectsList by viewModel.projectsList.collectAsState()
     val activeTool by viewModel.activeTool.collectAsState()
+    val barrelTool by viewModel.barrelTool.collectAsState()
     val strokeColor by viewModel.strokeColor.collectAsState()
     val strokeWidth by viewModel.strokeWidth.collectAsState()
     val strokeStyle by viewModel.strokeStyle.collectAsState()
@@ -86,10 +96,6 @@ fun PlanTraceApp(viewModel: MainViewModel) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    // S Pen radial menu state
-    var showRadialMenu by remember { mutableStateOf(false) }
-    var radialMenuPosition by remember { mutableStateOf(Offset(200f, 200f)) }
-
     // Edit Title state
     var showEditTitle by remember { mutableStateOf(false) }
 
@@ -108,9 +114,7 @@ fun PlanTraceApp(viewModel: MainViewModel) {
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         if (uri != null) {
-            val isPdf = uri.toString().lowercase().endsWith(".pdf") ||
-                    uri.path?.lowercase()?.endsWith(".pdf") == true
-            viewModel.importPlanUri(uri, isPdf)
+            viewModel.importPlanUri(uri)
         }
     }
 
@@ -146,7 +150,10 @@ fun PlanTraceApp(viewModel: MainViewModel) {
                     },
                     onPrevPdfPage = { viewModel.prevPdfPage() },
                     onNextPdfPage = { viewModel.nextPdfPage() },
-                    onEditTitle = { showEditTitle = true }
+                    onEditTitle = { showEditTitle = true },
+                    onFitDrawing = { viewModel.cancelScaleCalibration(); fitRequest++ },
+                    barrelTool = barrelTool,
+                    onSetBarrelTool = { viewModel.setBarrelTool(it) }
                 )
             }
         }
@@ -157,7 +164,10 @@ fun PlanTraceApp(viewModel: MainViewModel) {
                 .padding(innerPadding)
         ) {
             // Main Canvas (Infinite Pan and Zoom, S Pen pressure & inking)
+            key(project.id, project.pageKey) {
             TraceCanvas(
+                fitRequest = fitRequest,
+                barrelTool = barrelTool,
                 modifier = Modifier.fillMaxSize(),
                 project = project,
                 backgroundBitmap = backgroundBitmap,
@@ -171,22 +181,22 @@ fun PlanTraceApp(viewModel: MainViewModel) {
                 showDimensions = showDimensions,
                 onElementCreated = { viewModel.addVectorElement(it) },
                 onElementUpdated = { viewModel.updateElement(it) },
+                onEditGestureStarted = { viewModel.beginEditGesture() },
+                onEditGestureEnded = { viewModel.endEditGesture() },
+                onEditGestureCancelled = { viewModel.cancelEditGesture() },
                 onElementsDeleted = { viewModel.removeVectorElements(it) },
                 onElementDuplicated = { viewModel.duplicateElement(it) },
                 onElementSelected = { viewModel.selectElement(it) },
                 onColorSampled = { viewModel.sampleColor(it) },
                 onCalibrationSegmentDrawn = { p1, p2 -> viewModel.setCalibrationSegment(p1, p2) },
                 onTextRequested = { viewModel.setShowTextDialog(it) },
-                onShowRadialPalette = { offset ->
-                    radialMenuPosition = offset
-                    showRadialMenu = true
+                onTextEditRequested = { note ->
+                    if (project.layers.any { it.id == note.layerId && !it.isLocked && it.isVisible }) editingNote = note
+                    else viewModel.showToast("Unlock this layer to edit its note")
                 },
-                onHideRadialPalette = {
-                    showRadialMenu = false
-                },
-                onQuickUndo = { viewModel.undo() },
                 onFeedbackMessage = { viewModel.showToast(it) }
             )
+            }
 
             // Left floating architectural toolbar
             ArchitecturalToolbar(
@@ -203,14 +213,7 @@ fun PlanTraceApp(viewModel: MainViewModel) {
                 onSelectStyle = { viewModel.setStrokeStyle(it) }
             )
 
-            // S Pen Radial Palette (triggered by barrel button or quick tool gesture)
-            RadialPalette(
-                visible = showRadialMenu,
-                position = radialMenuPosition,
-                activeTool = activeTool,
-                onSelectTool = { viewModel.setTool(it) },
-                onDismiss = { showRadialMenu = false }
-            )
+
         }
     }
 
@@ -260,7 +263,10 @@ fun PlanTraceApp(viewModel: MainViewModel) {
             projects = projectsList,
             onDismiss = { viewModel.setShowProjectsDialog(false) },
             onSelectProject = { viewModel.loadProject(it) },
-            onCreateNewProject = { title, sample -> viewModel.createNewProject(title, sample) },
+            onCreateNewProject = { title, sample ->
+                viewModel.createNewProject(title, sample)
+                if (sample == com.example.model.LandscapeExample.TEMPLATE_KEY) fitRequest++
+            },
             onDeleteProject = { viewModel.deleteProject(it) },
             onImportFile = {
                 filePickerLauncher.launch(arrayOf("application/pdf", "image/*"))
@@ -268,13 +274,14 @@ fun PlanTraceApp(viewModel: MainViewModel) {
         )
     }
 
-    if (textRequestPoint != null) {
+    if (textRequestPoint != null || editingNote != null) {
         TextAnnotationDialog(
-            position = textRequestPoint!!,
+            position = editingNote?.position ?: textRequestPoint!!,
             activeLayerId = project.activeLayerId,
             strokeColor = strokeColor,
-            onDismiss = { viewModel.setShowTextDialog(null) },
-            onAddText = { viewModel.addVectorElement(it) }
+            existingNote = editingNote,
+            onDismiss = { viewModel.setShowTextDialog(null); editingNote = null },
+            onAddText = { if (editingNote != null) viewModel.updateElement(it) else viewModel.addVectorElement(it) }
         )
     }
 
