@@ -1,8 +1,8 @@
 # Current state and next-session handoff
 
-Updated 2026-09-12 after the grass-only pigment revision. The current
+Updated 2026-09-12 after the grass texture and final-detail revision. The current
 branch is **feat/expert-workspace-ui**; its verified application head is
-`5bf421bf360c31e8c9c409f905ecdce3b8aa92f6`. Draft PR #6
+`f11d5fd271a515a5f868614176f5356175e02e9d`. Draft PR #6
 targets the merged straight- and smooth-pool interaction seam in
 **feat/project-geometry-seam**. Do not reset the application branch to an older
 documentation checkpoint.
@@ -13,15 +13,15 @@ The latest owner feedback accepts the improvement at `5bf421b` but identifies
 it as approximately step 3 of the supplied close-up study. Current work extends
 it through texture lifting and final detail. The first three paint stages are
 preserved. The added passes and exact-path edge accents are described in
-[the grass study](GRASS_PAINT_STUDY.md). New CI evidence is pending for this
-follow-up; the earlier evidence below still refers to `5bf421b`.
+[the grass study](GRASS_PAINT_STUDY.md). The verified evidence below records
+this follow-up separately from the original pigment revision.
 
 
 The owner rejected the grass at `f52ea32` as **5/10** and explicitly set a **9/10**
 visual goal. The earlier checks below establish technical behavior, not accepted
 art quality. Water and decking are paused. The current revision replaces the
 old grass paint construction; see [the grass study](GRASS_PAINT_STUDY.md) for the
-reference analysis, mathematical model and honest acceptance criteria. The new build/unit gate passed 302 tests; the real emulator gate passed all
+reference analysis, mathematical model and honest acceptance criteria. The new build/unit gate passed 303 tests; the real emulator gate passed all
 20 scenarios. Do not describe the visual
 bar as achieved merely because tests pass.
 
@@ -144,47 +144,44 @@ implementation. No new dependency, reference pixels or runtime AI was added.
 
 ## Verified evidence
 
-[Android 2D integrity run 34706762595](https://github.com/CRisdon45/Plan_Trace/actions/runs/34706762595)
-at `5bf421b` passed **302 tests with zero failures, errors or skips**, the nine-test
-runtime-policy audit, resolved-runtime/manifest checks and debug assembly. The
-downloaded XML independently confirms these totals. Three new pigment tests
-check conserved deposited mass, concentration at external/internal wet fronts,
-unchanged dry paper, no invented image-crop rim, and thin fractional masks. The
-shared-renderer checks also cover cold-cache repeatability, seed variation,
-translation, exact concave clipping, unchanged serialization and correct grass
-opacity. The local production core and PNG adapter compile with Java 11 targets;
-no local Android/Gradle build ran.
+[Android 2D integrity run 34708899510](https://github.com/CRisdon45/Plan_Trace/actions/runs/34708899510)
+at `f11d5fd` passed **303 tests with zero failures, errors or skips**, the nine-test
+runtime-policy audit, resolved-runtime/manifest checks and debug assembly.
+Downloaded XML independently confirms the totals. The new finishing test verifies
+substantial lifting, new deposition and an increased dark range across cumulative
+stages 3/4/5. It does not assign an artistic quality score. Existing checks cover
+pigment mass, drying fronts, cold-cache repeatability, seed variation, translation,
+exact concave clipping, unchanged serialization and grass opacity.
 
-Unit artifact `10302150595` ZIP SHA-256:
-`d71713c087e849424b685c130b75368a56891f25b676aa7874ab73669274636b`.
-The actual 1150x850 turf detail SHA-256 is
-`34595dbd221ab3ccde94b2799f31489007e3d784cef4df2f8a2ed06dc6c7fa23`.
-Its 60px block range is 63.82 and 4px residual is 11.81; these are implementation
-characterization, not quality scores. Actual turf detail and concave images were
-opened and inspected. The water detail, polygon-water wash, caustic study,
-Graphic organic plan, and travertine detail/concave images are byte-identical to
-`f52ea32`. Seven local paint iterations and three inspected seeds informed the
-visual changes; no reference pixels or flattering crops serve as test fixtures.
+Unit artifact `10302847012` ZIP SHA-256:
+`68db13812d43c55fc292c5ee2ae32bade6a5f8ff0fe69e137e1024a6f7573b49`.
+Actual 1150x850 turf detail SHA-256:
+`ed12accf2c7fe2760ab080c94816588f89da96b20bb9e29c1fe6fb4ed87f573e`.
+Full turf and concave Android renders were opened and inspected. Android stage
+3/4/5 pixels exactly match the desktop production-core study. The first three
+stages remain unchanged from `5bf421b`. Three finishing iterations and two seeds
+were inspected. Water detail, polygon-water wash, caustic study, Graphic organic
+plan and travertine detail/concave images remain byte-identical to `5bf421b`.
+The Java core and adapter also compile locally with Java 11 targets; no local
+Android/Gradle build ran.
 
-The earlier `00712dd` CI runs were superseded by the final grain adjustment and
-cancelled. They are not reported as passing checks. [Android workspace run 34706762612](https://github.com/CRisdon45/Plan_Trace/actions/runs/34706762612)
-at the same final app revision passed **all 20 scenarios**. Downloaded per-case
-instrumentation logs independently confirm 20 `OK (1 test)` results. The real
-1600x1000 live grass view, 1800x1000 export and reopened view were opened and
-inspected: all contain the completed new paint, not the temporary flat fill.
-Active-window records identify the intended development app. The crash buffer
-is empty, and Android reports no ANR since boot. These are synthetic API-35
-emulator results, not physical-tablet performance or visual acceptance.
+[Android workspace run 34708899494](https://github.com/CRisdon45/Plan_Trace/actions/runs/34708899494)
+at the same `f11d5fd` app revision passed **all 20 scenarios**. Downloaded per-case
+logs independently confirm 20 `OK (1 test)` results. The actual 1600x1000 live
+workspace, 1800x1000 PNG export and reopened workspace were opened and inspected;
+all show the completed texture and final detail. Active-window records identify
+the intended development app. The crash buffer is empty and Android reports no
+ANR since boot. These are synthetic API-35 emulator results, not tablet timing.
 
-Emulator artifact `10302136925` ZIP SHA-256:
-`7c37ca09508bac95ff78b48782e1478c04eb7bd355a4d121b7e718fe98902222`.
+Emulator artifact `10302124945` ZIP SHA-256:
+`8f04f8305c87b1a9836615b6340f93d70a689047792b06d4c43b3f599ddba165`.
 Actual two-material export SHA-256:
-`79e45b41c0110e40b622871543f4c3232bbe673d27dded35409bd8668a206ca7`.
+`0c86e024f81dbf9bd32c5bd30b473ec6d200bbedae9aa89a8a7e78e02f49475a`.
 Appearance switching preserves saved JSON byte-for-byte at
-`69ec97d1ed89eb324513238c895a52e997a6d5601f6a59a9a12b5c9622520d19`.
-Technical and Graphic exports remain byte-identical to `f52ea32`. The grass
-fixture uses the existing normal save/reopen/export paths and restores the
-preceding synthetic project through monotonically increasing store revisions.
+`3698c9489fb04f80ca011420954b1c2174a11dca0a08e8a5482653fb9ba6063c`.
+Technical and Graphic exports remain byte-identical to `5bf421b`. The grass
+fixture follows normal save/reopen/export paths and restores the preceding
+synthetic project through monotonically increasing store revisions.
 
 Physical S Pen, palm rejection, hardware frame time and owner visual acceptance
 remain unverified. No original app/data, tablet installation, signing change or

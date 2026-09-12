@@ -24,7 +24,10 @@ and final mark strength; two object seeds were inspected. The desktop adapter
 now includes a full-frame 3/4/5 comparison. A renderer test captures those stages
 and checks substantial lifting, new deposition and an increased dark range.
 Those tests establish distinct operations, not a 9/10 quality score. Android CI
-verification for this follow-up is pending at this source checkpoint.
+passed all 303 unit tests; the captured stage pixels exactly match the desktop
+production study. Full-surface and concave Android renders were also inspected. All 20 emulator
+scenarios passed; live, exported and reopened grass captures show the finished
+paint. Exact run and artifact identities are recorded in CURRENT_STATE.
 
 ## What the reference requires
 
@@ -103,7 +106,7 @@ Local Java compilation and production-pixel inspection run without an Android
 SDK. Typical complete diagnostic generation took about 6.6 seconds on this host,
 including five PNG stage captures; that is not a tablet benchmark. Cold generation
 is appreciable, hence the worker. Actual Android build, clipping/opacity and
-persistence results are recorded in CURRENT_STATE: app `5bf421b` passed 302 unit
+persistence results are recorded in CURRENT_STATE: app `f11d5fd` passed 303 unit
 tests, nine policy checks and all 20 emulator scenarios. Its full grass surface,
 concave clip, live workspace, reopened canvas and PNG export were inspected. Hardware frame
 time, physical S Pen behavior and a 9/10 visual acceptance remain unverified.

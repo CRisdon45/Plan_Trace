@@ -48,6 +48,15 @@ the grass paint is brought toward the focused reference's quality.
 
 Turf uses broad irregular tonal variation, retained paper highlights, and a mixture of sharply dried and slightly bled pigment edges. A diagonal gradient alone does not achieve the reference. The owner's focused grass/travertine study on 2026-09-12 explicitly requires minute sharp detail: selective dry pigment rims, small lifted marks, clustered grass flecks and delicate blades over translucent yellow-green/olive glazes. Avoid uniformly distributed noise or visible repeated texture seams; do not omit the reference's small marks in the name of restraint. The owner rejected the earlier grass as 5/10 and requires an honest 9/10 target. Study the full layering and sediment at each paint front; do not equate successful tests with that visual acceptance. Water and decking are paused. See [the current grass study](GRASS_PAINT_STUDY.md).
 
+The follow-up grass gate explicitly covers steps 4 and 5 of the close-up study.
+Step 4 must materially lift and subdivide the established washes into smaller
+connected forms with retained pale passages. Step 5 must visibly extend the tonal
+range with varied green deposits, near-black ink accents, fine curved strokes,
+small light marks and clustered edge detail. The owner found `5bf421b` improved
+but approximately step 3; its previous stage labels are not evidence that the
+finishing work was complete. Preserve the improved first three stages while
+judging the new finish at both working size and close detail.
+
 Paving/coping maintain exact boundaries and coherent pattern orientation/scale. Joints are subordinate to outer geometry and simplify at sheet zoom without changing design dimensions. Gravel stays a quiet field. Planting eligibility does not require a decorative bed boundary.
 
 Travertine targets warm ivory paper, overlapping pale ochre/taupe washes, softly
