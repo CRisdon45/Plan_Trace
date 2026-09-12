@@ -46,9 +46,18 @@ glow do not meet that target. Keep painterly blue visible between the highlights
 The owner's current sequence is to finish caustics, then develop grass and decking
 with the staged watercolor layering shown in the supplied material study.
 
-Turf uses broad irregular tonal variation, retained paper highlights and soft pigment edges. A diagonal gradient alone does not achieve the reference. Do not add high-frequency speckles or visible repeated tile seams.
+Turf uses broad irregular tonal variation, retained paper highlights and soft pigment edges. A diagonal gradient alone does not achieve the reference. The owner's focused grass/travertine study on 2026-09-12 explicitly requires minute sharp detail: selective dry pigment rims, small lifted marks, clustered grass flecks and delicate blades over translucent yellow-green/olive glazes. Avoid uniformly distributed noise or visible repeated texture seams; do not omit the reference's small marks in the name of restraint. Water is paused for a later review while these two materials develop.
 
 Paving/coping maintain exact boundaries and coherent pattern orientation/scale. Joints are subordinate to outer geometry and simplify at sheet zoom without changing design dimensions. Gravel stays a quiet field. Planting eligibility does not require a decorative bed boundary.
+
+Travertine targets warm ivory paper, overlapping pale ochre/taupe washes, softly
+bled patches with selective sharp drying fronts, tiny mineral pores and fine
+joint ink. The initial 12x24-inch running bond is an illustrative appearance
+default anchored to calibrated drawing units, not an assigned product or a cut
+layout. Coping receives stone paint without an incorrect cross-pool deck grid.
+Decorative bleed and deposits stay inside the exact material silhouette. Full
+contextual planting shadows and furniture in the study are separate objects,
+not painted into a reusable grass or stone texture.
 
 Use distinct tree, palm, shrub, succulent/accent, flowering and groundcover silhouettes. Bounded lobes/fronds, intentional negative space and selective near-dark masses create form. Avoid branch spaghetti, generic translucent blobs and evenly distributed leaf noise. Repeatable variation should not make every instance identical or every movement redraw the canopy. The symbol must remain recognizable during edits.
 

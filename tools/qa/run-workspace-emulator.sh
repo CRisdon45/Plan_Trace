@@ -138,6 +138,9 @@ device shell am force-stop "$package"
 device exec-out run-as "$package" cat files/project-design/workspace.json > emulator-evidence/design-after-appearance.json
 cmp emulator-evidence/design-before-appearance.json emulator-evidence/design-after-appearance.json
 
+run_case grassAndTravertineInTheActualWorkspace com.example.AppearanceDeviceTest
+device shell am force-stop "$package"
+
 # Layout changes happen after the source/restart scenarios. Keep the test app
 # foreground while Android applies display changes, rather than reconfiguring the launcher.
 function layout_display() {

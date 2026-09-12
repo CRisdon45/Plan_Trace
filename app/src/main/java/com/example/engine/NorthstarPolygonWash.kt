@@ -25,7 +25,7 @@ internal object NorthstarPolygonWash {
     private const val SIDE = 768
     private const val CACHE_BYTES = 12 * 1024 * 1024
     private data class Key(val id: String, val width: Int, val height: Int)
-    private data class Vertex(val x: Float, val y: Float, val variance: Float)
+    internal data class Vertex(val x: Float, val y: Float, val variance: Float)
     private data class Glaze(
         val boundary: List<Vertex>, val color: Int, val opacity: Int, val layers: Int,
         val x: Float, val y: Float, val radius: Float,
@@ -158,7 +158,7 @@ internal object NorthstarPolygonWash {
         bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
     }
 
-    private fun deform(input: List<Vertex>, random: Random, rounds: Int): List<Vertex> {
+    internal fun deform(input: List<Vertex>, random: Random, rounds: Int): List<Vertex> {
         var boundary = input
         repeat(rounds) {
             val next = ArrayList<Vertex>(boundary.size * 2)

@@ -9,6 +9,7 @@ import com.example.data.DesignWorkspaceStore
 import com.example.export.DesignAppearance
 import com.example.export.DesignOutput
 import com.example.export.DesignOutputSettings
+import com.example.model.design.*
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Before
@@ -80,5 +81,37 @@ class AppearanceDeviceTest {
         ui.onNodeWithTag("workspace-appearance-northstar").assertIsSelected()
         ui.onNodeWithTag("workspace-appearance-close").performClick()
         assertEquals(before,store.load())
+    }
+
+    @Test fun grassAndTravertineInTheActualWorkspace()=runBlocking {
+        val before = store.load()!!
+        fun rectangle(x: Double, y: Double, width: Double, height: Double) = DesignBoundary(
+            listOf(DesignPoint(x,y), DesignPoint(x+width,y), DesignPoint(x+width,y+height), DesignPoint(x,y+height))
+                .mapIndexed { i, p -> BoundaryNode("v$i", p, "e$i", 0.0) })
+        val study = ProjectDesign(before.id, listOf(
+            DesignObject("grass-study", "Grass material study", DesignObjectKind.TURF, rectangle(0.0,0.0,4.8,4.0)),
+            DesignObject("travertine-study", "Travertine material study", DesignObjectKind.PAVING, rectangle(5.4,0.0,4.8,4.0))
+        ), before.revision + 1)
+        store.save(study)
+        try {
+            open()
+            choose(DesignAppearance.NORTHSTAR)
+            ui.onNodeWithTag("workspace-commands").performClick()
+            ui.onNodeWithTag("radial-category-view").performTouchInput { click(center) }
+            ui.onNodeWithTag("radial-action-fit").performTouchInput { click(center) }
+            capture("ground-materials-northstar")
+            val file = DesignOutput.png(context, study, 1800, 1000, DesignOutputSettings(
+                appearance=DesignAppearance.NORTHSTAR, includeMeasurements=false, includeSourceImage=false))!!
+            file.copyTo(File(evidence,"ground-materials-northstar-export.png"), overwrite=true)
+            assertEquals(study,store.load())
+            ui.activityRule.scenario.recreate()
+            ui.waitUntil(10000) { ui.onAllNodesWithTag("workspace-canvas").fetchSemanticsNodes().size==1 }
+            capture("ground-materials-reopened")
+            assertEquals(study,store.load())
+        } finally {
+            // Restore the earlier synthetic fixture through monotonically increasing
+            // store revisions. Never clear app data or bypass its persistence guards.
+            store.save(ProjectDesign(before.id, before.objects, study.revision + 1, before.siteImage))
+        }
     }
 }
