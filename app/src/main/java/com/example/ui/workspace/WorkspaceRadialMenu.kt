@@ -63,7 +63,8 @@ fun WorkspaceRadialMenu(anchor: Offset, bounds: IntSize, availability: RadialAva
                         } else RadialCommands.actions(expanded!!).forEach { a ->
                             TextButton(onClick={choose(RadialHit.Action(a))},enabled=availability.enabled(a),
                                 modifier=Modifier.fillMaxWidth().testTag("radial-action-${a.name.lowercase()}")) {
-                                Text(a.label + (availability.checked(a)?.let { if(it) " · On" else " · Off" } ?: ""))
+                                Text(a.label + (availability.checked(a)?.let { if(it) " · On" else " · Off" }
+                                    ?: availability.detail(a)?.let { " · $it" } ?: ""))
                             }
                         }
                     }
@@ -108,7 +109,8 @@ fun WorkspaceRadialMenu(anchor: Offset, bounds: IntSize, availability: RadialAva
                     val enabled=availability.enabled(a);val checked=availability.checked(a)
                     val angle=RadialGeometry.childAngle(category,i)
                     sector(angle,110f,162f,28f,if(checked==true) Color(0xFFD8EBE3) else Color(0xFFF0EFEB))
-                    label(a.label.replace("Touch edit","Touch\nedit").replace("Object snap","Object\nsnap")+(checked?.let { if(it) "\nOn" else "\nOff" }?:""),
+                    label(a.label.replace("Touch edit","Touch\nedit").replace("Object snap","Object\nsnap")+
+                        (checked?.let { if(it) "\nOn" else "\nOff" } ?: availability.detail(a)?.let { "\n$it" } ?: ""),
                         angle,136.0,if(enabled) Color(0xFF233C3F) else Color(0xFF8A9090),11f)
                 }
             }
@@ -136,6 +138,7 @@ fun WorkspaceRadialMenu(anchor: Offset, bounds: IntSize, availability: RadialAva
                     contentDescription=a.label;role=Role.Button
                     if(!availability.enabled(a)) disabled()
                     availability.checked(a)?.let { stateDescription=if(it) "On" else "Off" }
+                        ?: availability.detail(a)?.let { stateDescription=it }
                     onClick { if(availability.enabled(a)) { choose(RadialHit.Action(a));true } else false }
                 })
         } }

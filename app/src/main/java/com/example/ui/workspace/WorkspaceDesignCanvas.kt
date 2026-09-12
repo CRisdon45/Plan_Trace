@@ -39,6 +39,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.engine.WatercolorRenderer
 import com.example.export.DesignOutput
 import com.example.export.DesignOutputSettings
+import com.example.export.DesignAppearance
 import com.example.model.PolylineElement
 import com.example.model.design.*
 import kotlin.math.hypot
@@ -63,7 +64,7 @@ private class PointerSession {
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewModel, touchEdit: Boolean,
-    showGrid: Boolean, gridSnap: Boolean, geometrySnap: Boolean, commandRequest: Int, inspector: String?, allowCommands: Boolean,
+    showGrid: Boolean, gridSnap: Boolean, geometrySnap: Boolean, appearance: DesignAppearance, commandRequest: Int, inspector: String?, allowCommands: Boolean,
     onCloseInspector: () -> Unit, onAction: (RadialAction) -> Unit,
     onImportSite: () -> Unit, onSiteComplete: () -> Unit, modifier: Modifier) {
     val document = state.shownDocument ?: return
@@ -163,7 +164,8 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
             return true
         }
     }) }
-    val projectionResult = remember(document) { runCatching { DesignOutput.drawing(document, DesignOutputSettings(includeMeasurements = false, includeSourceNotice = false)) } }
+    val projectionResult = remember(document,appearance) { runCatching { DesignOutput.drawing(document,
+        DesignOutputSettings(appearance=appearance,includeMeasurements = false, includeSourceNotice = false)) } }
     val projection = projectionResult.getOrNull()
     val selected = document.objects.firstOrNull { it.id == state.selectedId }
     val radius = 6f * density
@@ -492,7 +494,7 @@ internal fun WorkspaceCanvas(state: WorkspaceState, model: DesignWorkspaceViewMo
                 selected?.kind==DesignObjectKind.POOL || selected?.kind==DesignObjectKind.SPA,
                 state.canUndo,state.canRedo,document.objects.isNotEmpty(),showGrid,touchEdit,gridSnap,geometrySnap,
                 canEditSides=StraightSideEditing.canEdit(selected),sideEditing=state.sideEditing,
-                canEditSmooth=SmoothPoolEditing.canEdit(selected),smoothMode=state.smoothMode),
+                canEditSmooth=SmoothPoolEditing.canEdit(selected),smoothMode=state.smoothMode,appearance=appearance),
                 onDismiss={ menuAnchor=null },onAction=onAction)
         }
 
