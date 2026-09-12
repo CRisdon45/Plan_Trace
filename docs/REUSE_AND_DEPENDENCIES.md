@@ -4,6 +4,28 @@ Reviewed 2026-09-11 against Plan Trace at 915017a. Reuse general-purpose machine
 
 ## Adopted now
 
+**Northstar polygon glazes (2026-09-12).** Adapt the published method, not source
+code or assets, from Tyler Hobbs's 2017
+[A Guide to Simulating Watercolor Paint with Generative Art](https://www.tylerxhobbs.com/words/a-guide-to-simulating-watercolor-paint-with-generative-art)
+(primary essay inspected 2026-09-12). `NorthstarPolygonWash.kt` is an independent
+Kotlin implementation: recursively displaced polygon edges with inherited local
+variance, interleaved translucent blue layers and gaps in individual deposits.
+Four spatial scales provide broad washes through small pigment blooms. The
+existing bounded deposition field and caustics remain separate complementary
+layers. No external code license or art redistribution grant is assumed; no
+third-party code, image, dependency or runtime service is added.
+
+This is an illustrative model, not physically accurate spectral pigment mixing.
+The cache is byte-bounded to 12 MiB, with a 768-pixel longest-side texture and
+fixed layer/polygon counts; exact object clipping stays in the shared renderer.
+It is independent of translation and view scale. Changing aspect ratio changes
+the generated wash; changing the silhouette within the same aspect ratio only
+changes the caller's clip. Subpixel detail eventually softens at extreme zoom.
+Proof gate: actual rectangular/organic app output, broad and fine variation
+without caustics, repeatability after cache eviction, neighbor variation, concave
+containment and unchanged saved geometry. Tablet cold-generation and frame-time
+cost require measurement; bounded work alone is not a performance claim.
+
 **JTS 1.20.0 spatial lookup.** The app already used this pinned local library for coping and site validity, with its EDL notice in assets. GeometrySnapIndex now also uses [STRtree](https://locationtech.github.io/jts/javadoc/org/locationtech/jts/index/strtree/STRtree.html) to shortlist finite corners, midpoints and edges. No new dependency, native bridge or copied third-party source was required.
 
 The tree is a broad-phase lookup only. Exact line/arc projection, reference priority, deterministic tie order, acquisition/release behavior and explicit construction axes remain in the existing resolver. Conservative arc boxes include their sagitta, not just the chord or a sampled path. Queries cover the wider release radius. Distant corner-alignment guides remain global because a nearby guide can originate from a far-away corner. This is not an overall logarithmic-time guarantee or elimination of every full-scene operation. A query too large for finite bounds falls back to the exhaustive candidate set.

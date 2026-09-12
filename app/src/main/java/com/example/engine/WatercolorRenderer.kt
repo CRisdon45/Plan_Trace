@@ -47,7 +47,7 @@ object WatercolorRenderer {
         if (material != null && element.supportsSurface()) {
             val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = if (material == com.example.model.SurfaceMaterial.WATER &&
-                    element.style == StrokeStyle.WATERCOLOR_WASH) Color.rgb(105, 189, 207)
+                    element.style == StrokeStyle.WATERCOLOR_WASH) Color.rgb(120, 199, 221)
                     else material.fill.toInt()
                 alpha = (element.alpha * layerAlpha * 255).toInt().coerceIn(0, 255)
                 style = Paint.Style.FILL
@@ -308,7 +308,7 @@ object WatercolorRenderer {
         // Northstar's blue pool reference is a presentation palette, not a change
         // to saved materials or Graphic mode's established flat fill.
         val waterPigment = Color.rgb(24, 91, 130)
-        val deep = colorWithScaledAlpha(waterPigment, 130, alpha)
+        val deep = colorWithScaledAlpha(waterPigment, 80, alpha)
         val clear = colorWithScaledAlpha(waterPigment, 0, alpha)
         val depthPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             shader = LinearGradient(
@@ -323,6 +323,8 @@ object WatercolorRenderer {
             style = Paint.Style.FILL
         }
         canvas.drawPath(path, depthPaint)
+
+        NorthstarPolygonWash.draw(canvas, stableId, bounds, alpha)
 
         NorthstarWatercolorField.draw(
             canvas = canvas,

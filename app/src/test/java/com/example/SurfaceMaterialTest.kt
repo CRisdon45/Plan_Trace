@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import com.example.data.ProjectJsonConverter
 import com.example.engine.NorthstarWatercolorField
 import com.example.engine.NorthstarWaterDetails
+import com.example.engine.NorthstarPolygonWash
 import com.example.engine.WatercolorRenderer
 import com.example.model.*
 import org.junit.Assert.*
@@ -135,6 +136,7 @@ class SurfaceMaterialTest {
         val first = render()
         NorthstarWaterDetails.clearCache()
         NorthstarWatercolorField.clearCache()
+        NorthstarPolygonWash.clearCache()
         assertTrue(first.sameAs(render()))
         assertEquals(saved, ProjectJsonConverter.serializeElements(listOf(element)))
         java.io.File("build/reports/northstar-watercolor").mkdirs()
@@ -152,6 +154,57 @@ class SurfaceMaterialTest {
         for (y in 80 until 125) for (x in 20 until 100) assertEquals(0, bitmap.getPixel(x, y))
         assertTrue(android.graphics.Color.blue(bitmap.getPixel(160, 90)) >
             android.graphics.Color.red(bitmap.getPixel(160, 90)) + 40)
+    }
+
+    @Test fun `polygon glazes retain broad washes and fine blooms independently of caustics`() {
+        fun wash(id: String): Bitmap = Bitmap.createBitmap(768, 480, Bitmap.Config.ARGB_8888).also {
+            it.eraseColor(android.graphics.Color.rgb(120, 199, 221))
+            NorthstarPolygonWash.draw(Canvas(it), id, android.graphics.RectF(0f, 0f, 768f, 480f), 1f)
+        }
+        val first = wash("polygon-water-evidence")
+        NorthstarPolygonWash.clearCache()
+        assertTrue("cold paint must be identical", first.sameAs(wash("polygon-water-evidence")))
+        assertFalse("different water objects need individual washes", first.sameAs(wash("neighbor-water")))
+        fun brightness(x: Int, y: Int): Float {
+            val color = first.getPixel(x, y)
+            return (android.graphics.Color.red(color) + android.graphics.Color.green(color) +
+                android.graphics.Color.blue(color)) / 3f
+        }
+        val broad = buildList<Float> {
+            for (y in 0 until 480 step 48) for (x in 0 until 768 step 48) {
+                var sum = 0f
+                for (dy in 0 until 48) for (dx in 0 until 48) sum += brightness(x + dx, y + dy)
+                add(sum / (48 * 48))
+            }
+        }
+        var detail = 0f
+        var count = 0
+        for (y in 12 until 468 step 3) for (x in 12 until 756 step 3) {
+            val neighbors = (brightness(x - 6, y) + brightness(x + 6, y) +
+                brightness(x, y - 6) + brightness(x, y + 6)) * 0.25f
+            detail += abs(brightness(x, y) - neighbors)
+            count++
+        }
+        val broadRange = broad.maxOrNull()!! - broad.minOrNull()!!
+        val meanDetail = detail / count
+        val output = java.io.File("build/reports/northstar-watercolor").apply { mkdirs() }
+        java.io.File(output, "polygon-wash-only.png").outputStream().use {
+            first.compress(Bitmap.CompressFormat.PNG, 100, it)
+        }
+        java.io.File(output, "polygon-wash-metrics.txt").writeText(
+            "48px block mean range=$broadRange\n6px local residual=$meanDetail\n")
+        assertTrue("broad variations must survive averaging, not only grain", broadRange > 20f)
+        assertTrue("small pigment blooms must survive without white caustics", meanDetail > 1.5f)
+
+        val rendered = Bitmap.createBitmap(1200, 800, Bitmap.Config.ARGB_8888)
+        rendered.eraseColor(android.graphics.Color.rgb(249, 247, 238))
+        WatercolorRenderer.render(Canvas(rendered), rectangle().copy(
+            id = "polygon-water-evidence", left = 70f, top = 70f, right = 1130f, bottom = 730f,
+            material = SurfaceMaterial.WATER, style = StrokeStyle.WATERCOLOR_WASH,
+        ), 1f, ScaleCalibration(), false)
+        java.io.File(output, "northstar-rectangular-water-detail.png").outputStream().use {
+            rendered.compress(Bitmap.CompressFormat.PNG, 100, it)
+        }
     }
 
     @Test fun `bounded watercolor field is seeded settles pigment and preserves mass`() {
