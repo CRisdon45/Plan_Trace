@@ -62,10 +62,10 @@ internal object NorthstarWaterDetails {
                 paint.color = colorWithScaledAlpha(pale, strength, alpha)
                 canvas.drawPath(path, paint)
             }
-            pass(web.halo, 24)
-            pass(web.quiet, 76)
-            pass(web.strong, 155)
-            pass(web.glints, 205)
+            pass(web.halo, 18)
+            pass(web.quiet, 58)
+            pass(web.strong, 130)
+            pass(web.glints, 220)
         } finally {
             canvas.restore()
         }
@@ -163,11 +163,12 @@ internal object NorthstarWaterDetails {
             val rhythm = 0.68f + 0.32f * sin(t * 6.283185f + emphasis * 8f)
             // Near a node the band widens into a small luminous confluence.
             val junction = (1f - (sin(t * 3.141593f)).coerceAtLeast(0f)).pow(7f)
-            val fade = if (presence < 0.14f) crest else 1f
-            widths[sample] = (0.35f + illumination * 0.55f + crest * rhythm * emphasis * 0.95f +
-                junction * illumination * 0.80f) * fade
+            val fade = if (presence < 0.075f) crest else 1f
+            val dryEdge = 0.93f + 0.07f * sin(point.x * 0.75f + point.y * 0.32f + phase)
+            widths[sample] = (0.24f + illumination * 0.45f + crest * rhythm * emphasis * 0.95f +
+                junction * illumination * 0.65f) * fade * dryEdge
             crests[sample] = if (emphasis > 0.57f) widths[sample] * crest *
-                ((emphasis - 0.57f) / 0.43f) else 0f
+                (0.25f + 0.75f * (emphasis - 0.57f) / 0.43f) else 0f
         }
         appendRibbon(halo, points, FloatArray(widths.size) { widths[it] * 3.4f })
         appendRibbon(quiet, points, FloatArray(widths.size) { widths[it] * 1.7f })
@@ -180,9 +181,13 @@ internal object NorthstarWaterDetails {
         var v = y / stepY
         // Successive shears remain invertible. All neighboring edges share the
         // same map, so stronger curvature cannot tear their common junctions.
-        u += 0.36f * sin(v * 1.8f + phase) + 0.13f * sin(v * 4.4f - phase)
-        v += 0.32f * sin(u * 1.7f + phase) + 0.12f * sin(u * 4.1f + phase)
-        u += 0.10f * sin(v * 5.1f + phase)
+        u += 0.23f * sin(v * 1.8f + phase) + 0.07f * sin(v * 4.4f - phase)
+        v += 0.21f * sin(u * 1.7f + phase) + 0.07f * sin(u * 4.1f + phase)
+        u += 0.06f * sin(v * 5.1f + phase)
+        // A diagonal shear varies local direction without folding the map.
+        val diagonal = 0.055f * sin((u + v) * 4.8f + phase)
+        u += diagonal
+        v -= diagonal
         return WaterPoint(u * stepX, v * stepY)
     }
 

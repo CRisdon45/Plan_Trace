@@ -180,6 +180,12 @@ class SurfaceMaterialTest {
         java.io.File(output, "caustic-light-only.png").outputStream().use {
             first.compress(Bitmap.CompressFormat.PNG, 100, it)
         }
+        val study = Bitmap.createBitmap(1000, 600, Bitmap.Config.ARGB_8888)
+        study.eraseColor(android.graphics.Color.rgb(40, 117, 152))
+        Canvas(study).drawBitmap(first, 0f, 0f, null)
+        java.io.File(output, "caustic-light-study.png").outputStream().use {
+            study.compress(Bitmap.CompressFormat.PNG, 100, it)
+        }
         java.io.File(output, "caustic-light-metrics.txt").writeText(
             "core pixels=$core/${pixels.size}\ncrest pixels=$crests\nscan widths=${widths.sorted()}\n")
         assertTrue("light should remain fine enough to expose the paint", core in pixels.size / 40..pixels.size / 4)
