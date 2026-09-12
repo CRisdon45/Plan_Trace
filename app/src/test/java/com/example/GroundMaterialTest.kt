@@ -63,6 +63,15 @@ class GroundMaterialTest {
         val report = StringBuilder()
         for (material in listOf(SurfaceMaterial.TURF, SurfaceMaterial.PAVING)) {
             val bitmap = render(element(material))
+            if (material == SurfaceMaterial.PAVING) {
+                var warm = 0; var samples = 0
+                for (y in 80..720 step 3) for (x in 80..1020 step 3) {
+                    val c = bitmap.getPixel(x,y)
+                    if (Color.red(c) >= Color.green(c) && Color.green(c) >= Color.blue(c)) warm++
+                    samples++
+                }
+                assertTrue("neutral stone glazes must not drift pink or green while accumulating", warm > samples * .97)
+            }
             fun luminance(x: Int, y: Int): Float {
                 val c = bitmap.getPixel(x,y)
                 return (Color.red(c) + Color.green(c) + Color.blue(c)) / 3f

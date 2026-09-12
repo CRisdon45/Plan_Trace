@@ -51,8 +51,11 @@ internal object NorthstarGroundMaterials {
     private fun generate(key: Key): Wash {
         val random = Random(seed(key.id))
         fun between(a: Float, b: Float) = a + random.nextFloat() * (b - a)
-        val bitmap = Bitmap.createBitmap(key.width, key.height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
+        // Accumulate faint glazes in floating point. Repeated 3/255 deposits in
+        // 8-bit premultiplied storage biased warm neutral pigment toward pink/green.
+        // Convert once after painting; the retained cache remains ordinary ARGB.
+        val wetPaint = Bitmap.createBitmap(key.width, key.height, Bitmap.Config.RGBA_F16)
+        val canvas = Canvas(wetPaint)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
         val grass = key.grass
         val palette = if (grass) intArrayOf(Color.rgb(160, 181, 63), Color.rgb(120, 151, 61),
@@ -92,20 +95,24 @@ internal object NorthstarGroundMaterials {
                     }
                 }
                 paint.style = Paint.Style.STROKE; paint.strokeWidth = between(.65f, 1.35f)
-                paint.color = color; paint.alpha = if (grass) 30 else 17
+                paint.color = color; paint.alpha = if (grass) 45 else 27
                 canvas.drawPath(rim, paint)
             }
         }
         // Broad yellow-green/ochre glazes, followed by distinct smaller blooms.
         repeat(18) { i -> glaze(between(0f, key.width.toFloat()), between(0f, key.height.toFloat()),
-            between(95f, 260f), palette[i % 4], if (grass) 6 else 3, 9, false) }
+            between(95f, 210f), palette[i % 4], if (grass) 6 else 3, 9, false) }
         repeat(70) { i ->
             val x = between(0f, key.width.toFloat()); val y = between(0f, key.height.toFloat())
-            val radius = between(22f, 75f)
+            val radius = between(18f, 58f)
             glaze(x, y, radius, palette[i % 4], if (grass) 7 else 4, 7, i % 3 != 0)
             repeat(5) {
                 glaze(x + between(-radius, radius), y + between(-radius, radius),
                     between(3f, 19f), palette[i % 4], if (grass) 9 else 5, 4, true)
+            }
+            repeat(10) {
+                glaze(x + between(-radius, radius), y + between(-radius, radius),
+                    between(.8f, 4.5f), palette[i % 4], if (grass) 17 else 10, 3, false)
             }
         }
         // Dry paper/lifting is irregular paint coverage, not a uniform white noise layer.
@@ -115,17 +122,20 @@ internal object NorthstarGroundMaterials {
         }
         paint.style = Paint.Style.FILL
         // Deposits/pits gather in patches. Sparse sharp marks sit over softer washes.
-        repeat(if (grass) 1500 else 1100) {
+        repeat(if (grass) 1800 else 1300) {
             val x = between(0f, key.width.toFloat()); val y = between(0f, key.height.toFloat())
             val grouping = sin(x * .024f + sin(y * .017f)) * cos(y * .021f)
             if (random.nextFloat() > .42f + grouping * .32f) return@repeat
-            val radius = between(.45f, if (grass) 2.3f else 1.35f)
+            val radius = between(.6f, if (grass) 3.6f else 2.5f)
             val dark = if (grass) Color.rgb(57, 83, 28) else Color.rgb(117, 89, 54)
-            paint.color = Color.rgb(255, 252, 226); paint.alpha = 95
-            canvas.drawOval(x - radius, y - radius, x + radius * 1.4f, y + radius * 1.8f, paint)
-            paint.color = dark; paint.alpha = between(35f, if (grass) 160f else 120f).toInt()
-            canvas.drawOval(x - radius, y - radius, x + radius, y + radius * .55f, paint)
-            if (grass && random.nextFloat() > .58f) {
+            if (!grass) {
+                paint.color = Color.rgb(255, 252, 235); paint.alpha = 75
+                canvas.drawOval(x - radius, y - radius, x + radius * 1.3f, y + radius * 1.6f, paint)
+            }
+            paint.color = dark; paint.alpha = between(60f, if (grass) 205f else 160f).toInt()
+            val deposit = polygon(boundary(x, y, radius))
+            canvas.drawPath(deposit, paint)
+            if (grass && random.nextFloat() > .72f) {
                 paint.style = Paint.Style.STROKE; paint.strokeWidth = between(.7f, 1.1f)
                 val blade = Path().apply {
                     moveTo(x, y); quadTo(x - 1.5f, y - 2f, x - between(1f, 3f), y - between(3f, 6f))
@@ -134,6 +144,8 @@ internal object NorthstarGroundMaterials {
                 canvas.drawPath(blade, paint); paint.style = Paint.Style.FILL
             }
         }
+        val bitmap = wetPaint.copy(Bitmap.Config.ARGB_8888, true)
+        wetPaint.recycle()
         // Fine tooth modulates existing pigment rather than creating dark pixels on bare paper.
         val pixels = IntArray(key.width * key.height)
         bitmap.getPixels(pixels, 0, key.width, 0, 0, key.width, key.height)
@@ -173,7 +185,7 @@ internal object NorthstarGroundMaterials {
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeCap = Paint.Cap.BUTT }
         val rows = ceil(bounds.height() / height).toInt()
         val columns = ceil(bounds.width() / width).toInt() + 1
-        val lineWidth = width * .008f
+        val lineWidth = width * .009f
         for (row in 0..rows) {
             val y = bounds.top + row * height
             val offset = if (row % 2 == 0) 0f else -width * .5f
@@ -184,7 +196,7 @@ internal object NorthstarGroundMaterials {
                 canvas.drawRect(x, y, x + width, y + height, paint)
                 // Continuous quiet joints establish exact orientation; small darker
                 // segments and intersections add dry ink without moving the grid.
-                paint.color = Color.rgb(105, 99, 78); paint.alpha = (95 * alpha).toInt()
+                paint.color = Color.rgb(105, 99, 78); paint.alpha = (115 * alpha).toInt()
                 paint.strokeWidth = lineWidth
                 canvas.drawLine(x, y, x + width, y, paint)
                 canvas.drawLine(x, y, x, y + height, paint)
