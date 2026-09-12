@@ -1,8 +1,8 @@
 # Current state and next-session handoff
 
-Updated 2026-09-12 after the verified bolder Northstar-water slice. The current
+Updated 2026-09-12 after the blue-water Northstar revision. The current
 branch is **feat/expert-workspace-ui**; its verified application head is
-`f97407e`. Draft PR #6
+`9b8ce97`. Draft PR #6
 targets the merged straight- and smooth-pool interaction seam in
 **feat/project-geometry-seam**. Do not reset the application branch to an older
 documentation checkpoint.
@@ -40,11 +40,15 @@ and deposited pigment evolve for a fixed 32 settling steps on a grid capped at
 128 cells per side. Results are seeded from stable object identity, geometry and
 color, cached within 12 MiB, and clipped again by the exact vector path. Moving
 an unchanged object therefore moves its existing wash instead of repainting it.
-Above that field, a separate deterministic detail pass adds a sparse irregular
-caustic web and selective broken shoreline deposits. Its cells, omissions,
-emphasis and gentle bends are generated in object-local space, so translation
-preserves the same water detail within native raster tolerance. The highlight
-pass is presentation-only and remains clipped by authoritative vector geometry.
+Northstar water now uses a dedicated blue/turquoise palette rather than Graphic's
+pale mint fill. A finer connected caustic network uses a shared smooth displacement
+field, varied strength, soft halos and short white crests. Geometry is normalized
+to object bounds, independent of view zoom, and cached for up to 24 aspect/identity
+pairs. The bounded pigment bitmap retains its separate 12 MiB cache. Both layers
+survive cache eviction deterministically. Selective shoreline deposits and final
+ink remain clipped/anchored to exact geometry. This follows the owner's blue-water
+landscape-plan studies, not the pale freeform-pool reference. Graphic and Technical
+palettes are unchanged.
 This is an independently implemented CPU reference model, not a new dependency
 or a full fluid simulation. Northstar line weight also
 establishes deck below coping below water without changing Technical or Graphic
@@ -63,56 +67,50 @@ authoritative project JSON and does not consume Undo/Redo.
 
 ## Verified evidence
 
-[Android 2D integrity run 34675471171](https://github.com/CRisdon45/Plan_Trace/actions/runs/34675471171)
-at `f97407e` passed **291 tests with zero failures, errors or skips**. The water
-regressions cover seeded repeatability, per-object variation, settling and
-deposition, approximate pigment-mass conservation, varied alpha, strict mask
-containment, locally stable translation, visible sparse highlights and darker
-wash masses. Existing geometry, appearance, hierarchy, persistence and export
-tests remain green. The separate nine-test runtime-policy audit,
-resolved-runtime and manifest checks, and debug assembly also passed. Artifact
-`10292296671` was downloaded and its ZIP SHA-256 is
-`d500f7551ac1f5f5ff63c42ac8fe10da7777bb49874f26720869231636dab54f`.
-Its retained 1000x700 Graphic and Northstar comparison PNGs have SHA-256 values
-`845e0d4882b7f6acd1c5b7dc7bbf310932edcb1a3fc45b709eeceaad6f8ad061`
-and `14a3582eaf666c1c404dc7c943b002d6b0022407f97860718f665161b1abe648`.
+[Android 2D integrity run 34679714157](https://github.com/CRisdon45/Plan_Trace/actions/runs/34679714157)
+at `9b8ce97` passed **293 tests with zero failures, errors or skips**, the
+nine-test runtime-policy audit, resolved-runtime/manifest checks and debug
+assembly. New regression coverage checks blue hue, strong sparse highlights,
+cold-cache repeatability, unchanged stored data and concave clipping. Existing
+geometry, persistence, translation and export tests remain green.
 
-[Android workspace emulator run 34675471207](https://github.com/CRisdon45/Plan_Trace/actions/runs/34675471207)
-at `f97407e` passed **all 19 scenarios**, including the full existing authoring,
-editing, snapping, rejection, Undo/Redo, save/restart and export suite plus
-Technical, Graphic and Northstar selection through the real View command. The
-downloaded artifact ZIP SHA-256 is
-`5243fdbe10ee7bbcc586dac2cf9db88f8bd4dcf469bb6d37c2b82c3c297358b8`.
-Project JSON before and after appearance switching was byte-identical at
-`52a7e85307b534d05061bbab77c76d590e36e27e50b0867ffff2bdc3a556a55d`.
-Technical, Graphic and Northstar export SHA-256 values are respectively
-`415a57b76cc2eb87a70a49f05141654e227cb7309e35346fe13121bc7da63f9c`,
-`2ecd6727d388c5115d0f5ace9ad0c183655809249f5cf268895fa2599cab097d`
-and `2553415ae82f01ede03d910f4cd288ec866c44b9d54f170be49819106a3932cb`.
-Visual inspection of the real workspace, full-layout exports and focused render
-pair confirms a visibly layered water wash, pale broken caustics, exact
-containment, stable coping geometry and subordinate paving. The current cells
-still read somewhat like cracked glass at full size; shortening and curving the
-next detail pass is preferable to increasing uniform coverage. The runtime crash
-buffer was empty and Android reported no ANR since boot.
+Downloaded artifact `10293507766` ZIP SHA-256:
+`bfc3a8a5ac340eaae3f5a80cd8955d0e26276e60c428c6fa8ca14d4c53deb6bf`.
+Focused Northstar PNG SHA-256:
+`4b63e67aef28e1605a53894a28a23cf762c0b7d4402ef44c6ea72650ebaaffa6`.
+Graphic comparison remains byte-identical to the prior pass at
+`845e0d4882b7f6acd1c5b7dc7bbf310932edcb1a3fc45b709eeceaad6f8ad061`.
+The 1000x700 organic output and small rectangular water render were opened and
+visually inspected. Blue depth, connected curved caustics and short bright crests
+are present. The finish is still cleaner and more uniform than the uploaded
+hand-painted studies; this is progress toward the target, not owner acceptance.
 
-This remains synthetic Android-emulator evidence, not physical S Pen, palm
-rejection, hardware latency or owner visual acceptance. The synthetic reference
-scene is intentionally not a client property. These broad deterministic cues
-and the bounded CPU pigment model are still an early material layer, not a claim
-of private-reference matching, physical watercolor, complete paving joints,
-full material language or Northstar renderer parity. PDF continues through the
-same deterministic renderer; a simpler non-artistic PDF fallback remains an
-acceptable future option if target-device export cost proves excessive.
+[Android workspace emulator run 34679714130](https://github.com/CRisdon45/Plan_Trace/actions/runs/34679714130)
+at the same revision passed all **19 scenarios**. Artifact `10293872909` was
+downloaded and its ZIP SHA-256 verified as
+`4f68b8acc262102988f23c30a47f18758ffd731f411d3923be823510a0fbefcd`.
+Live Northstar and 1400x1000 export screenshots were opened and inspected. The
+blue palette and caustics are present in both rectangular and curved pools.
+The crash buffer is empty and Android reports no ANR since boot. Appearance
+switching left saved project JSON byte-identical before/after at
+`bff7d25cb4306b85e3312eab7adf818d509c5b82828842d5d5cc863a877590df`.
+Northstar export SHA-256:
+`de9dc6fdc9d7d42138de502e63d188caf254c04f920c32d6043a17fe698af7c9`.
+Technical and Graphic exports remain byte-identical to the previous checkpoint.
+
+Physical S Pen, palm rejection, hardware frame time and owner visual acceptance
+remain unverified. The synthetic fixtures are not client properties. No reference
+images are published. PDF keeps the shared deterministic renderer; a simpler
+non-artistic fallback remains acceptable if tablet export cost warrants it.
 
 ## Next outcome
 
 Review this bounded slice into **feat/project-geometry-seam** without merging it
 implicitly. First review the wash and its interaction cost on the target latest-
 Android tablet; do not infer stylus or frame-time acceptance from the emulator.
-The next water-detail pass should shorten and curve the large caustic cells,
-introduce a smaller number of fine glints, and preserve quiet open water rather
-than increasing uniform coverage.
+Review the blue-water output against the owner's preferred landscape-plan studies.
+Further visual work should strengthen broad watercolor variation and vary caustic
+rhythm without returning to mint water or uniformly increasing line coverage.
 The next bounded geometry outcome remains rectangle/convex-polygon pool
 generation using the same editable objects, target water area and explicit
 outside-coping containment. Preserve direct pen placement, exact geometry,
