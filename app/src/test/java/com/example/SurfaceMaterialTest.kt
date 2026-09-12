@@ -204,6 +204,11 @@ class SurfaceMaterialTest {
         assertTrue(first.sameAs(render(1f)))
         assertEquals(0, first.getPixel(0, 0))
         assertEquals(0, render(0f).getPixel(120, 90))
+        val zoomEquivalent = Bitmap.createBitmap(260, 180, Bitmap.Config.ARGB_8888)
+        val zoomCanvas = Canvas(zoomEquivalent).apply { scale(0.5f, 0.5f) }
+        NorthstarWaterDetails.drawCaustics(zoomCanvas, "live-caustics",
+            android.graphics.RectF(40f, 40f, 480f, 320f), 1f, rasterize = true)
+        assertTrue("equal on-screen sizes should use equal integrated light", first.sameAs(zoomEquivalent))
         fun totalAlpha(bitmap: Bitmap): Long {
             val pixels = IntArray(bitmap.width * bitmap.height)
             bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)

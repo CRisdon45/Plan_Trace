@@ -3,6 +3,7 @@ package com.example.engine
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PathMeasure
@@ -21,14 +22,15 @@ internal object NorthstarWaterDetails {
     private data class WebKey(val stableId: String, val aspect: Float)
     private data class Web(val halo: Path, val quiet: Path, val strong: Path, val glints: Path)
     private data class RasterKey(val web: WebKey, val alpha: Float)
+    private data class Raster(val levels: List<Bitmap>)
     // Fixed normalized coordinates keep tessellation independent of zoom/output.
     // Bounded to 24 objects; cached paths are only read after construction.
     private val webs = LruCache<WebKey, Web>(24)
     // Thin filled paths on the hardware canvas can fall between coverage samples
-    // at sheet zoom. A mipmapped texture integrates that light before minification.
+    // at sheet zoom. Explicit prefiltered levels integrate light before reduction.
     // Export retains the vector ribbons. This cache is byte-bounded, not per-frame.
-    private val rasters = object : LruCache<RasterKey, Bitmap>(24 * 1024 * 1024) {
-        override fun sizeOf(key: RasterKey, value: Bitmap) = value.allocationByteCount
+    private val rasters = object : LruCache<RasterKey, Raster>(24 * 1024 * 1024) {
+        override fun sizeOf(key: RasterKey, value: Raster) = value.levels.sumOf { it.allocationByteCount }
     }
 
     internal fun clearCache() {
@@ -66,17 +68,27 @@ internal object NorthstarWaterDetails {
         }
         if (rasterize) {
             val rasterKey = RasterKey(key, alpha.coerceIn(0f, 1f))
-            val bitmap = synchronized(rasters) { rasters.get(rasterKey) } ?: run {
+            val raster = synchronized(rasters) { rasters.get(rasterKey) } ?: run {
                 val width = (normalized.width() * 1.024f).roundToInt().coerceIn(1, 1024)
                 val height = (normalized.height() * 1.024f).roundToInt().coerceIn(1, 1024)
                 val generated = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
                 val surface = Canvas(generated)
                 surface.scale(width / normalized.width(), height / normalized.height())
                 drawWeb(surface, web, rasterKey.alpha)
-                generated.setHasMipMap(true)
-                synchronized(rasters) { rasters.put(rasterKey, generated) }
-                generated
+                // Consecutive 2:1 reductions integrate all four source samples.
+                // A hardware mipmap hint alone proved insufficient on the emulator.
+                val levels = mutableListOf(generated)
+                while (levels.last().width > 1 || levels.last().height > 1) {
+                    val previous = levels.last()
+                    levels += Bitmap.createScaledBitmap(previous,
+                        (previous.width / 2).coerceAtLeast(1), (previous.height / 2).coerceAtLeast(1), true)
+                }
+                Raster(levels).also { synchronized(rasters) { rasters.put(rasterKey, it) } }
             }
+            val extent = deviceExtent(canvas, bounds)
+            // Upsample an already integrated level instead of asking hardware to
+            // minify subpixel white bands. Geometry/seed stay independent of zoom.
+            val bitmap = raster.levels.firstOrNull { max(it.width, it.height) <= extent } ?: raster.levels.last()
             canvas.drawBitmap(bitmap, null, bounds, Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG))
             return
         }
@@ -88,6 +100,19 @@ internal object NorthstarWaterDetails {
         } finally {
             canvas.restore()
         }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun deviceExtent(canvas: Canvas, bounds: RectF): Float {
+        val transform = Matrix()
+        canvas.getMatrix(transform)
+        val values = FloatArray(9)
+        transform.getValues(values)
+        val x = sqrt(values[Matrix.MSCALE_X] * values[Matrix.MSCALE_X] +
+            values[Matrix.MSKEW_Y] * values[Matrix.MSKEW_Y]) * bounds.width()
+        val y = sqrt(values[Matrix.MSKEW_X] * values[Matrix.MSKEW_X] +
+            values[Matrix.MSCALE_Y] * values[Matrix.MSCALE_Y]) * bounds.height()
+        return max(x, y).coerceAtLeast(1f)
     }
 
     private fun drawWeb(canvas: Canvas, web: Web, alpha: Float) {
