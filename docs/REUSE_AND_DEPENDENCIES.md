@@ -4,6 +4,17 @@ Reviewed 2026-09-11 against Plan Trace at 915017a. Reuse general-purpose machine
 
 ## Adopted now
 
+**Revised grass pigment model (2026-09-12).** After the owner rejected the earlier
+material pass, independently implement deeper related polygon glazes, finite
+pigment redistribution to each wet front, shared paper deposition and ordered
+RGB Kubelka-Munk compositing. The production Java core is shared with a desktop
+PNG inspection adapter. See [the grass study](GRASS_PAINT_STUDY.md) for primary
+sources, the limits of the mathematical approximation and the visual gate.
+No third-party source, art, runtime service or dependency was added. Ground
+cache bounds remain; expensive grass preparation moves off the hardware drawing
+thread. The older grass description below is historical, not the current model.
+
+
 **Grass and travertine paint (2026-09-12).** Reuse the already implemented polygon
 edge displacement from `NorthstarPolygonWash` in `NorthstarGroundMaterials`, with
 separate material palettes, glaze density, selective dry rims, lifted marks and

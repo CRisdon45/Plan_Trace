@@ -58,6 +58,9 @@ class GroundMaterialTest {
             val clipped = render(concave)
             for (y in 430 until 720 step 7) for (x in 80 until 520 step 7) assertEquals(0, clipped.getPixel(x,y))
             assertEquals(0, render(original, alpha = 0f).getPixel(350,350))
+            if (material == SurfaceMaterial.TURF) assertEquals(
+                "Baked grass underpainting must receive surface opacity exactly once", 128,
+                Color.alpha(render(original, alpha = .5f).getPixel(350,350)))
             assertEquals(material.fill.toInt(), render(original.copy(style = StrokeStyle.INK)).getPixel(350,350))
             save(clipped, "northstar-${material.name.lowercase()}-concave.png")
         }

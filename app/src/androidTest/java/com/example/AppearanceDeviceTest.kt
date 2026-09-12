@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.data.DesignJsonCodec
 import com.example.data.DesignWorkspaceStore
+import com.example.engine.NorthstarGroundMaterials
 import com.example.export.DesignAppearance
 import com.example.export.DesignOutput
 import com.example.export.DesignOutputSettings
@@ -46,6 +47,8 @@ class AppearanceDeviceTest {
         ui.onNodeWithTag("workspace-appearance-dialog").assertDoesNotExist()
     }
     private fun capture(name:String,semanticsTag:String?=null) {
+        ui.waitForIdle()
+        ui.waitUntil(60000) { NorthstarGroundMaterials.isGrassReady }
         ui.waitForIdle()
         InstrumentationRegistry.getInstrumentation().uiAutomation.waitForIdle(300,3000)
         EmulatorCapture.save(context,evidence,name)

@@ -9,9 +9,14 @@ import android.graphics.Path
 import android.graphics.PathMeasure
 import android.graphics.RectF
 import android.util.LruCache
+import android.os.Handler
+import android.os.Looper
+import androidx.compose.runtime.mutableIntStateOf
 import com.example.model.ScaleCalibration
 import com.example.model.SurfaceMaterial
 import java.util.Random
+import java.util.concurrent.Executors
+import java.util.concurrent.FutureTask
 import kotlin.math.*
 
 /** Paint-only material study. Exact clipping and final boundary ink belong to the caller.
@@ -25,6 +30,10 @@ internal object NorthstarGroundMaterials {
     private val cache = object : LruCache<Key, Wash>(24 * 1024 * 1024) {
         override fun sizeOf(key: Key, value: Wash) = value.levels.sumOf { it.allocationByteCount }
     }
+    private val paintRevision = mutableIntStateOf(0)
+    private val worker = Executors.newSingleThreadExecutor { task -> Thread(task, "grass-paint").apply { isDaemon = true } }
+    private val pending = mutableMapOf<Key, FutureTask<Wash>>()
+    internal val isGrassReady: Boolean get() = synchronized(cache) { pending.isEmpty() }
     internal fun clearCache() = synchronized(cache) { cache.evictAll() }
 
     fun draw(canvas: Canvas, id: String, path: Path, bounds: RectF,
@@ -34,8 +43,19 @@ internal object NorthstarGroundMaterials {
         val grass = material == SurfaceMaterial.TURF
         val key = Key(id, (SIDE * bounds.width() / longest).roundToInt().coerceIn(1, SIDE),
             (SIDE * bounds.height() / longest).roundToInt().coerceIn(1, SIDE), grass)
-        val wash = synchronized(cache) { cache.get(key) } ?: generate(key).also {
-            synchronized(cache) { cache.put(key, it) }
+        // Reading this state in Compose's draw observation invalidates the actual canvas
+        // when pigment is ready. A cold wash must never run on the live pen thread.
+        if (grass && canvas.isHardwareAccelerated) paintRevision.intValue
+        val wash = synchronized(cache) { cache.get(key) } ?: if (grass && canvas.isHardwareAccelerated) {
+            prepareGrass(key)
+            canvas.drawPath(path, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.rgb(218, 225, 151)
+                this.alpha = (alpha.coerceIn(0f, 1f) * 255).roundToInt()
+            })
+            return
+        } else {
+            val preparing = synchronized(cache) { pending[key] }
+            (preparing?.get() ?: generate(key)).also { synchronized(cache) { cache.put(key, it) } }
         }
         val extent = deviceExtent(canvas, bounds)
         val bitmap = wash.levels.lastOrNull { max(it.width, it.height) >= extent } ?: wash.levels.first()
@@ -49,6 +69,10 @@ internal object NorthstarGroundMaterials {
     }
 
     private fun generate(key: Key): Wash {
+        if (key.grass) {
+            val pixels = NorthstarGrassPaint.render(key.width, key.height, seed(key.id))
+            return prefilter(Bitmap.createBitmap(pixels, key.width, key.height, Bitmap.Config.ARGB_8888))
+        }
         val random = Random(seed(key.id))
         fun between(a: Float, b: Float) = a + random.nextFloat() * (b - a)
         // Accumulate faint glazes in floating point. Repeated 3/255 deposits in
@@ -162,6 +186,26 @@ internal object NorthstarGroundMaterials {
                 Color.red(c), Color.green(c), Color.blue(c))
         }
         bitmap.setPixels(pixels, 0, key.width, 0, 0, key.width, key.height)
+        return prefilter(bitmap)
+    }
+
+    private fun prepareGrass(key: Key) = synchronized(cache) {
+        // Rapid shape previews cannot enqueue an unbounded history of obsolete washes.
+        // Completion redraws the scene, allowing the next still-visible key to start.
+        if (cache.get(key) != null || pending.containsKey(key) || pending.size >= 3) return@synchronized
+        val task = FutureTask {
+            try {
+                generate(key).also { synchronized(cache) { cache.put(key, it) } }
+            } finally {
+                synchronized(cache) { pending.remove(key) }
+                Handler(Looper.getMainLooper()).post { paintRevision.intValue++ }
+            }
+        }
+        pending[key] = task
+        worker.execute(task)
+    }
+
+    private fun prefilter(bitmap: Bitmap): Wash {
         val levels = mutableListOf(bitmap)
         while (levels.last().width > 1 || levels.last().height > 1) {
             val previous = levels.last()
@@ -231,10 +275,10 @@ internal object NorthstarGroundMaterials {
             val edge = Path()
             measure.getSegment(distance, min(distance + length, measure.length), edge, true)
             paint.strokeWidth = (5f + random.nextFloat() * 10f) * unit
-            paint.alpha = ((if (grass) 24 else 13) * alpha).toInt()
+            paint.alpha = ((if (grass) 45 else 13) * alpha).toInt()
             canvas.drawPath(edge, paint)
             paint.strokeWidth = (1f + random.nextFloat() * 2f) * unit
-            paint.alpha = ((if (grass) 100 else 53) * alpha).toInt()
+            paint.alpha = ((if (grass) 135 else 53) * alpha).toInt()
             canvas.drawPath(edge, paint)
             distance += length + (3f + random.nextFloat() * 17f) * unit
         }

@@ -7,6 +7,16 @@ targets the merged straight- and smooth-pool interaction seam in
 **feat/project-geometry-seam**. Do not reset the application branch to an older
 documentation checkpoint.
 
+## Active owner correction: grass only
+
+The owner rejected the grass at `f52ea32` as **5/10** and explicitly set a **9/10**
+visual goal. The earlier checks below establish technical behavior, not accepted
+art quality. Water and decking are paused. The current revision replaces the
+old grass paint construction; see [the grass study](GRASS_PAINT_STUDY.md) for the
+reference analysis, mathematical model and honest acceptance criteria. New Android
+verification is pending at this source checkpoint. Do not describe the visual
+bar as achieved merely because tests pass.
+
 ## Delivered on this branch
 
 The real Android workspace now gives the drawing substantially more visual
