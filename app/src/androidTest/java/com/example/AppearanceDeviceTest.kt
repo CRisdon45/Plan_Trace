@@ -39,16 +39,17 @@ class AppearanceDeviceTest {
         ui.onNodeWithTag("radial-category-view").performTouchInput { click(center) }
         ui.onNodeWithTag("radial-action-appearance").performTouchInput { click(center) }
         ui.onNodeWithTag("workspace-appearance-dialog").assertExists()
-        if(showSelectorEvidence) capture("appearance-selector")
+        if(showSelectorEvidence) capture("appearance-selector","workspace-appearance-dialog")
         ui.onNodeWithTag("workspace-appearance-${appearance.name.lowercase()}").performClick()
         ui.waitUntil(5000) { preferences.getString("appearance",null)==appearance.name }
         ui.onNodeWithTag("workspace-appearance-dialog").assertDoesNotExist()
     }
-    private fun capture(name:String) {
+    private fun capture(name:String,semanticsTag:String?=null) {
         ui.waitForIdle()
         InstrumentationRegistry.getInstrumentation().uiAutomation.waitForIdle(300,3000)
         EmulatorCapture.save(context,evidence,name)
-        File(evidence,"$name-semantics.txt").writeText(ui.onRoot().printToString())
+        val semantics=if(semanticsTag==null) ui.onRoot() else ui.onNodeWithTag(semanticsTag)
+        File(evidence,"$name-semantics.txt").writeText(semantics.printToString())
     }
 
     @Test fun switchPersistAndExportTheSameDesign()=runBlocking {
