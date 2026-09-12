@@ -74,8 +74,8 @@ public final class NorthstarGrassPaint {
                 color[2][i]=(float)(brightness*.921);
                 // A luminous initial wash shares the same paper as every later deposit.
                 double thickness=.28+.15*noise(x*.008,y*.008,81)+.05*(paper[i]-.5);
-                apply(i,thickness*(.45+1.10*paper[i]),YELLOW);
-                apply(i,(.10+.10*noise(x*.014,y*.014,82))*(.45+1.10*paper[i]),OLIVE);
+                apply(i,thickness*(.75+.50*paper[i]),YELLOW);
+                apply(i,(.10+.10*noise(x*.014,y*.014,82))*(.75+.50*paper[i]),OLIVE);
             }
         }
         double between(double a,double b) { return a+(b-a)*random.nextDouble(); }

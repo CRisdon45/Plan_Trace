@@ -56,9 +56,10 @@ pigments. This is a finite drying approximation, **not the paper's full
 shallow-water, adsorption and capillary-flow simulation**. No upstream code,
 external art, new dependency or runtime service was imported.
 
-Six local revisions addressed excessive yellow, conspicuous broad outlines,
+Seven local revisions addressed excessive yellow, conspicuous broad outlines,
 angular lobes, insufficient sediment, aligned flecks, lattice-shaped reserves,
-and overly flat underpainting. These are iterations, not six passed quality gates.
+overly flat underpainting, and then excessive grain in the initial wash. These
+are iterations, not seven passed quality gates.
 The current model retains visible stylization; owner acceptance is required before
 recording the requested quality as achieved.
 
