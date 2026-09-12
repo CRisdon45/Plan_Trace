@@ -1,8 +1,8 @@
 # Current state and next-session handoff
 
-Updated 2026-09-12 after the flowing-caustic Northstar water revision. The current
+Updated 2026-09-12 after the layered grass and travertine revision. The current
 branch is **feat/expert-workspace-ui**; its verified application head is
-`1a0836a1e94c656bde62347117ac0520165a78ae`. Draft PR #6
+`f52ea3212ddc283ef4d0be5e3d57e7ce566fc957`. Draft PR #6
 targets the merged straight- and smooth-pool interaction seam in
 **feat/project-geometry-seam**. Do not reset the application branch to an older
 documentation checkpoint.
@@ -88,99 +88,105 @@ stored in the existing workspace-view preferences, survives activity recreation,
 and is passed to both the live canvas and PNG/PDF output. It remains outside the
 authoritative project JSON and does not consume Undo/Redo.
 
+Grass and travertine now have dedicated material paint through the shared live
+and export renderer. `NorthstarGroundMaterials` reuses the polygon displacement
+helper for overlapping glazes, selective sharp drying fronts, lifted paper,
+fine granulation, clustered grass flecks/blades and mineral pores. Grass uses
+deeper yellow-green/olive washes with uneven concentrations and luminous gaps.
+Travertine uses warm ivory/ochre/taupe with subordinate crisp joint ink. Floating-
+point accumulation prevents faint neutral layers acquiring pink/green casts;
+the finished paint is converted once to ordinary ARGB. Fixed 1024-pixel-longest-
+side textures and their prefiltered levels share a 24 MiB cache. Fine detail
+softens beyond that texture resolution; target-tablet timing is not established.
+Selective dry deposits follow the actual boundary inside its exact clip.
+
+Travertine's initial 12x24-inch running bond respects calibrated drawing units
+and follows object movement. It is a presentation default, not a specified
+product, cut layout or quantity model. Uncalibrated legacy objects use a
+proportionate preview; giant extents have bounded grid density. Coping receives
+stone paint without a deck grid crossing its enclosing polygon. Technical and
+Graphic retain their flat fills and geometry. Reference furniture, planting and
+their cast shadows are not baked into a reusable surface texture. Water remains
+paused for later owner review; only polygon-helper visibility changed in its
+implementation. No new dependency, reference pixels or runtime AI was added.
+
 ## Verified evidence
 
-[Android 2D integrity run 34701250784](https://github.com/CRisdon45/Plan_Trace/actions/runs/34701250784)
-at `1a0836a` passed **296 tests with zero failures, errors or skips**, the
+[Android 2D integrity run 34704034341](https://github.com/CRisdon45/Plan_Trace/actions/runs/34704034341)
+at `f52ea32` passed **299 tests with zero failures, errors or skips**, the
 nine-test runtime-policy audit, resolved-runtime/manifest checks and debug
-assembly. Regression coverage checks blue hue, strong sparse highlights,
-cold-cache repeatability, unchanged stored data and concave clipping. The
-wash-only regression separates broad and fine pigment variation from caustics,
-checks different object seeds and cold-cache identity, and retains diagnostic
-images. Its 48-pixel block-mean brightness range is 64.16833/255, and its
-six-pixel local residual is 2.8023088/255. These are fixture measurements, not
-reference-match scores or tablet performance measurements. Existing
-geometry, persistence, translation and export tests remain green. New isolated
-caustic evidence checks cache repeatability, different object seeds, fine threads,
-broader folds and preserved open water. In its 1000x600 fixture, 25,081 pixels have
-alpha above 140 (4.18%), and 2,682 have alpha above 220 (0.45%). Scan intersections
-include both 1–2-pixel threads and 4–9-pixel folds/confluences. These characterize
-this fixture and do not establish physical optics or owner acceptance.
-The live-raster branch also has cold-cache, opacity, destination-containment and
-equivalent-screen-size coverage. Actual hardware-canvas screenshot review confirms
-continuous fine light in the rectangular pool, small spa and curved pool.
+assembly. Downloaded XML independently confirmed the test totals. The new ground
+checks cover both materials after cache eviction, translation, neighboring seeds,
+concave clipping, unchanged serialized elements, zero opacity, unchanged Graphic
+fills, physical joint calibration equivalence, broad/fine paint variation and
+neutral stone hue. Tests characterize implementation behavior, not visual acceptance.
 
-Downloaded artifact `10299819332` ZIP SHA-256:
-`2fe1bd3d0cf17712c4d92971db32ddd86475a7c0829a1cfd64d59d23b03520c7`.
-Focused Northstar PNG SHA-256:
-`7b21aac4261a1a1fd470fb807601b0f5320497de9c45f97c23fb21bc98b1b743`.
-1200x800 rectangular detail SHA-256:
-`ed10e188282b1a9357b383972faaee9c7092c2d0df42d63da7368abddc6e280b`.
-The focused vector outputs and caustic study remain byte-identical to `1808ec5`
-after the hardware minification fix.
-Graphic comparison remains byte-identical to the prior pass at
-`845e0d4882b7f6acd1c5b7dc7bbf310932edcb1a3fc45b709eeceaad6f8ad061`.
-The 1000x700 organic output, 1200x800 rectangular detail and isolated caustic
-study were opened and visually inspected against the supplied blue-water studies.
-The final light has gentler flowing contours, tapered brightness and fine/broad
-variation while leaving the layered pigment visible. The implementation review
-considers this caustic pass ready for the next material study. Owner visual
-acceptance and the full Northstar composition remain separate pending outcomes.
-The pigment-only image remains byte-identical to `c1a0658`, SHA-256
-`f83b846f697832aa5954d0bbf6fd7bf1150a88205473ea2b244444675ac9778e`.
-The first ribbon pass `2ca2741` passed 295 tests but was visually revised to reduce
-repeated swirls and excessive uniform light; its emulator run was superseded.
-The refined-vector pass `1808ec5` passed 295 tests and 19 emulator scenarios, but
-its actual hardware screenshot exposed dotted/fragmented small caustics despite
-correct exports. That visual failure prompted the filtered live rendering fix.
-The first filtered pass `9af3ee6` passed 296 tests but its hardware mipmap hint
-was insufficient; the live screenshot still broke up. The explicit prefiltered
-levels replace that hint. The equivalent-screen-size regression exercises the
-canvas transform used to select the level.
-The first explicit-level pass `9f90d3a` resolved the visible breakup but selected
-a level below screen resolution, softening the small pools too much. The final
-selection uses the nearest prefiltered level at or above display resolution,
-limiting the remaining reduction to less than 2:1 while preserving more detail.
-Android builds and policy checks for this pass ran in CI. No local Android
-build ran; the Gradle distribution was unavailable in this workspace.
+Unit artifact `10301162860` ZIP SHA-256:
+`077bb907330b2219acc1fdaeefa69c26fd8ea745c8eb8aec223d443470f864f1`.
+Actual 1150x850 renderer details, composited onto paper for inspection:
 
-[Android workspace emulator run 34701250774](https://github.com/CRisdon45/Plan_Trace/actions/runs/34701250774)
-at the same revision passed all **19 scenarios**. Artifact `10300501791` was
-downloaded and its ZIP SHA-256 verified as
-`2a4f819609af2f9e54e8f947a113d2e75da4b73cf2631eca6f7d4c8aefcbe17b`.
-Live Northstar and 1400x1000 export screenshots were opened and inspected. The
-layered blue pigment and caustics are present in both rectangular and curved pools.
-The final live view preserves fine continuous contours without the fragmentation
-of the vector-only hardware pass or the blur of the undersized image level.
-The active-window record identifies the actual development app. This remains an
-overlapping synthetic interaction fixture, not a composed client plan.
-The crash buffer is empty and Android reports no ANR since boot. Appearance
-switching left saved project JSON byte-identical before/after at
-`d856cbaf925e0ce42a6d6cfb14423805d1f236bd8c0f8facd18f98dfd850b8e7`.
-Northstar export SHA-256:
-`2ded46c30c9e98b2ba2b0fb9da5d38aa3ed806645720fe6f06fe16cfd98a93a4`.
-Technical and Graphic exports remain byte-identical to the `c1a0658` checkpoint.
+- Grass PNG: `a17d9dd771f1d45e93c9ce88b584625ffdac356feaf17878a19e4a7388943763`.
+- Travertine PNG: `60fb1e74389a0046e52fa124b6bbaea7e09e8005346dc141020ddc46a0456610`.
 
-Physical S Pen, palm rejection, hardware frame time and owner visual acceptance
-remain unverified. The synthetic fixtures are not client properties. No reference
-images are published. PDF keeps the shared deterministic renderer; a simpler
-non-artistic fallback remains acceptable if tablet export cost warrants it.
+The final grass fixture has a 60-pixel block brightness range of 87.44324/255 and
+a four-pixel local residual of 3.971203/255. Travertine measures 32.77011/255 and
+3.101962/255 respectively. These are diagnostic measurements, not reference-match
+scores or tablet performance results. The final details and supplied focused
+material study were opened and inspected. The initial `a2a434f` pass passed 299
+tests but exposed pink/green drift in faint stone glazes and embossed grass marks.
+`9be53af` corrected compositing and deposits; its grass remained too pale.
+`f52ea32` deepens selective olive concentrations while preserving light gaps.
+Earlier emulator runs were superseded by the visual refinements.
+
+Water-only detail, pigment-only and caustic-study images remain byte-identical
+to `1a0836a`; Graphic organic output is also byte-identical. Its prior caustic
+implementation remains described above and in the previous checkpoint. Northstar
+organic output now includes the new stone treatment on its coping.
+
+[Android workspace run 34704034310](https://github.com/CRisdon45/Plan_Trace/actions/runs/34704034310)
+at the same application revision passed all **20 scenarios**, independently
+counted from the retained instrumentation results. Artifact `10301547860` ZIP
+SHA-256: `48bbbd292899248bde7480fe75646b7580ddbf377b599bef4fabc06f3dd9f861`.
+The new scenario places two synthetic material objects in the actual workspace,
+selects Northstar through the View command, captures the live app, exports the
+same geometry and recreates the activity. It restores the preceding synthetic
+fixture through increasing store revisions without clearing application data.
+The live and reopened images and 1800x1000 export were opened and inspected;
+the active-window records identify the development app. Fine material marks and
+joint ink remain visible at working scale. This is a material study, not a full
+landscape composition or physical-tablet performance result.
+
+The actual two-material export SHA-256 is
+`b03196946e4445dd8399fea195d15d95d8dd9cae24266247a83b85eb29ca1391`.
+Appearance switching preserved saved JSON byte-for-byte at
+`de083f287a3f408447bc60e16f8d96f39cc79312b2eb2c581c2945a8cbbd8e7f`.
+Technical and Graphic exports remain byte-identical to `1a0836a`. The runtime
+crash buffer is empty, and Android reports no ANR since boot.
+
+Android builds ran in CI; no local Android build ran because the Gradle
+distribution is unavailable here. Physical S Pen, palm rejection, hardware frame
+time and owner visual acceptance remain unverified. Synthetic fixtures are not
+client properties, and reference pixels are not published. PDF keeps the shared
+deterministic renderer; a simpler fallback remains acceptable if tablet export
+cost warrants it. No physical tablet, original app, signing key or user data was
+changed. No application PR was merged.
 
 ## Next outcome
 
-The owner's requested sequence is **caustics, then grass and decking**, using the
-staged watercolor layering in the uploaded material study. Preserve this water
-pass while developing layered green washes/texture and warm paving washes,
-material variation and subordinate joint ink through the actual renderer. Keep
-the full reference detail as the bar and inspect both working-view and export
-images. Do not substitute a separate polished demonstration for app output.
+Review grass and travertine against the owner's focused layered material study,
+including close detail and actual working scale. Preserve the full reference
+bar: translucent washes, crisp drying fronts, bleed within paint, mineral pores,
+grass detail and coherent joint hierarchy. Owner acceptance and a complete
+Northstar composition remain pending. The water is explicitly paused for later
+review, not reopened by material work. Contextual planting, furniture and cast
+shadows should come from their own objects when that scope is taken up.
 
-Measure cold texture generation and warm redraw on the target latest-Android
-tablet before claiming pen responsiveness. Review the bounded application slice
-into **feat/project-geometry-seam** without implicitly merging it. The queued
-rectangle/convex-polygon geometry milestone remains behind this material work;
-preserve direct pen placement, exact geometry, whole-action Undo and all three
-appearances. Do not restart solver/library research or the paused 3D work.
+Measure cold generation and warm redraw on the target latest-Android tablet
+before claiming pen responsiveness. Review the bounded application slice into
+**feat/project-geometry-seam** without implicitly merging it. The queued
+rectangle/convex-polygon geometry milestone remains behind the current material
+work. Preserve direct pen placement, exact geometry, whole-action Undo and all
+three appearances. Do not restart solver/library research or the paused 3D work.
 
 ## Boundaries still in force
 

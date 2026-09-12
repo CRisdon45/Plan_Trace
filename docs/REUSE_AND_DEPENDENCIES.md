@@ -4,6 +4,29 @@ Reviewed 2026-09-11 against Plan Trace at 915017a. Reuse general-purpose machine
 
 ## Adopted now
 
+**Grass and travertine paint (2026-09-12).** Reuse the already implemented polygon
+edge displacement from `NorthstarPolygonWash` in `NorthstarGroundMaterials`, with
+separate material palettes, glaze density, selective dry rims, lifted marks and
+clustered grass/mineral detail. Only helper visibility changes in the water wash;
+its generation is unchanged. No additional library or reference pixels are used.
+Ground paint accumulates in a temporary floating-point bitmap before conversion
+to ordinary ARGB. This avoids hue drift from repeatedly quantizing very faint
+premultiplied deposits. Generation uses a 1024-pixel longest side with explicit
+prefiltered levels, all included in a 24 MiB cache. Warm draws select a cached level from the
+actual canvas transform. Exact silhouette clipping and final outline ink remain
+in the shared renderer. Extreme magnification still exposes the texture cap.
+
+The first travertine joint default is an illustrative 12x24-inch running bond.
+Calibrated metres/feet/inches control its spacing; uncalibrated legacy surfaces
+use a proportionate preview. Grid work is bounded for very large extents. It is
+not persisted as an assigned product, counted as a cut layout or applied across
+the coping's enclosing polygon. A future material/layout model must own those
+choices explicitly. Per-object movement retains the paint and joint arrangement.
+Verification uses actual renderer details, concave masks, repeatability after
+cache eviction, physical calibration equivalence and a disposable two-material
+scene in the real Android workspace. No tablet performance claim follows from
+bounded work or emulator screenshots.
+
 **Northstar polygon glazes (2026-09-12).** Adapt the published method, not source
 code or assets, from Tyler Hobbs's 2017
 [A Guide to Simulating Watercolor Paint with Generative Art](https://www.tylerxhobbs.com/words/a-guide-to-simulating-watercolor-paint-with-generative-art)
