@@ -1,8 +1,8 @@
 # Current state and next-session handoff
 
-Updated 2026-09-12 after the verified first object-driven Northstar rendering
-slice. The current branch is **feat/expert-workspace-ui**; its verified code
-head is `b1cc519`, followed only by this checkpoint documentation. Draft PR #6
+Updated 2026-09-12 after the verified presentation-mode selector slice. The
+current branch is **feat/expert-workspace-ui**; its verified application head is
+`ecfb845`, followed only by this checkpoint documentation. Draft PR #6
 targets the merged straight- and smooth-pool interaction seam in
 **feat/project-geometry-seam**. Do not reset the application branch to an older
 documentation checkpoint.
@@ -37,48 +37,58 @@ path. Northstar is the current default for both the real workspace canvas and
 PNG/PDF output. These styles are transient projection data: changing appearance
 does not change saved geometry, object ordering, IDs, hit testing or revision.
 
+Technical, Graphic and Northstar are now exposed through an Appearance command
+appended to the existing View radial fan. Fit, Grid and Site retain their learned
+directions. The compact dialog shows all three modes and the current selection;
+choosing a row applies immediately without an Apply/Accept step. The current mode
+is also exposed as command state for accessibility and compact layouts. It is
+stored in the existing workspace-view preferences, survives activity recreation,
+and is passed to both the live canvas and PNG/PDF output. It remains outside the
+authoritative project JSON and does not consume Undo/Redo.
+
 ## Verified evidence
 
-[Android 2D integrity run 34660738450](https://github.com/CRisdon45/Plan_Trace/actions/runs/34660738450)
-at `b1cc519` passed **283 tests with zero failures, errors or skips**, including
+[Android 2D integrity run 34663149927](https://github.com/CRisdon45/Plan_Trace/actions/runs/34663149927)
+at `ecfb845` passed **287 tests with zero failures, errors or skips**, including
 the appearance-only projection contract, deterministic clipped tonal rendering,
-the compact drawing-strip behavior/accessibility contract, live drawing and
+safe preference decoding, immediate selector behavior, current-mode semantics,
+unchanged learned radial directions, the compact drawing-strip
+behavior/accessibility contract, live drawing and
 object navigation, the separate nine-test runtime policy audit, resolved-runtime
 and manifest checks, and debug assembly.
 The downloaded report archive digest is
-`b7a2602ceaf132d5cfbafbdce7404565532ad2382396f57a3fdbfa585b662ccd`.
+`ed39bf88d7e5b7830698695c5ba749fe76a560895250d42fd5faf98e22d049b1`.
 
-[Android workspace emulator run 34660738449](https://github.com/CRisdon45/Plan_Trace/actions/runs/34660738449)
-passed **all 18 scenarios**, including hand-placed pool/deck outlines,
+[Android workspace emulator run 34663149892](https://github.com/CRisdon45/Plan_Trace/actions/runs/34663149892)
+passed **all 19 scenarios**, including hand-placed pool/deck outlines,
 held-pointer live distances, exact snapping, rejected/cancelled side edits,
-smooth-pool creation and editing, save/restart and reopening. Its artifact
-digest is
-`1e28b4d7a66e1e62da6f1398204ce9009d1f7c660f48c6f2ad5be2e9c6aef029`.
+smooth-pool creation and editing, save/restart and reopening, plus Technical,
+Graphic and Northstar selection through the real View command. Its artifact
+digest is `c2bee666509b936a45b1aa4f071382307d66e96d0ebdc9537a4b3db6224d2dbb`.
 The downloaded archive matched that digest. Visual inspection of the real
-workspace and vector PNG evidence confirms that paving/ground is behind water
-and coping, the restrained cue remains inside exact rectilinear, concave and
-smooth boundaries, overlapping objects remain legible, and reopening/exporting
-does not change the appearance or saved design. The site raster remains a
-reference layer behind the projected objects.
+workspace, selector and three 1400x1000 vector PNGs confirms that Technical is
+linework-only, Graphic is flat material color and Northstar adds the same clipped
+tonal cue in canvas and export. All three use identical smooth/concave project
+geometry. Project JSON before and after the selector scenario was byte-identical
+with SHA-256 `610f0f6a4211b1032f3dd59d56f7547dce01eaa0b11d52f4ed940293bd536ab4`.
+The site raster remains a reference layer behind projected objects.
 
 This remains synthetic Android-emulator evidence, not physical S Pen, palm
 rejection, hardware latency or owner visual acceptance. The synthetic reference
 scene is intentionally not a client property. The current tonal cue is a
 deliberately elementary first material layer, not a claim of private-reference
-matching, full material language or Northstar renderer parity. Technical and
-Graphic are tested projection modes but do not yet have an in-workspace
-selector.
+matching, full material language or Northstar renderer parity.
 
 ## Next outcome
 
 Review this bounded slice into **feat/project-geometry-seam** without merging it
-implicitly. The next outcome is a compact, pen-accessible presentation-mode
-selector that exposes Technical, Graphic and Northstar without rearranging the
-learned radial directions. Store it as workspace view preference rather than
-project data, carry the selected appearance through the live canvas and export
-path, and capture all three outputs from the same authoritative geometry. Then
-advance the restrained water/coping/deck material language against approved
-visual references rather than adding arbitrary texture.
+implicitly. The next bounded visual outcome is stronger water/coping/deck
+hierarchy using deterministic, orientation-stable rendering primitives in the
+shared canvas/export path. Use approved Northstar reference evidence when it is
+available; do not substitute arbitrary texture or claim reference matching from
+the synthetic scene. Preserve the now-verified Technical and Graphic baselines,
+exact clipping and view-only appearance state while comparing the same
+rectilinear, concave and smooth geometry.
 
 After dependable manual authoring and the coherent interaction pass, continue
 rectangle/convex-polygon pool generation using the same editable objects, target
