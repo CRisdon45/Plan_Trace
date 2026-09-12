@@ -1,8 +1,9 @@
 # Current state and next-session handoff
 
-Updated 2026-09-12 after the verified water/coping/deck hierarchy slice. The
-current branch is **feat/expert-workspace-ui**; its verified application head is
-`59ff0e0`, followed only by this checkpoint documentation. Draft PR #6
+Updated 2026-09-12 after the verified bounded-watercolor slice. The current
+branch is **feat/expert-workspace-ui**; its verified application head is
+`65425ec`, followed by evidence-retention commit `ea1cf66` and this checkpoint
+documentation. Draft PR #6
 targets the merged straight- and smooth-pool interaction seam in
 **feat/project-geometry-seam**. Do not reset the application branch to an older
 documentation checkpoint.
@@ -34,7 +35,14 @@ remain unfilled. Ground surfaces render beneath pools and spas, with walls
 above them. Technical removes material fills, Graphic uses flat material fills,
 and Northstar adds deterministic tonal structure clipped to the exact object
 path. Water now uses a calm sheet-directed depth field and a restrained inner
-edge cue; paving and coping use a much quieter field. Northstar line weight also
+edge cue; paving and coping use a much quieter field. Northstar water also has
+a bounded deterministic pigment field: paper variation, wetness, mobile pigment
+and deposited pigment evolve for a fixed 32 settling steps on a grid capped at
+128 cells per side. Results are seeded from stable object identity, geometry and
+color, cached within 12 MiB, and clipped again by the exact vector path. Moving
+an unchanged object therefore moves its existing wash instead of repainting it.
+This is an independently implemented CPU reference model, not a new dependency
+or a full fluid simulation. Northstar line weight also
 establishes deck below coping below water without changing Technical or Graphic
 weights. Northstar is the current default for both the real workspace canvas and
 PNG/PDF output. These styles are transient projection data: changing appearance
@@ -51,48 +59,51 @@ authoritative project JSON and does not consume Undo/Redo.
 
 ## Verified evidence
 
-[Android 2D integrity run 34664674103](https://github.com/CRisdon45/Plan_Trace/actions/runs/34664674103)
-at `59ff0e0` passed **288 tests with zero failures, errors or skips**, including
-the appearance-only projection contract, deterministic clipped sheet-directed
-water depth, quieter paving, preserved Technical/Graphic weights and the
-Northstar deck/coping/water edge hierarchy. Selector semantics, learned radial
-directions, compact workspace behavior, geometry, persistence and export tests
-also remain green. The separate nine-test runtime policy audit, resolved-runtime
-and manifest checks, and debug assembly passed.
-The downloaded report archive digest is
-`1105556cf5227f1abdcd9b58cc75bf9eebba6fd1934a8f85bdb51cc6d0241a64`.
-The generated connected-coping PNG digest is
-`59fdba3fc43a7182d23306800e7542af284b8cc90051d04cde1b37ed2366e0a9`.
+[Android 2D integrity run 34671107391](https://github.com/CRisdon45/Plan_Trace/actions/runs/34671107391)
+at `ea1cf66` verified application revision `65425ec` and passed **290 tests with
+zero failures, errors or skips**. The two added regressions exercise seeded
+repeatability, per-object variation, settling/deposition, approximate pigment
+mass conservation, varied alpha and strict mask containment. Existing geometry,
+appearance, hierarchy, persistence and export tests remain green. The separate
+nine-test runtime policy audit, resolved-runtime and manifest checks, and debug
+assembly also passed. Artifact `10291145153` was downloaded and its ZIP SHA-256
+is `67a5ef145f32586884893d960434d47c611f84b89cae71ffea78c39bdcc6068f`.
+Its retained 1000x700 Graphic and Northstar comparison PNGs have SHA-256 values
+`845e0d4882b7f6acd1c5b7dc7bbf310932edcb1a3fc45b709eeceaad6f8ad061`
+and `5f05ff7fd6e4db9134e84c4f38614bbbb8ea8c3bb9f9de702d497693dba8c0b9`.
 
-[Android workspace emulator run 34664674104](https://github.com/CRisdon45/Plan_Trace/actions/runs/34664674104)
-passed **all 19 scenarios**, including hand-placed pool/deck outlines,
-held-pointer live distances, exact snapping, rejected/cancelled side edits,
-smooth-pool creation and editing, save/restart and reopening, plus Technical,
-Graphic and Northstar selection through the real View command. Its artifact
-digest is `e802200815a717bd32d43260284f2e73ca60a67ea8f315edc1aba798d21eb626`.
-The downloaded archive matched that digest. Visual inspection of the real
-workspace, selector and three 1400x1000 vector PNGs confirms that Technical is
-linework-only and Graphic remains the prior flat material baseline. Northstar
-now gives the water stronger directional depth and inner edge definition while
-the exact coping band and paving stay subordinate in both canvas and export.
-All three use identical smooth/concave project geometry. Project JSON before and
-after the selector scenario was byte-identical with SHA-256
-`9c864d95df3e9a224974793c72ef8f35d6fa684f6d9e6241d7b56486b3bebc25`.
-Technical and Graphic export digests are unchanged from the prior verified slice;
-the Northstar export digest is
-`65c7f509db30cedd9b21ab96270dbd72cbde0bfa41409a8b3eeb27d00422c1a4`.
-The site raster remains a reference layer behind projected objects.
+[Android workspace emulator run 34670500283](https://github.com/CRisdon45/Plan_Trace/actions/runs/34670500283)
+at `65425ec` passed **all 19 scenarios**, including the full existing authoring,
+editing, snapping, rejection, Undo/Redo, save/restart and export suite plus
+Technical, Graphic and Northstar selection through the real View command. The
+downloaded artifact ZIP SHA-256 is
+`cd87af9750e3541dbdd39072ea85435b09af10cae64fd72a515c2ca2820f8b4e`.
+Project JSON before and after appearance switching was byte-identical at
+`e37ff3f81267e3e576baac95e73ee81c65fe3088e18423ada14df7dcc267d27c`.
+Technical, Graphic and Northstar export SHA-256 values are respectively
+`415a57b76cc2eb87a70a49f05141654e227cb7309e35346fe13121bc7da63f9c`,
+`2ecd6727d388c5115d0f5ace9ad0c183655809249f5cf268895fa2599cab097d`
+and `d15f923fc6d35e8c25fcba5ec1cba803d7a9ba6e165fdbdb09bb12c7cfdb41f4`.
+Visual inspection of the real workspace, full-layout exports and focused render
+pair confirms a restrained irregular water wash, exact containment, stable
+coping geometry and subordinate paving. The runtime crash buffer was empty and
+Android reported no ANR since boot.
 
 This remains synthetic Android-emulator evidence, not physical S Pen, palm
 rejection, hardware latency or owner visual acceptance. The synthetic reference
 scene is intentionally not a client property. These broad deterministic cues
-are still an early material layer, not a claim of private-reference matching,
-complete paving joints, full material language or Northstar renderer parity.
+and the bounded CPU pigment model are still an early material layer, not a claim
+of private-reference matching, physical watercolor, complete paving joints,
+full material language or Northstar renderer parity. PDF continues through the
+same deterministic renderer; a simpler non-artistic PDF fallback remains an
+acceptable future option if target-device export cost proves excessive.
 
 ## Next outcome
 
 Review this bounded slice into **feat/project-geometry-seam** without merging it
-implicitly. The next bounded product outcome is rectangle/convex-polygon pool
+implicitly. First review the wash and its interaction cost on the target latest-
+Android tablet; do not infer stylus or frame-time acceptance from the emulator.
+The next bounded geometry outcome remains rectangle/convex-polygon pool
 generation using the same editable objects, target water area and explicit
 outside-coping containment. Preserve direct pen placement, exact geometry,
 whole-action Undo, and the now-verified Technical/Graphic/Northstar rendering
