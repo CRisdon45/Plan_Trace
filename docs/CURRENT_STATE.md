@@ -1,8 +1,8 @@
 # Current state and next-session handoff
 
-Updated 2026-09-12 after the layered-polygon Northstar water revision. The current
+Updated 2026-09-12 after the flowing-caustic Northstar water revision. The current
 branch is **feat/expert-workspace-ui**; its verified application head is
-`c1a06585a443d0e49389e9995ad40dbb2f908842`. Draft PR #6
+`1a0836a1e94c656bde62347117ac0520165a78ae`. Draft PR #6
 targets the merged straight- and smooth-pool interaction seam in
 **feat/project-geometry-seam**. Do not reset the application branch to an older
 documentation checkpoint.
@@ -41,14 +41,26 @@ and deposited pigment evolve for a fixed 32 settling steps on a grid capped at
 color, cached within 12 MiB, and clipped again by the exact vector path. Moving
 an unchanged object therefore moves its existing wash instead of repainting it.
 Northstar water now uses a dedicated blue/turquoise palette rather than Graphic's
-pale mint fill. A finer connected caustic network uses a shared smooth displacement
-field, varied strength, soft halos and short white crests. Geometry is normalized
+pale mint fill. Caustics now use filled ribbons with continuously varying width,
+tapered crests, fine edge variation and brighter confluences. Uneven site density
+varies cell size, and successive invertible shears curve the shared network
+without tearing its junctions. Four light passes supply soft shoulders, narrow
+cores and selective crests. Visual iteration reduced excessive swirls and uniform
+glow in the first ribbon pass. Geometry is normalized
 to object bounds, independent of view zoom, and cached for up to 24 aspect/identity
 pairs. The bounded pigment bitmap retains its separate 12 MiB cache. Both layers
 survive cache eviction deterministically. Selective shoreline deposits and final
 ink remain clipped/anchored to exact geometry. This follows the owner's blue-water
 landscape-plan studies, not the pale freeform-pool reference. Graphic and Technical
 palettes are unchanged.
+Hardware canvas caustics now use explicit prefiltered image levels generated
+from those same ribbons, starting at a 1024-pixel longest side and cached within
+24 MiB including all levels. The nearest level at or above display resolution is
+selected from the actual canvas scale and object bounds, integrating thin light
+before drawing at small working sizes without enlarging an undersized level.
+The raster cache includes opacity; cache eviction remains deterministic. Software PNG/PDF
+output keeps the vector caustics. Raster minification and vector export may differ
+slightly in antialiasing; neither representation changes the project boundary.
 The water now also contains independently implemented Hobbs-inspired polygon
 glazes: four blue pigments interleave across broad washes, medium blooms, small
 deposits and fine marks. Recursively displaced edges retain local variation;
@@ -78,51 +90,76 @@ authoritative project JSON and does not consume Undo/Redo.
 
 ## Verified evidence
 
-[Android 2D integrity run 34681246579](https://github.com/CRisdon45/Plan_Trace/actions/runs/34681246579)
-at `c1a0658` passed **294 tests with zero failures, errors or skips**, the
+[Android 2D integrity run 34701250784](https://github.com/CRisdon45/Plan_Trace/actions/runs/34701250784)
+at `1a0836a` passed **296 tests with zero failures, errors or skips**, the
 nine-test runtime-policy audit, resolved-runtime/manifest checks and debug
-assembly. New regression coverage checks blue hue, strong sparse highlights,
-cold-cache repeatability, unchanged stored data and concave clipping. The new
+assembly. Regression coverage checks blue hue, strong sparse highlights,
+cold-cache repeatability, unchanged stored data and concave clipping. The
 wash-only regression separates broad and fine pigment variation from caustics,
 checks different object seeds and cold-cache identity, and retains diagnostic
 images. Its 48-pixel block-mean brightness range is 64.16833/255, and its
 six-pixel local residual is 2.8023088/255. These are fixture measurements, not
 reference-match scores or tablet performance measurements. Existing
-geometry, persistence, translation and export tests remain green.
+geometry, persistence, translation and export tests remain green. New isolated
+caustic evidence checks cache repeatability, different object seeds, fine threads,
+broader folds and preserved open water. In its 1000x600 fixture, 25,081 pixels have
+alpha above 140 (4.18%), and 2,682 have alpha above 220 (0.45%). Scan intersections
+include both 1–2-pixel threads and 4–9-pixel folds/confluences. These characterize
+this fixture and do not establish physical optics or owner acceptance.
+The live-raster branch also has cold-cache, opacity, destination-containment and
+equivalent-screen-size coverage. Actual hardware-canvas screenshot review confirms
+continuous fine light in the rectangular pool, small spa and curved pool.
 
-Downloaded artifact `10293707944` ZIP SHA-256:
-`e2c56b4d213c0211e157396d1f452ca7c8f3d48f983350fbeb7a743c3b83375d`.
+Downloaded artifact `10299819332` ZIP SHA-256:
+`2fe1bd3d0cf17712c4d92971db32ddd86475a7c0829a1cfd64d59d23b03520c7`.
 Focused Northstar PNG SHA-256:
-`602b6fe9558dfedf6f697bbe3f68cdf0442b77f083dfa5dacc321c22e7102975`.
+`7b21aac4261a1a1fd470fb807601b0f5320497de9c45f97c23fb21bc98b1b743`.
 1200x800 rectangular detail SHA-256:
-`780f46c45ce1b54329d1e2f81838463e7ca9e4f44494f28bc417bae9cae80766`.
+`ed10e188282b1a9357b383972faaee9c7092c2d0df42d63da7368abddc6e280b`.
+The focused vector outputs and caustic study remain byte-identical to `1808ec5`
+after the hardware minification fix.
 Graphic comparison remains byte-identical to the prior pass at
 `845e0d4882b7f6acd1c5b7dc7bbf310932edcb1a3fc45b709eeceaad6f8ad061`.
-The 1000x700 organic output, 1200x800 rectangular detail and wash-only diagnostic
-were opened and visually inspected against the supplied blue-water studies.
-Overlapping blue masses, smaller dark blooms, translucent ragged transitions
-and fine pigment grain are visible under the existing connected caustics. This
-is materially more painterly than `9b8ce97`, but the caustic widths/junctions are
-still more uniform and geometric than the references. Do not claim full Northstar
-or owner visual acceptance. The earlier polygon pass `693f009` also passed 294
-tests; its emulator run was superseded/cancelled when the fine-grain pass pushed.
-Local Gradle could not bootstrap (unavailable distribution/network); nine Python
-policy tests and diff validation ran locally. Android build evidence is CI-only.
+The 1000x700 organic output, 1200x800 rectangular detail and isolated caustic
+study were opened and visually inspected against the supplied blue-water studies.
+The final light has gentler flowing contours, tapered brightness and fine/broad
+variation while leaving the layered pigment visible. The implementation review
+considers this caustic pass ready for the next material study. Owner visual
+acceptance and the full Northstar composition remain separate pending outcomes.
+The pigment-only image remains byte-identical to `c1a0658`, SHA-256
+`f83b846f697832aa5954d0bbf6fd7bf1150a88205473ea2b244444675ac9778e`.
+The first ribbon pass `2ca2741` passed 295 tests but was visually revised to reduce
+repeated swirls and excessive uniform light; its emulator run was superseded.
+The refined-vector pass `1808ec5` passed 295 tests and 19 emulator scenarios, but
+its actual hardware screenshot exposed dotted/fragmented small caustics despite
+correct exports. That visual failure prompted the filtered live rendering fix.
+The first filtered pass `9af3ee6` passed 296 tests but its hardware mipmap hint
+was insufficient; the live screenshot still broke up. The explicit prefiltered
+levels replace that hint. The equivalent-screen-size regression exercises the
+canvas transform used to select the level.
+The first explicit-level pass `9f90d3a` resolved the visible breakup but selected
+a level below screen resolution, softening the small pools too much. The final
+selection uses the nearest prefiltered level at or above display resolution,
+limiting the remaining reduction to less than 2:1 while preserving more detail.
+Android builds and policy checks for this pass ran in CI. No local Android
+build ran; the Gradle distribution was unavailable in this workspace.
 
-[Android workspace emulator run 34681246577](https://github.com/CRisdon45/Plan_Trace/actions/runs/34681246577)
-at the same revision passed all **19 scenarios**. Artifact `10294565201` was
+[Android workspace emulator run 34701250774](https://github.com/CRisdon45/Plan_Trace/actions/runs/34701250774)
+at the same revision passed all **19 scenarios**. Artifact `10300501791` was
 downloaded and its ZIP SHA-256 verified as
-`45b0edb9d1c28603c6e7cd73d6b9d5ec3700c061c3991be30b0e21a2957b9959`.
+`2a4f819609af2f9e54e8f947a113d2e75da4b73cf2631eca6f7d4c8aefcbe17b`.
 Live Northstar and 1400x1000 export screenshots were opened and inspected. The
 layered blue pigment and caustics are present in both rectangular and curved pools.
+The final live view preserves fine continuous contours without the fragmentation
+of the vector-only hardware pass or the blur of the undersized image level.
 The active-window record identifies the actual development app. This remains an
 overlapping synthetic interaction fixture, not a composed client plan.
 The crash buffer is empty and Android reports no ANR since boot. Appearance
 switching left saved project JSON byte-identical before/after at
-`b647bc31080331ea17deaacf3e834b7097e560558d9658948ea21adab7291bb8`.
+`d856cbaf925e0ce42a6d6cfb14423805d1f236bd8c0f8facd18f98dfd850b8e7`.
 Northstar export SHA-256:
-`43c9f6d96540859baec41e3cefc33ab8c83c68c46f51f1e12b63a128b0d99218`.
-Technical and Graphic exports remain byte-identical to the previous checkpoint.
+`2ded46c30c9e98b2ba2b0fb9da5d38aa3ed806645720fe6f06fe16cfd98a93a4`.
+Technical and Graphic exports remain byte-identical to the `c1a0658` checkpoint.
 
 Physical S Pen, palm rejection, hardware frame time and owner visual acceptance
 remain unverified. The synthetic fixtures are not client properties. No reference
@@ -131,21 +168,19 @@ non-artistic fallback remains acceptable if tablet export cost warrants it.
 
 ## Next outcome
 
-Review this bounded slice into **feat/project-geometry-seam** without merging it
-implicitly. First review the wash and its interaction cost on the target latest-
-Android tablet; do not infer stylus or frame-time acceptance from the emulator.
-Review the blue-water output against the owner's preferred landscape-plan studies.
-Further visual work should refine caustic rhythm, tapered light, organic junctions
-and pigment edge deposits to the full-detail reference bar. Retain the new
-multiscale blue glazes and fine grain; do not return to mint water or substitute
-uniformly heavier white line coverage. Measure cold texture generation and warm
-redraw cost on the actual tablet before making responsiveness claims.
-The next bounded geometry outcome remains rectangle/convex-polygon pool
-generation using the same editable objects, target water area and explicit
-outside-coping containment. Preserve direct pen placement, exact geometry,
-whole-action Undo, and the now-verified Technical/Graphic/Northstar rendering
-path. Do not replace this with a numeric-form milestone or restart solver/library
-research.
+The owner's requested sequence is **caustics, then grass and decking**, using the
+staged watercolor layering in the uploaded material study. Preserve this water
+pass while developing layered green washes/texture and warm paving washes,
+material variation and subordinate joint ink through the actual renderer. Keep
+the full reference detail as the bar and inspect both working-view and export
+images. Do not substitute a separate polished demonstration for app output.
+
+Measure cold texture generation and warm redraw on the target latest-Android
+tablet before claiming pen responsiveness. Review the bounded application slice
+into **feat/project-geometry-seam** without implicitly merging it. The queued
+rectangle/convex-polygon geometry milestone remains behind this material work;
+preserve direct pen placement, exact geometry, whole-action Undo and all three
+appearances. Do not restart solver/library research or the paused 3D work.
 
 ## Boundaries still in force
 
