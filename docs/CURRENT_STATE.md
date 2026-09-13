@@ -1,6 +1,29 @@
 # Current state and next-session handoff
 
-## Active scope: Android grass responds to shape
+## Active scope: Android grass wash and finishing refinement
+
+The owner asked to continue using `northstar-live-rendering-engineer`. The skill
+was read and its reference-first loop applied to the retained grass witness.
+Scope remains Android grass only. The latest shape-aware paint had a broad
+empty center and repeated angular marks from thresholded square-grid noise.
+
+Three local revisions replace that center with related recursive polygon
+washes, sized by local cross-section width. A separate darker glaze accumulates
+where interior wash coverage meets a boundary band. Lifting exposes the earlier
+underpainting. Final detail now uses individually deformed polygon deposits and
+fine strokes, with density weighted toward shape boundaries and retained washes.
+The grid-threshold finishing pass is removed. Two seeds, five shapes and close
+crops were inspected. Some broad wash contours remain too rounded; no 9/10
+acceptance or physical-tablet performance result is claimed.
+
+Only the production Java painter changes. Android path ownership, exact clipping,
+cache identity, worker, bitmap budget, export routing and project data are
+unchanged. Existing test thresholds are unchanged. Local Java 11-targeted
+compilation passes using a scratch-only Eclipse compiler because this runtime
+currently has a JRE without javac. No compiler or dependency is added to the app.
+Android CI is pending for this revision.
+
+## Previous verified scope: Android grass responds to shape
 
 The latest owner correction is that paint needs intent based on the lawn's
 shape. The native Android adapter now passes actual path coverage to the Java

@@ -14,7 +14,7 @@ import java.util.Random;
  *
  * Construction is a few related washes, paper showing through, sediment in the
  * drying fronts, then sparse clustered deposits. It is not a particle field of
- * blades. Quiet interiors are required, not a defect to be filled.
+ * blades. Interior glazes remain quieter than the shape-guided boundary deposits.
  */
 public final class NorthstarGrassPaint {
     private NorthstarGrassPaint() {}
@@ -121,48 +121,83 @@ public final class NorthstarGrassPaint {
                     (.18+.55*noise(x*.010,y*.010,701)));
             shapeDeposit(body,.16,.08,OLIVE,702);
             float[] broad=boundaryWash(coverage,distance,reach,3.8,711);
-            shapeDeposit(broad,.14,.10,OLIVE,712);
+            shapeDeposit(broad,.11,.10,OLIVE,712);
+            // Related translucent polygon glazes cross the middle of the lawn.
+            // Their scale follows local width, so a corridor keeps smaller forms.
+            float[] interior=interiorWash(coverage,reach);
+            shapeDeposit(interior,.23,.14,OLIVE,713);
             snapshot(observer,"02-midtone");
             float[] middle=boundaryWash(coverage,distance,reach,1.35,721);
-            shapeDeposit(middle,.20,.22,OLIVE,722);
+            shapeDeposit(middle,.24,.22,OLIVE,722);
             float[] margin=boundaryWash(coverage,distance,reach,.42,731);
-            shapeDeposit(margin,.15,.22,GREEN,732);
+            shapeDeposit(margin,.20,.22,GREEN,732);
+            float[] pooled=new float[w*h];
+            for(int i=0;i<pooled.length;i++)pooled[i]=interior[i]*(.12f+.88f*middle[i]);
+            shapeDeposit(pooled,.15,.18,GREEN,733);
             snapshot(observer,"03-drying-fronts");
-            textureField=broad;
+            textureField=new float[w*h];
             for(int y=0;y<h;y++)for(int x=0;x<w;x++) {
                 int i=y*w+x;
                 if(coverage[i]<=0)continue;
                 double reserve=smooth(.57,.76,noise(x*.028+noise(x*.009,y*.009,741),
                         y*.028+noise(x*.009,y*.009,742),743));
                 // Lift channels within the edge washes, retaining their prior ground.
-                double lifting=reserve*broad[i]*.58;
+                double wet=Math.min(1,broad[i]*.72+interior[i]*.80);
+                double lifting=reserve*wet*.58;
                 for(int c=0;c<3;c++)color[c][i]+=(underpainting[c][i]-color[c][i])*lifting;
-                textureField[i]=(float)Math.min(1,broad[i]*(1-.75*reserve)+body[i]*.25);
+                textureField[i]=(float)Math.min(1,wet*(1-.75*reserve)+body[i]*.25);
             }
             shapeDeposit(textureField,.09,.18,OLIVE,744);
             snapshot(observer,"04-lifted-texture");
             for(int y=0;y<h;y++)for(int x=0;x<w;x++) {
                 int i=y*w+x;
                 if(coverage[i]<=0)continue;
-                double gx=x*.095+1.2*noise(x*.022,y*.022,751);
-                double gy=y*.095+1.2*noise(x*.022,y*.022,752);
-                double granule=smooth(.57,.80,noise(gx,gy,753));
                 double group=.25+.75*noise(x*.018,y*.018,754);
                 double edge=Math.exp(-distance[i]/Math.max(1.3,reach[i]*.08));
                 double tooth=.3+1.15*paper[i];
-                apply(i,coverage[i]*(textureField[i]*granule*.40+edge*.20)*group*tooth,GREEN);
-                apply(i,coverage[i]*(textureField[i]*granule*granule*.24+edge*.12)*group*tooth,INK);
+                apply(i,coverage[i]*edge*.30*group*tooth,GREEN);
+                apply(i,coverage[i]*edge*.23*group*tooth,INK);
             }
-            // Explicit minute marks inherit edge-wash density. Interior lawn is quiet.
-            int count=(int)(w*h/650.0);
+            // Discrete torn pigment flecks, not thresholded square-grid noise.
+            // A shape-guided wash decides density, with sparse marks in the interior.
+            int count=(int)(w*h/66.0);
             for(int j=0;j<count;j++) {
                 double x=between(0,w),y=between(0,h);
                 int i=Math.min(h-1,(int)y)*w+Math.min(w-1,(int)x);
-                if(coverage[i]<.9 || random.nextDouble()>textureField[i]*.35)continue;
-                if(j%5==0)blade(x,y,between(3,7),between(.5,1.1),GREEN,between(.3,.8));
-                else wash(x,y,between(.7,2.5),j%4==0?INK:GREEN,between(.25,.8),.10,6,1,false);
+                double group=.25+.75*noise(x*.017,y*.017,761);
+                double edge=Math.exp(-distance[i]/Math.max(3,reach[i]*1.45));
+                double density=(.045+.26*textureField[i]+.70*edge)*group;
+                if(coverage[i]<.9 || random.nextDouble()>density)continue;
+                if(j%11==0)blade(x,y,between(2,5.5),between(.45,.95),GREEN,between(.4,.95));
+                else {
+                    double radius=between(.6,2.7);
+                    if(j%9==0)radius=between(2.7,5.8)*(.65+.35*edge);
+                    wash(x,y,radius,j%4==0?INK:GREEN,between(.35,1.2),.13,4,1,false);
+                }
             }
             snapshot(observer,"05-final-grass");
+        }
+
+        float[] interiorWash(float[] coverage,float[] reach) {
+            float[] difference=new float[(w+1)*h];
+            int attempts=Math.max(12,w*h/11500);
+            for(int j=0;j<attempts;j++) {
+                double x=between(0,w),y=between(0,h);
+                int i=Math.min(h-1,(int)y)*w+Math.min(w-1,(int)x);
+                if(coverage[i]<.9)continue;
+                double radius=reach[i]*between(1.1,2.9);
+                List<Vertex> outline=deform(contour(x,y,radius),2);
+                for(int layer=0;layer<4;layer++)raster(deform(outline,1),0,0,w,h,difference);
+            }
+            float[] mask=new float[w*h];
+            for(int y=0;y<h;y++) {
+                float total=0;
+                for(int x=0;x<w;x++) {
+                    total+=difference[y*(w+1)+x];
+                    mask[y*w+x]=(float)(coverage[y*w+x]*Math.min(1.6,Math.max(0,total/4.0)));
+                }
+            }
+            return mask;
         }
 
         float[] boundaryWash(float[] coverage,float[] distance,float[] reach,double width,int salt) {

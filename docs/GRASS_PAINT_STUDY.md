@@ -1,5 +1,29 @@
 # Grass paint study
 
+## Interior washes and non-grid finishing, 2026-09-13
+
+The Northstar skill's reference-first loop identified two causes in the prior
+shape-aware result: the broad boundary mask left one unpainted central region,
+and thresholded value noise produced recognizable square-grid accents.
+The production painter now adds overlapping recursive polygon washes through
+the interior, scales them by local lawn width, and pools an additional green
+glaze where those washes overlap boundary bands. Lifted channels retain the
+underpainting rather than painting opaque white.
+
+The square-grid granule pass is removed. Small polygon deposits now have varied
+shape, size and loading. Their density depends on the existing wash and distance
+to the actual boundary, with sparser marks in the interior. A first local pass
+had too uniform a speckle distribution. The second strengthened edge weighting;
+the third strengthened overlapping glazes to recover value grouping. Both
+`ground-study` and `neighbor` seeds plus all five shape masks were inspected.
+No existing test threshold was weakened. Android verification is pending.
+
+The changes use the existing recursive polygon, Kubelka-Munk and mass-conserving
+drying code. This is an artistic approximation, not a complete fluid solver.
+Some large wash contours still look too rounded compared with the witness, and
+tablet performance remains unmeasured. Water, paving, Godot and project data are
+outside this revision.
+
 ## Shape intent, 2026-09-13
 
 The owner rejected the lack of shape intent. Production paint now consumes
