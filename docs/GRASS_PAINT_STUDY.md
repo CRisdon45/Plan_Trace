@@ -1,5 +1,31 @@
 # Grass paint study
 
+## Shape intent, 2026-09-13
+
+The owner rejected the lack of shape intent. Production paint now consumes
+actual Android Path coverage. Irregular inset fronts follow outside and inside
+boundaries. A chamfer distance field and smoothed row/column cross-sections
+control wash width in narrow features. The exact path still owns final clipping.
+Mask coordinates and cache keys are object-local; same-bounds outline changes
+invalidate paint. No frame/time noise is introduced.
+
+Broad translucent layers, narrower boundary glazes, lifting and edge-biased
+granulation share the existing RGB Kubelka-Munk and mass-conserving deposition
+code. The former independent-blob recipe was removed. The desktop rectangle
+adapter and new `GrassShapeStudy` call this same production core; desktop AWT
+only supplies test masks. Android rasterizes its own paths.
+
+A first iteration looked like a frame around an empty center. Wider light
+washes, a faint interior glaze and smoothed cross-section changes removed
+that abrupt treatment. Five shapes were inspected; actual Android evidence
+and its limits are recorded in CURRENT_STATE. The stage-test area thresholds
+were revised explicitly for boundary-concentrated finishing, not as an art
+quality score. No new dependencies, Godot changes or project-schema changes.
+
+The geometry-to-paint relationship is an artistic rule. It does not infer sun,
+planting adjacency or unseen landscape semantics. Tablet latency remains to be
+measured.
+
 ## Android-only revision, 2026-09-13
 
 The Northstar live rendering skill was applied to the actual Java painter,

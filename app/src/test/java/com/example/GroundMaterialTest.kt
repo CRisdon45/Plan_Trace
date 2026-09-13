@@ -3,6 +3,8 @@ package com.example
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Path
+import android.graphics.RectF
 import com.example.data.ProjectJsonConverter
 import com.example.engine.NorthstarGroundMaterials
 import com.example.engine.NorthstarGrassPaint
@@ -45,10 +47,11 @@ class GroundMaterialTest {
             if (light(finished[i]) < 110) finalDark++
         }
         // These prove distinct paint operations, not a subjective quality score.
-        // 110 is an olive-black watercolor tail, not a requirement for burnt near-black fills.
-        assertTrue("Texture must materially lift existing washes", lifted > shadow.size * .07)
+        // Finishing now occupies shape-guided edge bands, not the whole rectangle.
+        // Keep a distinct lift and dark tail without requiring dense interior stamps.
+        assertTrue("Texture must materially lift existing washes", lifted > shadow.size * .03)
         assertTrue("Texture must also deposit smaller paint forms", repainted > shadow.size * .10)
-        assertTrue("Final accents must create a distinct dark range", finalDark > textureDark + shadow.size * .02)
+        assertTrue("Final accents must create a distinct dark range", finalDark > textureDark + shadow.size * .01)
     }
 
     private fun element(material: SurfaceMaterial, id: String = "ground-study") = RectangleElement(
@@ -116,6 +119,60 @@ class GroundMaterialTest {
             warm.recycle(); cold.recycle()
         }
         original.recycle()
+    }
+
+    private fun shapeRender(path: Path): Bitmap = Bitmap.createBitmap(1150, 850, Bitmap.Config.ARGB_8888).also {
+        val canvas = Canvas(it)
+        canvas.clipPath(path)
+        NorthstarGroundMaterials.draw(canvas, "shape-study", path, RectF(50f,50f,1050f,750f),
+            SurfaceMaterial.TURF, 1f, ScaleCalibration(true,200f,1f,"m"))
+    }
+    @Test fun `same bounds shape edit changes paint near the new inner edge`() {
+        val rectangle = Path().apply { addRect(50f,50f,1050f,750f,Path.Direction.CW) }
+        val concave = Path().apply {
+            moveTo(50f,50f); lineTo(1050f,50f); lineTo(1050f,750f)
+            lineTo(550f,750f); lineTo(550f,400f); lineTo(50f,400f); close()
+        }
+        val first = shapeRender(rectangle)
+        val edited = shapeRender(concave)
+        fun mean(bitmap: Bitmap): Double {
+            var sum=0.0; var count=0
+            for(y in 355..385 step 3)for(x in 250..450 step 3) {
+                val c=bitmap.getPixel(x,y);sum+=(Color.red(c)+Color.green(c)+Color.blue(c))/3.0;count++
+            }
+            return sum/count
+        }
+        assertTrue("New inner boundary must guide pigment, not just clip the old rectangle", mean(edited)<mean(first)-5)
+        NorthstarGroundMaterials.clearCache()
+        assertTrue("Edited shape must reproduce after eviction", edited.sameAs(shapeRender(concave)))
+        assertTrue("Returning to original geometry must reproduce its paint", first.sameAs(shapeRender(rectangle)))
+        save(first,"grass-shape-rectangle.png");save(edited,"grass-shape-concave.png")
+    }
+    @Test fun `curves holes and narrow turns retain shape guided paint and exact clipping`() {
+        val curved = Path().apply {
+            moveTo(50f,350f); cubicTo(50f,50f,350f,50f,550f,130f)
+            cubicTo(850f,0f,1050f,150f,1050f,400f)
+            cubicTo(1050f,750f,750f,750f,550f,640f)
+            cubicTo(250f,850f,50f,680f,50f,350f); close()
+        }
+        val courtyard = Path().apply {
+            fillType=Path.FillType.EVEN_ODD
+            addRect(50f,50f,1050f,750f,Path.Direction.CW)
+            addRoundRect(RectF(250f,220f,850f,580f),55f,55f,Path.Direction.CW)
+        }
+        val narrow = Path().apply {
+            moveTo(50f,50f);lineTo(1050f,50f);lineTo(1050f,150f)
+            lineTo(150f,150f);lineTo(150f,750f);lineTo(50f,750f);close()
+        }
+        for((name,path) in listOf("curved" to curved,"courtyard" to courtyard,"narrow" to narrow)) {
+            val actual=shapeRender(path)
+            assertEquals("Outside shape must stay transparent",0,actual.getPixel(15,15))
+            if(name!="curved")assertEquals("Hole or notch must stay transparent",0,actual.getPixel(500,400))
+            if(name=="narrow")assertTrue("Painting must reach a narrow turn",Color.alpha(actual.getPixel(100,100))>0)
+            NorthstarGroundMaterials.clearCache()
+            assertTrue(actual.sameAs(shapeRender(path)))
+            save(actual,"grass-shape-$name.png")
+        }
     }
 
     @Test fun `material studies retain broad glazes and minute detail at actual renderer output`() {

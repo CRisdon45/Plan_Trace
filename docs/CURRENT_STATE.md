@@ -1,5 +1,36 @@
 # Current state and next-session handoff
 
+## Active scope: Android grass responds to shape
+
+The latest owner correction is that paint needs intent based on the lawn's
+shape. The native Android adapter now passes actual path coverage to the Java
+painter. Cache identity includes an object-local outline (including contour
+breaks and fill rule) so a same-bounds shape edit repaints while translation
+and view zoom retain paint. Path rasterization, distance fields and deposition
+run on the existing paint worker or the synchronous export path.
+
+The painter derives irregular inset fronts from inside boundary distance and
+smoothed local cross-section width. Broad light washes penetrate the interior;
+stronger deposits gather near outer and inner edges. Thin arms receive narrower
+washes. The first attempt made a heavy frame with a blank center and abrupt
+width seams; the second widened the pale washes and smoothed width changes.
+The old rectangle-only painting recipe was removed. The rectangular study API
+now delegates to the same shape-aware painter with full rectangle coverage.
+
+Straight, curved, concave, courtyard-hole and narrow-turn masks were inspected
+locally. New Android tests cover same-bounds invalidation and curves/holes/thin
+arms. Existing stage checks now require 3% lifted pixels and a 1% additional
+dark tail (formerly 7% and 2% for full-sheet stamping), because finishing is
+concentrated in boundary bands. These are operation checks, not visual scores.
+The real workspace fixture now shows rectangular, curved and concave turf.
+CI verification is pending for this shape-aware revision.
+
+Godot, water and paving development stay paused. The visual treatment still
+needs owner review, and tablet frame-time evidence is not established. Do not
+call the shape-aware distance approximation a physical wet-paint simulation.
+
+## Previous verified Android grass checkpoint
+
 ## Active scope: Android grass only, 2026-09-13
 
 The owner explicitly selected the Android version using the

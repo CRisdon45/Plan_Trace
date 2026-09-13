@@ -27,8 +27,21 @@ public final class NorthstarGrassPaint {
     public static int[] render(int width, int height, long seed, Observer observer) {
         if (width < 1 || height < 1 || width > 1024 || height > 1024)
             throw new IllegalArgumentException("Grass paint dimensions must be 1..1024");
-        Studio s = new Studio(width, height, seed);
-        s.paint(observer);
+        float[] rectangle=new float[width*height];
+        Arrays.fill(rectangle,1f);
+        return renderShape(width,height,seed,rectangle,observer);
+    }
+
+    /** Exact silhouette coverage is prepared by the Android path rasterizer.
+     * Geometry guides media placement; it never changes the authoritative outline.
+     */
+    public static int[] renderShape(int width, int height, long seed, float[] coverage, Observer observer) {
+        if(width<1 || height<1 || width>1024 || height>1024 || coverage.length!=width*height)
+            throw new IllegalArgumentException("Invalid grass silhouette");
+        for(float v:coverage)if(!Float.isFinite(v) || v<0 || v>1)
+            throw new IllegalArgumentException("Invalid silhouette coverage");
+        Studio s=new Studio(width,height,seed);
+        s.paintShape(coverage,observer);
         return s.pixels();
     }
 
@@ -85,158 +98,6 @@ public final class NorthstarGrassPaint {
         }
         double between(double a,double b) { return a+(b-a)*random.nextDouble(); }
         void snapshot(Observer o,String name) { if(o!=null)o.stage(name,w,h,pixels()); }
-        void paint(Observer o) {
-            // A handful of large related glazes. Placement is stratified so they
-            // form connected masses instead of a field of independent stamps.
-            int sheets = 8;
-            for (int j=0;j<sheets;j++) {
-                double t=(j+.35)/sheets;
-                double x=w*(.08+.84*t)+between(-w*.16,w*.16);
-                double y=h*(.18+.62*noise(j*.37,1.1,3))+between(-h*.14,h*.14);
-                wash(x,y,between(Math.min(w,h)*.28,Math.min(w,h)*.48),
-                        j%3==0?YELLOW:OLIVE,between(.045,.11),.0,24,1,false);
-            }
-            snapshot(o,"01-base-wash");
-            underpainting=new float[][]{color[0].clone(),color[1].clone(),color[2].clone()};
-            for (int j=0;j<14;j++) {
-                double t=(j+.2)/14.0;
-                double x=w*(.10+.80*t)+between(-w*.12,w*.12);
-                double y=h*(.15+.70*noise(j*.29,2.4,5))+between(-h*.10,h*.10);
-                wash(x,y,between(48,125),j%5==0?YELLOW:OLIVE,between(.09,.20),.20,24,2,true);
-            }
-            snapshot(o,"02-midtone");
-            // Stronger pigment and real drying fronts, biased toward one side so
-            // the sheet keeps a light-to-shadow reading instead of even coverage.
-            for (int j=0;j<11;j++) {
-                double x=between(w*.38,w*1.06), y=between(-h*.08,h*1.06);
-                wash(x,y,between(52,140),j%4==0?GREEN:OLIVE,between(.18,.40),.34,24,2,true);
-            }
-            for (int j=0;j<5;j++) {
-                wash(between(w*.04,w*.55),between(h*.08,h*.92),between(36,88),
-                        OLIVE,between(.12,.26),.28,20,2,true);
-            }
-            snapshot(o,"03-drying-fronts");
-            liftAndRepaintTexture();
-            snapshot(o,"04-lifted-texture");
-            finishDeposits();
-            snapshot(o,"05-final-grass");
-        }
-
-        /** Lift large connected passages back to the retained underpainting, then
-         * glaze the remaining islands. Reserves are scalloped paint shapes, not a
-         * warped scalar field (that produced stretched ribbons) and not white
-         * speckle over the finished image.
-         */
-        void liftAndRepaintTexture() {
-            float[] difference=new float[(w+1)*h];
-            int islands=Math.max(8,(int)(38.0*w*h/(1024*717)));
-            for(int j=0;j<islands;j++) {
-                List<Vertex> base=deform(contour(between(-50,w+50),between(-50,h+50),between(52,132)),1);
-                for(int k=0;k<8;k++)raster(deform(base,2),0,0,w,h,difference);
-            }
-            float[] reserveDiff=new float[(w+1)*h];
-            int tongues=Math.max(4,(int)(14.0*w*h/(1024*717)));
-            for(int j=0;j<tongues;j++) {
-                List<Vertex> base=deform(contour(between(0,w),between(0,h),between(24,64)),1);
-                for(int k=0;k<8;k++)raster(deform(base,2),0,0,w,h,reserveDiff);
-            }
-            float[] mask=new float[w*h];
-            textureField=new float[w*h];
-            for(int y=0;y<h;y++) {
-                float keep=0,lift=0;
-                for(int x=0;x<w;x++) {
-                    int i=y*w+x;
-                    keep+=difference[y*(w+1)+x];
-                    lift+=reserveDiff[y*(w+1)+x];
-                    double island=Math.max(0,Math.min(1,keep/8));
-                    double reserve=Math.max(0,Math.min(1,lift/8));
-                    mask[i]=(float)(island*(1-.92*reserve));
-                    textureField[i]=mask[i];
-                    double lifting=(1-mask[i])*(.74+.12*paper[i]);
-                    for(int c=0;c<3;c++)color[c][i]+=(underpainting[c][i]-color[c][i])*lifting;
-                }
-            }
-            float[] front=new float[w*h];
-            for(int y=0;y<h;y++)for(int x=0;x<w;x++)
-                front[y*w+x]=(float)smooth(.32,.73,noise(x*.026,y*.026,509));
-            float[] deposited=dry(mask,w,h,.24,front);
-            for(int i=0;i<mask.length;i++) {
-                double tooth=.50+.95*paper[i];
-                apply(i,.23*deposited[i]*tooth,OLIVE);
-            }
-            int blooms=Math.max(8,(int)(40.0*w*h/(1024*717)));
-            for(int j=0;j<blooms;j++) {
-                double x=between(0,w),y=between(0,h);
-                if(islandAt(x,y)<.36) continue;
-                wash(x,y,between(14,40),j%4==0?EARTH:OLIVE,between(.07,.18),.20,12,1,true);
-            }
-        }
-
-        /** Minute finishing lives on fronts and dark cores. Quiet paper between
-         * the islands is left alone. Granulation is paper interaction, not confetti.
-         */
-        void finishDeposits() {
-            sedimentFronts();
-            // Fine pigment breaks up within the retained paint. The same paper
-            // modulates every scale; this is deposited color, not an opaque noise overlay.
-            for(int y=0;y<h;y++)for(int x=0;x<w;x++) {
-                int i=y*w+x;
-                double wet=textureField[i];
-                if(wet<.05)continue;
-                double mass=smooth(.32,.76,noise(x*.019,y*.019,601));
-                double granules=smooth(.49,.70,noise(x*.16,y*.16,602));
-                double tooth=.35+.95*paper[i];
-                apply(i,wet*mass*(.045+.28*granules)*tooth,GREEN);
-                // Warp only the small sediment coordinates. Broad wet fronts remain
-                // explicit polygons, and no screen coordinate or clock enters the field.
-                double sx=x*.052+1.7*noise(x*.023,y*.023,604);
-                double sy=y*.052+1.7*noise(x*.023,y*.023,605);
-                double sediment=smooth(.60,.80,noise(sx,sy,603));
-                apply(i,wet*mass*sediment*(.08+.40*granules)*tooth,INK);
-            }
-            int area=w*h;
-            int blooms=Math.max(6,(int)(65.0*area/(1024*717)));
-            for(int j=0;j<blooms;j++) {
-                double x=between(0,w),y=between(0,h);
-                if(random.nextDouble()>detailDensity(x,y)*1.5)continue;
-                wash(x,y,between(5,19),j%5==0?EARTH:GREEN,between(.12,.40),.18,12,1,true);
-            }
-            int specks=Math.max(8,(int)(1450.0*area/(1024*717)));
-            for(int j=0;j<specks;j++) {
-                double x=between(0,w),y=between(0,h);
-                if(random.nextDouble()>detailDensity(x,y))continue;
-                wash(x,y,between(.8,3.4),j%3==0?INK:GREEN,between(.25,.95),.08,6,1,false);
-            }
-            int blades=Math.max(4,(int)(65.0*area/(1024*717)));
-            for(int j=0;j<blades;j++) {
-                double x=between(0,w),y=between(0,h);
-                if(random.nextDouble()>detailDensity(x,y))continue;
-                blade(x,y,between(3,8),between(.45,1.1),j%3==0?INK:GREEN,between(.35,.85));
-            }
-        }
-
-        void sedimentFronts() {
-            if(textureField==null) return;
-            float[] grad=new float[w*h];
-            for(int y=1;y<h-1;y++) for(int x=1;x<w-1;x++) {
-                int i=y*w+x;
-                double dx=textureField[i+1]-textureField[i-1];
-                double dy=textureField[i+w]-textureField[i-w];
-                grad[i]=(float)Math.sqrt(dx*dx+dy*dy);
-            }
-            for(int y=1;y<h-1;y++) for(int x=1;x<w-1;x++) {
-                int i=y*w+x;
-                if(grad[i]<.05) continue;
-                // Only parts of a front collect extra pigment. Adjacent segments stay soft.
-                double broken=noise(x*.028,y*.028,501);
-                if(broken<.46) continue;
-                double tooth=.42+1.05*paper[i];
-                apply(i,Math.min(.32,grad[i]*1.15)*(broken-.20)*tooth,OLIVE);
-                if(grad[i]>.15 && broken>.78 && paper[i]>.55)
-                    apply(i,Math.min(.18,grad[i]*.7)*tooth,INK);
-            }
-        }
-
         void blade(double x,double y,double length,double width,Pigment pigment,double load) {
             double angle=between(0,Math.PI*2),curve=between(-.4,.4)*length;
             List<Vertex> outline=new ArrayList<>();
@@ -248,14 +109,81 @@ public final class NorthstarGrassPaint {
             }
             deposit(outline,pigment,load,.03,4,false);
         }
-        double islandAt(double x,double y) {
-            int i=Math.min(h-1,Math.max(0,(int)y))*w+Math.min(w-1,Math.max(0,(int)x));
-            return textureField==null?1:textureField[i];
+        void paintShape(float[] coverage,Observer observer) {
+            float[] distance=insideDistance(coverage,w,h);
+            float[] reach=localReach(coverage,w,h);
+            snapshot(observer,"01-base-wash");
+            underpainting=new float[][]{color[0].clone(),color[1].clone(),color[2].clone()};
+            // Successive irregular inset fronts follow every contour, including
+            // holes. Narrow arms get narrower washes instead of giant clipped blobs.
+            float[] body=new float[w*h];
+            for(int y=0;y<h;y++)for(int x=0;x<w;x++)body[y*w+x]=(float)(coverage[y*w+x]*
+                    (.18+.55*noise(x*.010,y*.010,701)));
+            shapeDeposit(body,.16,.08,OLIVE,702);
+            float[] broad=boundaryWash(coverage,distance,reach,3.8,711);
+            shapeDeposit(broad,.14,.10,OLIVE,712);
+            snapshot(observer,"02-midtone");
+            float[] middle=boundaryWash(coverage,distance,reach,1.35,721);
+            shapeDeposit(middle,.20,.22,OLIVE,722);
+            float[] margin=boundaryWash(coverage,distance,reach,.42,731);
+            shapeDeposit(margin,.15,.22,GREEN,732);
+            snapshot(observer,"03-drying-fronts");
+            textureField=broad;
+            for(int y=0;y<h;y++)for(int x=0;x<w;x++) {
+                int i=y*w+x;
+                if(coverage[i]<=0)continue;
+                double reserve=smooth(.57,.76,noise(x*.028+noise(x*.009,y*.009,741),
+                        y*.028+noise(x*.009,y*.009,742),743));
+                // Lift channels within the edge washes, retaining their prior ground.
+                double lifting=reserve*broad[i]*.58;
+                for(int c=0;c<3;c++)color[c][i]+=(underpainting[c][i]-color[c][i])*lifting;
+                textureField[i]=(float)Math.min(1,broad[i]*(1-.75*reserve)+body[i]*.25);
+            }
+            shapeDeposit(textureField,.09,.18,OLIVE,744);
+            snapshot(observer,"04-lifted-texture");
+            for(int y=0;y<h;y++)for(int x=0;x<w;x++) {
+                int i=y*w+x;
+                if(coverage[i]<=0)continue;
+                double gx=x*.095+1.2*noise(x*.022,y*.022,751);
+                double gy=y*.095+1.2*noise(x*.022,y*.022,752);
+                double granule=smooth(.57,.80,noise(gx,gy,753));
+                double group=.25+.75*noise(x*.018,y*.018,754);
+                double edge=Math.exp(-distance[i]/Math.max(1.3,reach[i]*.08));
+                double tooth=.3+1.15*paper[i];
+                apply(i,coverage[i]*(textureField[i]*granule*.40+edge*.20)*group*tooth,GREEN);
+                apply(i,coverage[i]*(textureField[i]*granule*granule*.24+edge*.12)*group*tooth,INK);
+            }
+            // Explicit minute marks inherit edge-wash density. Interior lawn is quiet.
+            int count=(int)(w*h/650.0);
+            for(int j=0;j<count;j++) {
+                double x=between(0,w),y=between(0,h);
+                int i=Math.min(h-1,(int)y)*w+Math.min(w-1,(int)x);
+                if(coverage[i]<.9 || random.nextDouble()>textureField[i]*.35)continue;
+                if(j%5==0)blade(x,y,between(3,7),between(.5,1.1),GREEN,between(.3,.8));
+                else wash(x,y,between(.7,2.5),j%4==0?INK:GREEN,between(.25,.8),.10,6,1,false);
+            }
+            snapshot(observer,"05-final-grass");
         }
-        double grouping(double x,double y) { return noise(x*.024,y*.024,401); }
-        double detailDensity(double x,double y) {
-            double islands=islandAt(x,y);
-            return Math.max(.01,(.04+.42*islands)*(.30+1.10*grouping(x,y))*(.55+.50*x/w));
+
+        float[] boundaryWash(float[] coverage,float[] distance,float[] reach,double width,int salt) {
+            float[] mask=new float[w*h];
+            for(int y=0;y<h;y++)for(int x=0;x<w;x++) {
+                int i=y*w+x;
+                if(coverage[i]<=0)continue;
+                double n=noise(x*.016,y*.016,salt);
+                double lobes=noise(x*.055+1.4*n,y*.055+noise(x*.017,y*.017,salt+1),salt+2);
+                double front=reach[i]*width*(.62+.65*n+.32*(lobes-.5));
+                double wet=1-smooth(front-1.2,front+1.2,distance[i]);
+                mask[i]=(float)(coverage[i]*wet*(.48+.52*noise(x*.012,y*.012,salt+3)));
+            }
+            return mask;
+        }
+        void shapeDeposit(float[] mask,double load,double drying,Pigment pigment,int salt) {
+            float[] front=new float[w*h];
+            for(int y=0;y<h;y++)for(int x=0;x<w;x++)
+                front[y*w+x]=(float)smooth(.27,.76,noise(x*.024,y*.024,salt));
+            float[] density=dry(mask,w,h,drying,front);
+            for(int i=0;i<density.length;i++)apply(i,load*density[i]*(.5+paper[i]),pigment);
         }
 
         List<Vertex> contour(double x,double y,double radius) {
@@ -409,6 +337,68 @@ public final class NorthstarGrassPaint {
             }
             return out;
         }
+    }
+
+    /** Eight-neighbour chamfer distance in paint pixels. The image exterior
+     * is dry too, so a rectangle touching the raster bounds keeps its boundary.
+     */
+    static float[] insideDistance(float[] mask,int w,int h) {
+        float[] d=new float[w*h];
+        for(int y=0;y<h;y++)for(int x=0;x<w;x++)d[y*w+x]=mask[y*w+x]<.5?0:
+                (x==0 || y==0 || x==w-1 || y==h-1?.5f:2048f);
+        for(int y=0;y<h;y++)for(int x=0;x<w;x++) {
+            int i=y*w+x;
+            if(x>0)d[i]=Math.min(d[i],d[i-1]+1);
+            if(y>0){d[i]=Math.min(d[i],d[i-w]+1);
+                if(x>0)d[i]=Math.min(d[i],d[i-w-1]+1.414214f);
+                if(x+1<w)d[i]=Math.min(d[i],d[i-w+1]+1.414214f);}
+        }
+        for(int y=h-1;y>=0;y--)for(int x=w-1;x>=0;x--) {
+            int i=y*w+x;
+            if(x+1<w)d[i]=Math.min(d[i],d[i+1]+1);
+            if(y+1<h){d[i]=Math.min(d[i],d[i+w]+1);
+                if(x>0)d[i]=Math.min(d[i],d[i+w-1]+1.414214f);
+                if(x+1<w)d[i]=Math.min(d[i],d[i+w+1]+1.414214f);}
+        }
+        return d;
+    }
+    /** Local cross-section limits the inset width in thin arms and corridors. */
+    static float[] localReach(float[] mask,int w,int h) {
+        float[] span=new float[w*h];
+        for(int y=0;y<h;y++)for(int x=0;x<w;) {
+            if(mask[y*w+x]<.5){x++;continue;}
+            int start=x;while(x<w && mask[y*w+x]>=.5)x++;
+            for(int k=start;k<x;k++)span[y*w+k]=x-start;
+        }
+        for(int x=0;x<w;x++)for(int y=0;y<h;) {
+            if(mask[y*w+x]<.5){y++;continue;}
+            int start=y;while(y<h && mask[y*w+x]>=.5)y++;
+            for(int k=start;k<y;k++)span[k*w+x]=(float)Math.max(3,Math.min(48,Math.min(span[k*w+x],y-start)*.13));
+        }
+        // Cross-sections change at re-entrant corners. Smooth inside the
+        // silhouette so those changes never become straight paint seams.
+        float[] inside=new float[mask.length];
+        for(int i=0;i<inside.length;i++)inside[i]=mask[i]>=.5?1:0;
+        float[] weights=boxBlur(inside,w,h,16), smoothed=boxBlur(span,w,h,16);
+        for(int i=0;i<span.length;i++)if(weights[i]>0)span[i]=smoothed[i]/weights[i];
+        return span;
+    }
+    private static float[] boxBlur(float[] field,int w,int h,int radius) {
+        float[] tmp=new float[field.length],out=new float[field.length];
+        int size=radius*2+1;
+        for(int y=0;y<h;y++) {
+            double sum=0;
+            for(int k=-radius;k<=radius;k++)sum+=field[y*w+Math.max(0,Math.min(w-1,k))];
+            for(int x=0;x<w;x++) { tmp[y*w+x]=(float)(sum/size);
+                sum+=field[y*w+Math.min(w-1,x+radius+1)]-field[y*w+Math.max(0,x-radius)]; }
+        }
+        for(int x=0;x<w;x++) {
+            double sum=0;
+            for(int k=-radius;k<=radius;k++)sum+=tmp[Math.max(0,Math.min(h-1,k))*w+x];
+            for(int y=0;y<h;y++) { out[y*w+x]=(float)(sum/size);
+                sum+=tmp[Math.min(h-1,y+radius+1)*w+x]-tmp[Math.max(0,y-radius)*w+x]; }
+        }
+        return out;
     }
 
     /** Redistribute a finite fraction of a glaze to its own evaporating front.

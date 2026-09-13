@@ -91,9 +91,17 @@ class AppearanceDeviceTest {
         fun rectangle(x: Double, y: Double, width: Double, height: Double) = DesignBoundary(
             listOf(DesignPoint(x,y), DesignPoint(x+width,y), DesignPoint(x+width,y+height), DesignPoint(x,y+height))
                 .mapIndexed { i, p -> BoundaryNode("v$i", p, "e$i", 0.0) })
+        fun boundary(points: List<DesignPoint>, bulge: Double = 0.0) = DesignBoundary(
+            points.mapIndexed { i,p -> BoundaryNode("v$i",p,"e$i",bulge) })
+        val round = boundary(listOf(DesignPoint(7.8,0.0),DesignPoint(10.0,2.2),
+            DesignPoint(7.8,4.4),DesignPoint(5.6,2.2)), .41421356237309503)
+        val concave = boundary(listOf(DesignPoint(0.0,4.8),DesignPoint(4.8,4.8),
+            DesignPoint(4.8,8.8),DesignPoint(2.8,8.8),DesignPoint(2.8,6.3),DesignPoint(0.0,6.3)))
         val study = ProjectDesign(before.id, listOf(
-            DesignObject("grass-study", "Grass material study", DesignObjectKind.TURF, rectangle(0.0,0.0,4.8,4.0)),
-            DesignObject("travertine-study", "Travertine material study", DesignObjectKind.PAVING, rectangle(5.4,0.0,4.8,4.0))
+            DesignObject("grass-study", "Rectangular grass", DesignObjectKind.TURF, rectangle(0.0,0.0,4.8,4.0)),
+            DesignObject("grass-curve", "Curved grass", DesignObjectKind.TURF, round),
+            DesignObject("grass-concave", "Concave grass", DesignObjectKind.TURF, concave),
+            DesignObject("travertine-study", "Travertine material study", DesignObjectKind.PAVING, rectangle(5.4,4.8,4.8,4.0))
         ), before.revision + 1)
         store.save(study)
         try {

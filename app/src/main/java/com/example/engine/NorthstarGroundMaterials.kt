@@ -25,7 +25,7 @@ import kotlin.math.*
  */
 internal object NorthstarGroundMaterials {
     private const val SIDE = 1024
-    private data class Key(val id: String, val width: Int, val height: Int, val grass: Boolean)
+    private data class Key(val id: String, val width: Int, val height: Int, val grass: Boolean, val outline: List<Int> = emptyList())
     private data class Wash(val levels: List<Bitmap>)
     private val cache = object : LruCache<Key, Wash>(24 * 1024 * 1024) {
         override fun sizeOf(key: Key, value: Wash) = value.levels.sumOf { it.allocationByteCount }
@@ -41,13 +41,28 @@ internal object NorthstarGroundMaterials {
         val longest = max(bounds.width(), bounds.height())
         if (!longest.isFinite() || longest <= 0f || alpha <= 0f) return
         val grass = material == SurfaceMaterial.TURF
-        val key = Key(id, (SIDE * bounds.width() / longest).roundToInt().coerceIn(1, SIDE),
-            (SIDE * bounds.height() / longest).roundToInt().coerceIn(1, SIDE), grass)
+        val width = (SIDE * bounds.width() / longest).roundToInt().coerceIn(1, SIDE)
+        val height = (SIDE * bounds.height() / longest).roundToInt().coerceIn(1, SIDE)
+        // Work in object-local paint pixels. Translation and view zoom do not
+        // change identity, but an edit within the same bounds must invalidate it.
+        val shape = if (grass) Path(path).apply {
+            transform(Matrix().apply { setRectToRect(bounds, RectF(0f, 0f, width.toFloat(), height.toFloat()), Matrix.ScaleToFit.FILL) })
+        } else null
+        val outline = if (shape == null) emptyList() else buildList {
+            add(shape.fillType.ordinal)
+            val points = shape.approximate(.25f)
+            for (i in points.indices step 3) {
+                if (i > 0 && points[i] == points[i - 3]) add(Int.MIN_VALUE)
+                add((points[i + 1] * 16f).roundToInt())
+                add((points[i + 2] * 16f).roundToInt())
+            }
+        }
+        val key = Key(id, width, height, grass, outline)
         // Reading this state in Compose's draw observation invalidates the actual canvas
         // when pigment is ready. A cold wash must never run on the live pen thread.
         if (grass && canvas.isHardwareAccelerated) paintRevision.intValue
         val wash = synchronized(cache) { cache.get(key) } ?: if (grass && canvas.isHardwareAccelerated) {
-            prepareGrass(key)
+            prepareGrass(key, shape!!)
             canvas.drawPath(path, Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = Color.rgb(218, 225, 151)
                 this.alpha = (alpha.coerceIn(0f, 1f) * 255).roundToInt()
@@ -55,7 +70,7 @@ internal object NorthstarGroundMaterials {
             return
         } else {
             val preparing = synchronized(cache) { pending[key] }
-            (preparing?.get() ?: generate(key)).also { synchronized(cache) { cache.put(key, it) } }
+            (preparing?.get() ?: generate(key, shape)).also { synchronized(cache) { cache.put(key, it) } }
         }
         val extent = deviceExtent(canvas, bounds)
         val bitmap = wash.levels.lastOrNull { max(it.width, it.height) >= extent } ?: wash.levels.first()
@@ -69,9 +84,17 @@ internal object NorthstarGroundMaterials {
         if (grass) drawGrassEdgeDetail(canvas, path, bounds, alpha, id)
     }
 
-    private fun generate(key: Key): Wash {
+    private fun generate(key: Key, shape: Path? = null): Wash {
         if (key.grass) {
-            val pixels = NorthstarGrassPaint.render(key.width, key.height, seed(key.id))
+            // Rasterize the real path on the paint worker (or synchronous export),
+            // including curved segments, multiple contours and holes.
+            val mask = Bitmap.createBitmap(key.width, key.height, Bitmap.Config.ARGB_8888)
+            Canvas(mask).drawPath(requireNotNull(shape), Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE })
+            val argb = IntArray(key.width * key.height)
+            mask.getPixels(argb, 0, key.width, 0, 0, key.width, key.height)
+            mask.recycle()
+            val coverage = FloatArray(argb.size) { Color.alpha(argb[it]) / 255f }
+            val pixels = NorthstarGrassPaint.renderShape(key.width, key.height, seed(key.id), coverage, null)
             return prefilter(Bitmap.createBitmap(pixels, key.width, key.height, Bitmap.Config.ARGB_8888))
         }
         val random = Random(seed(key.id))
@@ -190,13 +213,13 @@ internal object NorthstarGroundMaterials {
         return prefilter(bitmap)
     }
 
-    private fun prepareGrass(key: Key) = synchronized(cache) {
+    private fun prepareGrass(key: Key, shape: Path) = synchronized(cache) {
         // Rapid shape previews cannot enqueue an unbounded history of obsolete washes.
         // Completion redraws the scene, allowing the next still-visible key to start.
         if (cache.get(key) != null || pending.containsKey(key) || pending.size >= 3) return@synchronized
         val task = FutureTask {
             try {
-                generate(key).also { synchronized(cache) { cache.put(key, it) } }
+                generate(key, shape).also { synchronized(cache) { cache.put(key, it) } }
             } finally {
                 synchronized(cache) { pending.remove(key) }
                 Handler(Looper.getMainLooper()).post { paintRevision.intValue++ }
