@@ -7,7 +7,7 @@ was read and its reference-first loop applied to the retained grass witness.
 Scope remains Android grass only. The latest shape-aware paint had a broad
 empty center and repeated angular marks from thresholded square-grid noise.
 
-Three local revisions replace that center with related recursive polygon
+Four local revisions replace that center with related recursive polygon
 washes, sized by local cross-section width. A separate darker glaze accumulates
 where interior wash coverage meets a boundary band. Lifting exposes the earlier
 underpainting. Final detail now uses individually deformed polygon deposits and
@@ -21,7 +21,10 @@ cache identity, worker, bitmap budget, export routing and project data are
 unchanged. Existing test thresholds are unchanged. Local Java 11-targeted
 compilation passes using a scratch-only Eclipse compiler because this runtime
 currently has a JRE without javac. No compiler or dependency is added to the app.
-Android CI is pending for this revision.
+The third revision's local stage check found repainting below the existing
+10% area requirement. The fourth increases texture-glaze loading from .09 to
+.14, retaining lifted channels and a distinct repainting pass. All local stage
+checks now pass without threshold changes. Android CI is pending for this revision.
 
 ## Previous verified scope: Android grass responds to shape
 

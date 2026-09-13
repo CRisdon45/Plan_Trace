@@ -16,7 +16,10 @@ to the actual boundary, with sparser marks in the interior. A first local pass
 had too uniform a speckle distribution. The second strengthened edge weighting;
 the third strengthened overlapping glazes to recover value grouping. Both
 `ground-study` and `neighbor` seeds plus all five shape masks were inspected.
-No existing test threshold was weakened. Android verification is pending.
+A fourth revision strengthens the texture glaze after the stage check found
+insufficient repainting in the third. Lift, repaint and dark-tail operation
+checks now pass locally. No existing test threshold was weakened. Android
+verification is pending.
 
 The changes use the existing recursive polygon, Kubelka-Munk and mass-conserving
 drying code. This is an artistic approximation, not a complete fluid solver.

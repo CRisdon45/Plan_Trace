@@ -147,7 +147,7 @@ public final class NorthstarGrassPaint {
                 for(int c=0;c<3;c++)color[c][i]+=(underpainting[c][i]-color[c][i])*lifting;
                 textureField[i]=(float)Math.min(1,wet*(1-.75*reserve)+body[i]*.25);
             }
-            shapeDeposit(textureField,.09,.18,OLIVE,744);
+            shapeDeposit(textureField,.14,.18,OLIVE,744);
             snapshot(observer,"04-lifted-texture");
             for(int y=0;y<h;y++)for(int x=0;x<w;x++) {
                 int i=y*w+x;
