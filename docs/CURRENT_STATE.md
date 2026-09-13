@@ -1,5 +1,29 @@
 # Current state and next-session handoff
 
+## Active scope: Android grass only, 2026-09-13
+
+The owner explicitly selected the Android version using the
+`northstar-live-rendering-engineer` skill. Godot work is paused for this task.
+The current change preserves the first three production paint stages and
+refines texture lifting and final pigment. Smaller connected keep masks and
+reserve tongues replace large pale cutouts. Drying strength varies along each
+front. Small pigment concentrations sit within the retained paint instead of
+large separate near-black stamps. No runtime, geometry, water, paving or Godot
+code changes are included.
+
+Three local revisions and two seeds were inspected at full frame and close
+scale. Java 11 compilation passes. Android CI is pending for this change; the
+303-test results below belong to the historical `f11d5fd` build. A new test
+checks stable paint through pan/zoom, cache eviction and return to the initial
+view. Physical-tablet timing and the 9/10 visual bar remain unverified.
+
+The remaining visual differences include broad pale reserves and some dominant
+dry fronts. Do not describe this as a completed Northstar match. Keep iterating
+the Android production painter against the grass witness, with actual canvas
+and export evidence.
+
+## Earlier session checkpoint
+
 Updated 2026-09-12 after the grass *wash-structure* revision. The current
 branch is **feat/expert-workspace-ui**. This session rewrote the production
 grass recipe in `NorthstarGrassPaint.java` and thinned silhouette accents in

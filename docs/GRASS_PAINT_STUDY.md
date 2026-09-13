@@ -1,4 +1,37 @@
-# Grass paint: wash-structure revision, 2026-09-12
+# Grass paint study
+
+## Android-only revision, 2026-09-13
+
+The Northstar live rendering skill was applied to the actual Java painter,
+not the separate Godot sheet. The owner explicitly chose Android-only work.
+The baseline at `5971f8b` has broad, heavily outlined washes and isolated
+dark stamps. The revision keeps stages 1–3 pixel-identical, and changes only
+the two finishing passes:
+
+- Step 4 uses smaller overlapping polygon keep masks and reserve tongues.
+  A spatially varying drying strength breaks the continuous ring while
+  retaining sharp, pigment-rich sections.
+- Step 5 deposits green and olive-black pigment into the retained wet mask,
+  modulated by shared paper and several spatial scales. Small sediment
+  coordinates are warped to suppress visible lattice alignment. Broad fronts
+  still come from recursively displaced polygons, not noise thresholds.
+- Sparse polygon flecks and fine strokes supply distinct accents. Large
+  independent near-black stamps were removed.
+
+This remains an artistic approximation using the existing ordered RGB
+Kubelka-Munk layers and mass-conserving drying operator. It is not a full
+fluid simulation. Object seeds, exact Android clipping, worker ownership,
+cache budget and the 1024-pixel longest side are unchanged.
+
+Three local iterations and two seeds were inspected. The first pass exposed
+lattice alignment in small deposits; the last revision perturbed those
+coordinates. The existing operation checks retain their original thresholds.
+A new Android renderer test checks pan/zoom and cache-eviction repeatability.
+CI results are recorded in CURRENT_STATE when complete. No physical-tablet
+performance claim or 9/10 visual acceptance follows from these checks.
+Broad pale reserves and dominant drying fronts still differ from the witness.
+
+## Earlier wash-structure revision, 2026-09-12
 
 The owner rejected stamp-count finishing. `f11d5fd` still read as digital
 grass at close-up because steps 4 and 5 laid thousands of marks over the

@@ -129,15 +129,15 @@ public final class NorthstarGrassPaint {
          */
         void liftAndRepaintTexture() {
             float[] difference=new float[(w+1)*h];
-            int islands=Math.max(8,(int)(14.0*w*h/(1024*717)));
+            int islands=Math.max(8,(int)(38.0*w*h/(1024*717)));
             for(int j=0;j<islands;j++) {
-                List<Vertex> base=deform(contour(between(-50,w+50),between(-50,h+50),between(110,230)),1);
+                List<Vertex> base=deform(contour(between(-50,w+50),between(-50,h+50),between(52,132)),1);
                 for(int k=0;k<8;k++)raster(deform(base,2),0,0,w,h,difference);
             }
             float[] reserveDiff=new float[(w+1)*h];
-            int tongues=Math.max(4,(int)(8.0*w*h/(1024*717)));
+            int tongues=Math.max(4,(int)(14.0*w*h/(1024*717)));
             for(int j=0;j<tongues;j++) {
-                List<Vertex> base=deform(contour(between(0,w),between(0,h),between(55,110)),1);
+                List<Vertex> base=deform(contour(between(0,w),between(0,h),between(24,64)),1);
                 for(int k=0;k<8;k++)raster(deform(base,2),0,0,w,h,reserveDiff);
             }
             float[] mask=new float[w*h];
@@ -156,10 +156,13 @@ public final class NorthstarGrassPaint {
                     for(int c=0;c<3;c++)color[c][i]+=(underpainting[c][i]-color[c][i])*lifting;
                 }
             }
-            float[] deposited=dry(mask,w,h,.38);
+            float[] front=new float[w*h];
+            for(int y=0;y<h;y++)for(int x=0;x<w;x++)
+                front[y*w+x]=(float)smooth(.32,.73,noise(x*.026,y*.026,509));
+            float[] deposited=dry(mask,w,h,.24,front);
             for(int i=0;i<mask.length;i++) {
                 double tooth=.50+.95*paper[i];
-                apply(i,.12*deposited[i]*tooth,OLIVE);
+                apply(i,.23*deposited[i]*tooth,OLIVE);
             }
             int blooms=Math.max(8,(int)(40.0*w*h/(1024*717)));
             for(int j=0;j<blooms;j++) {
@@ -174,43 +177,41 @@ public final class NorthstarGrassPaint {
          */
         void finishDeposits() {
             sedimentFronts();
-            int area=w*h;
-            int mid=Math.max(20,(int)(110.0*area/(1024*717)));
-            for(int j=0;j<mid*3;j++) {
-                double x=between(0,w),y=between(0,h);
-                double density=detailDensity(x,y);
-                if(random.nextDouble()>density) continue;
-                wash(x,y,between(3.5,12),j%5==0?EARTH:GREEN,between(.10,.32),.16,8,1,true);
-            }
-            int specks=Math.max(20,(int)(110.0*area/(1024*717)));
-            for(int j=0;j<specks*3;j++) {
-                double x=between(0,w),y=between(0,h);
-                double island=islandAt(x,y);
-                if(island<.28 || island>.68) continue;
-                if(random.nextDouble()>.48+grouping(x,y)*.42) continue;
-                wash(x,y,between(1.0,3.6),j%4==0?INK:GREEN,between(.16,.48),.08,4,1,false);
-            }
-            int blades=Math.max(8,(int)(42.0*area/(1024*717)));
-            for(int j=0;j<blades*3;j++) {
-                double x=between(0,w),y=between(0,h);
-                if(islandAt(x,y)<.52) continue;
-                if(random.nextDouble()>.36+grouping(x,y)*.50) continue;
-                blade(x,y,between(5,13),between(.55,1.4),j%3==0?INK:GREEN,between(.45,1.2));
-            }
-            int cores=Math.max(14,(int)(38.0*area/(1024*717)));
-            for(int j=0;j<cores*5;j++) {
-                double x=between(0,w),y=between(0,h);
-                if(islandAt(x,y)<.62) continue;
-                if(random.nextDouble()>.34+grouping(x,y)*.55) continue;
-                wash(x,y,between(4.5,13),j%4==0?GREEN:INK,between(.32,.72),.16,8,1,false);
-            }
-            for(int y=0;y<h;y++) for(int x=0;x<w;x++) {
+            // Fine pigment breaks up within the retained paint. The same paper
+            // modulates every scale; this is deposited color, not an opaque noise overlay.
+            for(int y=0;y<h;y++)for(int x=0;x<w;x++) {
                 int i=y*w+x;
-                if(textureField[i]<.60) continue;
-                double clump=noise(x*.04,y*.04,601);
-                if(clump<.72) continue;
-                if(paper[i]<.52) continue;
-                apply(i,(clump-.62)*(.22+.30*textureField[i])*paper[i],INK);
+                double wet=textureField[i];
+                if(wet<.05)continue;
+                double mass=smooth(.32,.76,noise(x*.019,y*.019,601));
+                double granules=smooth(.49,.70,noise(x*.16,y*.16,602));
+                double tooth=.35+.95*paper[i];
+                apply(i,wet*mass*(.045+.28*granules)*tooth,GREEN);
+                // Warp only the small sediment coordinates. Broad wet fronts remain
+                // explicit polygons, and no screen coordinate or clock enters the field.
+                double sx=x*.052+1.7*noise(x*.023,y*.023,604);
+                double sy=y*.052+1.7*noise(x*.023,y*.023,605);
+                double sediment=smooth(.60,.80,noise(sx,sy,603));
+                apply(i,wet*mass*sediment*(.08+.40*granules)*tooth,INK);
+            }
+            int area=w*h;
+            int blooms=Math.max(6,(int)(65.0*area/(1024*717)));
+            for(int j=0;j<blooms;j++) {
+                double x=between(0,w),y=between(0,h);
+                if(random.nextDouble()>detailDensity(x,y)*1.5)continue;
+                wash(x,y,between(5,19),j%5==0?EARTH:GREEN,between(.12,.40),.18,12,1,true);
+            }
+            int specks=Math.max(8,(int)(1450.0*area/(1024*717)));
+            for(int j=0;j<specks;j++) {
+                double x=between(0,w),y=between(0,h);
+                if(random.nextDouble()>detailDensity(x,y))continue;
+                wash(x,y,between(.8,3.4),j%3==0?INK:GREEN,between(.25,.95),.08,6,1,false);
+            }
+            int blades=Math.max(4,(int)(65.0*area/(1024*717)));
+            for(int j=0;j<blades;j++) {
+                double x=between(0,w),y=between(0,h);
+                if(random.nextDouble()>detailDensity(x,y))continue;
+                blade(x,y,between(3,8),between(.45,1.1),j%3==0?INK:GREEN,between(.35,.85));
             }
         }
 

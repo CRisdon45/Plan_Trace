@@ -97,6 +97,27 @@ class GroundMaterialTest {
         }
     }
 
+    @Test fun `grass paint stays fixed across zoom pan and cache eviction`() {
+        val grass = element(SurfaceMaterial.TURF)
+        val original = render(grass)
+        fun view(zoom: Float): Bitmap = Bitmap.createBitmap(1150, 850, Bitmap.Config.ARGB_8888).also {
+            val canvas = Canvas(it)
+            canvas.translate(43f, 27f)
+            canvas.scale(zoom, zoom)
+            WatercolorRenderer.render(canvas, grass, 1f, ScaleCalibration(true, 200f, 1f, "m"), false)
+        }
+        for (zoom in listOf(.5f, 1.5f)) {
+            val warm = view(zoom)
+            NorthstarGroundMaterials.clearCache()
+            val cold = view(zoom)
+            assertTrue("Zoomed paint must reproduce after cache eviction", warm.sameAs(cold))
+            assertTrue("Returning from pan and zoom must preserve paint", original.sameAs(render(grass)))
+            save(warm, "northstar-turf-zoom-${if (zoom < 1f) "half" else "detail"}.png")
+            warm.recycle(); cold.recycle()
+        }
+        original.recycle()
+    }
+
     @Test fun `material studies retain broad glazes and minute detail at actual renderer output`() {
         val report = StringBuilder()
         for (material in listOf(SurfaceMaterial.TURF, SurfaceMaterial.PAVING)) {
