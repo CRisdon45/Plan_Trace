@@ -28,6 +28,16 @@ Recorded 2026-09-10 from the owner's clarification and delegated direction revie
 
 ## How decisions change
 
+On 2026-09-12 Cody granted standing authorization for ordinary Plan Trace pushes
+and CI runs within approved development scope. This does not authorize merging,
+changing visibility/permissions, publishing private references, or device-data
+destruction. The same day he redirected Northstar water toward the blue-water
+landscape-plan studies instead of the pale freeform-pool reference.
+He subsequently emphasized the full fine-detail reference target, including
+stacked blue washes at larger scales and smaller dark blotches, and asked to
+apply the earlier polygon-watercolor research. Prior recommendations to simplify
+reference minutiae are not an owner constraint or the acceptance bar.
+
 Ordinary implementation details are flexible within the product requirements. Challenge a direction when code, design or user evidence shows a better outcome. Explain the tradeoff and affected acceptance cases; update the relevant decision and contract in the same change rather than silently drifting. Reversing an explicit owner constraint requires the owner's approval. Do not invent approval or convert a recommendation into a historical user quote.
 
 The old product hierarchy, optional radial palette, late freeform sequencing, and execution-stage priorities are superseded where they conflict with these decisions. Their historical evidence remains available through [HISTORY.md](HISTORY.md). The latest explicit owner request controls session scope, with [CURRENT_STATE.md](CURRENT_STATE.md) recording the current checkpoint.

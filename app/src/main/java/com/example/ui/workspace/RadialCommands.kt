@@ -1,16 +1,18 @@
 package com.example.ui.workspace
 
+import com.example.export.DesignAppearance
 import kotlin.math.*
 
 /** Stable categories and ordering; disable actions rather than rearranging learned directions. */
 enum class RadialCategory(val label: String) { DRAW("Draw"), EDIT("Edit"), VIEW("View"), ASSIST("Assist"), HISTORY("History"), SELECT("Select") }
 enum class RadialAction(val label: String) {
     POOL("Pool"), CURVED("Curved"), PAVING("Paving"), SIZE("Size"), COPING("Coping"), DELETE("Delete"),
-    FIT("Fit"), GRID("Grid"), TOUCH("Touch edit"), SNAP("1 ft snap"), UNDO("Undo"), REDO("Redo"), NEXT("Next"), CLEAR("Clear"), SITE("Site image"), GEOMETRY("Object snap"), SIDES("Move sides"), SMOOTH_POOL("Smooth pool"), SMOOTH("Keep smooth"), RADIUS("Radius")
+    FIT("Fit"), GRID("Grid"), APPEARANCE("Appearance"), TOUCH("Touch edit"), SNAP("1 ft snap"), UNDO("Undo"), REDO("Redo"), NEXT("Next"), CLEAR("Clear"), SITE("Site image"), GEOMETRY("Object snap"), SIDES("Move sides"), SMOOTH_POOL("Smooth pool"), SMOOTH("Keep smooth"), RADIUS("Radius")
 }
 data class RadialAvailability(val hasDocument: Boolean, val hasSelection: Boolean, val editable: Boolean,
     val hasCopingTarget: Boolean, val canUndo: Boolean, val canRedo: Boolean, val hasObjects: Boolean,
-    val grid: Boolean=false, val touch: Boolean=false, val snap: Boolean=false, val geometry: Boolean=false, val canEditSides: Boolean=false, val sideEditing: Boolean=false, val canEditSmooth: Boolean=false, val smoothMode: com.example.model.design.SmoothEditMode=com.example.model.design.SmoothEditMode.OFF) {
+    val grid: Boolean=false, val touch: Boolean=false, val snap: Boolean=false, val geometry: Boolean=false, val canEditSides: Boolean=false, val sideEditing: Boolean=false, val canEditSmooth: Boolean=false, val smoothMode: com.example.model.design.SmoothEditMode=com.example.model.design.SmoothEditMode.OFF,
+    val appearance: DesignAppearance=DesignAppearance.NORTHSTAR) {
     fun enabled(a: RadialAction)=when(a) {
         RadialAction.SIZE, RadialAction.DELETE -> editable
         RadialAction.COPING -> editable && hasCopingTarget
@@ -23,12 +25,13 @@ data class RadialAvailability(val hasDocument: Boolean, val hasSelection: Boolea
         else -> hasDocument
     }
     fun checked(a: RadialAction): Boolean?=when(a) { RadialAction.GRID->grid;RadialAction.TOUCH->touch;RadialAction.SNAP->snap;RadialAction.GEOMETRY->geometry;RadialAction.SIDES->sideEditing;RadialAction.SMOOTH->smoothMode==com.example.model.design.SmoothEditMode.SHAPE;RadialAction.RADIUS->smoothMode==com.example.model.design.SmoothEditMode.RADIUS;else->null }
+    fun detail(a: RadialAction): String?=if(a==RadialAction.APPEARANCE) appearance.workspaceLabel else null
 }
 object RadialCommands {
     fun actions(c: RadialCategory): List<RadialAction> = when(c) {
         RadialCategory.DRAW -> listOf(RadialAction.POOL,RadialAction.CURVED,RadialAction.PAVING,RadialAction.SMOOTH_POOL)
         RadialCategory.EDIT -> listOf(RadialAction.SIZE,RadialAction.COPING,RadialAction.DELETE,RadialAction.SIDES,RadialAction.SMOOTH,RadialAction.RADIUS)
-        RadialCategory.VIEW -> listOf(RadialAction.FIT,RadialAction.GRID,RadialAction.SITE)
+        RadialCategory.VIEW -> listOf(RadialAction.FIT,RadialAction.GRID,RadialAction.SITE,RadialAction.APPEARANCE)
         RadialCategory.ASSIST -> listOf(RadialAction.TOUCH,RadialAction.SNAP,RadialAction.GEOMETRY)
         RadialCategory.HISTORY -> listOf(RadialAction.UNDO,RadialAction.REDO)
         RadialCategory.SELECT -> listOf(RadialAction.NEXT,RadialAction.CLEAR)
@@ -51,8 +54,9 @@ object RadialGeometry {
         // Append side editing without moving the learned Size/Coping/Delete directions.
         if(c==RadialCategory.EDIT) return angle(c)+listOf(-30.0,0.0,30.0,60.0,-60.0,90.0)[index]
         if(c==RadialCategory.DRAW) return angle(c)+listOf(-30.0,0.0,30.0,60.0)[index]
-        // Preserve the existing Fit/Grid directions when adding source setup.
-        if(c==RadialCategory.VIEW || c==RadialCategory.ASSIST) return angle(c)+listOf(-15.0,15.0,45.0)[index]
+        // Preserve the existing Fit/Grid/Site directions when adding appearance.
+        if(c==RadialCategory.VIEW) return angle(c)+listOf(-15.0,15.0,45.0,75.0)[index]
+        if(c==RadialCategory.ASSIST) return angle(c)+listOf(-15.0,15.0,45.0)[index]
         return angle(c)+(index-(count-1)/2.0)*30.0
     }
     fun point(degrees: Double,radius: Double): Pair<Double,Double> {

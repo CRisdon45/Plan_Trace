@@ -1,5 +1,6 @@
 package com.example
 
+import com.example.export.DesignAppearance
 import com.example.ui.workspace.*
 import org.junit.Assert.*
 import org.junit.Test
@@ -52,5 +53,16 @@ class RadialCommandsTest {
         val state=RadialAvailability(true,true,true,true,true,false,true,grid=true,snap=false)
         assertEquals(true,state.checked(RadialAction.GRID));assertEquals(false,state.checked(RadialAction.SNAP))
         assertNull(state.checked(RadialAction.SIZE))
+    }
+    @Test fun `appearance appends to view without moving learned directions`() {
+        assertEquals(listOf(RadialAction.FIT,RadialAction.GRID,RadialAction.SITE,RadialAction.APPEARANCE),
+            RadialCommands.actions(RadialCategory.VIEW))
+        assertEquals(listOf(15.0,45.0,75.0,105.0),
+            (0..3).map { RadialGeometry.childAngle(RadialCategory.VIEW,it) })
+        val state=RadialAvailability(true,false,false,false,false,false,false,
+            appearance=DesignAppearance.GRAPHIC)
+        assertTrue(state.enabled(RadialAction.APPEARANCE))
+        assertEquals("Graphic",state.detail(RadialAction.APPEARANCE))
+        assertNull(state.checked(RadialAction.APPEARANCE))
     }
 }

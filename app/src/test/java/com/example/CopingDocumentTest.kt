@@ -6,6 +6,8 @@ import androidx.test.core.app.ApplicationProvider
 import com.example.data.DesignJsonCodec
 import com.example.data.DesignWorkspaceStore
 import com.example.export.DesignOutput
+import com.example.export.DesignAppearance
+import com.example.export.DesignOutputSettings
 import com.example.model.PolylineElement
 import com.example.model.SurfaceMaterial
 import com.example.model.design.*
@@ -68,17 +70,31 @@ class CopingDocumentTest {
         val doc=document();val elements=DesignOutput.drawing(doc).elements.filterIsInstance<PolylineElement>()
         assertEquals(listOf("pool:coping-outer","pool:outline"),elements.map { it.id })
         assertEquals(listOf(SurfaceMaterial.PAVING,SurfaceMaterial.WATER),elements.map { it.material })
+        assertEquals(listOf(1.5f,2.35f),elements.map { it.strokeWidth })
         val context=ApplicationProvider.getApplicationContext<Context>()
         val a=DesignOutput.png(context,doc,1000,700)!!.readBytes()
         val b=DesignOutput.png(context,doc,1000,700)!!.readBytes()
         assertArrayEquals(a,b)
+        val graphic=DesignOutput.png(context,doc,1000,700,
+            DesignOutputSettings(appearance=DesignAppearance.GRAPHIC,includeMeasurements=false))!!.readBytes()
+        val northstar=DesignOutput.png(context,doc,1000,700,
+            DesignOutputSettings(appearance=DesignAppearance.NORTHSTAR,includeMeasurements=false))!!.readBytes()
+        assertFalse(graphic.contentEquals(northstar))
         val bitmap=BitmapFactory.decodeByteArray(a,0,a.size)
         val pixels=IntArray(bitmap.width*bitmap.height);bitmap.getPixels(pixels,0,bitmap.width,0,0,bitmap.width,bitmap.height)
-        assertTrue(pixels.count { it==SurfaceMaterial.PAVING.fill.toInt() }>100)
-        assertTrue(pixels.count { it==SurfaceMaterial.WATER.fill.toInt() }>1000)
+        fun distance(color:Int,target:Int)=kotlin.math.abs(android.graphics.Color.red(color)-android.graphics.Color.red(target))+
+            kotlin.math.abs(android.graphics.Color.green(color)-android.graphics.Color.green(target))+
+            kotlin.math.abs(android.graphics.Color.blue(color)-android.graphics.Color.blue(target))
+        assertTrue(pixels.count { distance(it,SurfaceMaterial.PAVING.fill.toInt())<60 }>100)
+        // Northstar intentionally differs from Graphic's pale material token.
+        assertTrue(pixels.count { android.graphics.Color.blue(it) > android.graphics.Color.red(it) + 40 &&
+            android.graphics.Color.blue(it) > android.graphics.Color.green(it) + 5 }>1000)
         bitmap.recycle()
         File("build/reports/design-geometry").mkdirs()
         File("build/reports/design-geometry/connected-coping.png").writeBytes(a)
         File("build/reports/design-geometry/connected-coping.json").writeText(DesignJsonCodec.encode(doc))
+        File("build/reports/northstar-watercolor").mkdirs()
+        File("build/reports/northstar-watercolor/graphic-organic-pool.png").writeBytes(graphic)
+        File("build/reports/northstar-watercolor/northstar-organic-pool.png").writeBytes(northstar)
     }
 }

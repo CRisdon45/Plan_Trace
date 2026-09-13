@@ -26,7 +26,9 @@ class LiveDrawingTest {
         val live=LiveMeasurements.segment(listOf(zero),target)!!
         assertEquals(GridAssist.snapPoint(raw),target.point)
         assertEquals(target.point,live.target)
-        assertTrue(live.lines.first().contains(LiveFeetInches.format(zero.distanceTo(target.point))))
+        assertEquals(listOf(LiveFeetInches.format(zero.distanceTo(target.point))),live.lines)
+        assertTrue(live.plain)
+        assertFalse(live.lines.any { it.contains("Line") || it.contains("grid",ignoreCase=true) })
         assertNotEquals(zero.distanceTo(raw),zero.distanceTo(target.point),1e-6)
     }
     @Test fun `orthogonal reading follows rotated first edge not raw pointer diagonal`() {
@@ -35,13 +37,17 @@ class LiveDrawingTest {
         val delta=target.point.translated(-2.0,-2.0)
         assertEquals(abs(delta.x),abs(delta.y),1e-10)
         assertEquals("Right angle",target.assistance)
-        assertTrue(LiveMeasurements.segment(points,target)!!.lines.first().contains(LiveFeetInches.format(hypot(delta.x,delta.y))))
+        val live=LiveMeasurements.segment(points,target)!!
+        assertEquals(listOf(LiveFeetInches.format(hypot(delta.x,delta.y))),live.lines)
+        assertTrue(live.plain)
     }
     @Test fun `closing uses exact first vertex for preview and committed final edge`() {
         val points=listOf(zero,DesignPoint(4.0,0.0),DesignPoint(4.0,3.0))
         val target=CornerTarget.resolve(points,DesignPoint(0.05,0.02),true,true,0.1)
         assertTrue(target.closing);assertEquals(zero,target.point)
-        assertEquals("Close · "+LiveFeetInches.format(5.0),LiveMeasurements.segment(points,target)!!.lines.first())
+        val live=LiveMeasurements.segment(points,target)!!
+        assertEquals("Close · "+LiveFeetInches.format(5.0),live.lines.first())
+        assertFalse(live.plain)
         assertNull(LiveMeasurements.segment(emptyList(),target))
     }
     @Test fun `pool is hand placed in project coordinates with following coping and one undo`() {

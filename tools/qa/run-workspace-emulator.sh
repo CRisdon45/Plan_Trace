@@ -132,6 +132,15 @@ device shell am force-stop "$package"
 device exec-out run-as "$package" cat files/project-design/workspace.json > emulator-evidence/smooth-after-restart.json
 cmp emulator-evidence/smooth-before-restart.json emulator-evidence/smooth-after-restart.json
 
+device exec-out run-as "$package" cat files/project-design/workspace.json > emulator-evidence/design-before-appearance.json
+run_case switchPersistAndExportTheSameDesign com.example.AppearanceDeviceTest
+device shell am force-stop "$package"
+device exec-out run-as "$package" cat files/project-design/workspace.json > emulator-evidence/design-after-appearance.json
+cmp emulator-evidence/design-before-appearance.json emulator-evidence/design-after-appearance.json
+
+run_case grassAndTravertineInTheActualWorkspace com.example.AppearanceDeviceTest
+device shell am force-stop "$package"
+
 # Layout changes happen after the source/restart scenarios. Keep the test app
 # foreground while Android applies display changes, rather than reconfiguring the launcher.
 function layout_display() {
@@ -160,6 +169,7 @@ device exec-out run-as "$package" cat files/project-design/workspace.json > emul
   echo 'Additional: hand-placed pool/deck outlines and held-pointer live distances, constrained target matching, closing edge, canceled edit, existing-site readout and persisted geometry.'
   echo 'Additional: explicit geometry snapping against locked house corners, exact off-grid target/readout/placement, vertex snap/cancel/Undo and restart without stored snap constraints.'
   echo 'Additional: whole-side pool edit, constrained grid/object alignment, live size, invalid/canceled edit, coupled Undo/Redo, locked-site preservation and restart.'
+  echo 'Additional: Technical/Graphic/Northstar selected through the real View command, persisted as view-only state, captured and exported from identical saved geometry.'
   echo 'Every accepted in-app screenshot checks the Android active-window package; obstructed frames fail and are retained, never dismissed.'
   echo 'Display cases: landscape 1600x1000@240, portrait 1000x1600@240, compact 800x1400@400.'
   echo "API: $(device shell getprop ro.build.version.sdk | tr -d '\r')"

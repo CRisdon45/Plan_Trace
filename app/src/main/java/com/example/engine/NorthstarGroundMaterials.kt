@@ -1,0 +1,370 @@
+package com.example.engine
+
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Matrix
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.PathMeasure
+import android.graphics.RectF
+import android.util.LruCache
+import android.os.Handler
+import android.os.Looper
+import androidx.compose.runtime.mutableIntStateOf
+import com.example.model.ScaleCalibration
+import com.example.model.SurfaceMaterial
+import java.util.Random
+import java.util.concurrent.Executors
+import java.util.concurrent.FutureTask
+import kotlin.math.*
+
+/** Paint-only material study. Exact clipping and final boundary ink belong to the caller.
+ * Reuses the existing recursive polygon method; no reference art is embedded.
+ * Fixed work and byte-bounded prefiltered images keep redraw independent of deposit count.
+ */
+internal object NorthstarGroundMaterials {
+    private const val SIDE = 1024
+    private data class Key(val id: String, val width: Int, val height: Int, val grass: Boolean, val outline: List<Int> = emptyList())
+    private data class Wash(val levels: List<Bitmap>)
+    private val cache = object : LruCache<Key, Wash>(24 * 1024 * 1024) {
+        override fun sizeOf(key: Key, value: Wash) = value.levels.sumOf { it.allocationByteCount }
+    }
+    private val paintRevision = mutableIntStateOf(0)
+    private val worker = Executors.newSingleThreadExecutor { task -> Thread(task, "grass-paint").apply { isDaemon = true } }
+    private val pending = mutableMapOf<Key, FutureTask<Wash>>()
+    internal val isGrassReady: Boolean get() = synchronized(cache) { pending.isEmpty() }
+    internal fun clearCache() = synchronized(cache) { cache.evictAll() }
+
+    fun draw(canvas: Canvas, id: String, path: Path, bounds: RectF,
+             material: SurfaceMaterial, alpha: Float, scale: ScaleCalibration) {
+        val longest = max(bounds.width(), bounds.height())
+        if (!longest.isFinite() || longest <= 0f || alpha <= 0f) return
+        val grass = material == SurfaceMaterial.TURF
+        val width = (SIDE * bounds.width() / longest).roundToInt().coerceIn(1, SIDE)
+        val height = (SIDE * bounds.height() / longest).roundToInt().coerceIn(1, SIDE)
+        // Work in object-local paint pixels. Translation and view zoom do not
+        // change identity, but an edit within the same bounds must invalidate it.
+        val shape = if (grass) Path(path).apply {
+            transform(Matrix().apply { setRectToRect(bounds, RectF(0f, 0f, width.toFloat(), height.toFloat()), Matrix.ScaleToFit.FILL) })
+        } else null
+        val outline = if (shape == null) emptyList() else buildList {
+            add(shape.fillType.ordinal)
+            val points = shape.approximate(.25f)
+            for (i in points.indices step 3) {
+                if (i > 0 && points[i] == points[i - 3]) add(Int.MIN_VALUE)
+                add((points[i + 1] * 16f).roundToInt())
+                add((points[i + 2] * 16f).roundToInt())
+            }
+        }
+        val key = Key(id, width, height, grass, outline)
+        // Reading this state in Compose's draw observation invalidates the actual canvas
+        // when pigment is ready. A cold wash must never run on the live pen thread.
+        if (grass && canvas.isHardwareAccelerated) paintRevision.intValue
+        val wash = synchronized(cache) { cache.get(key) } ?: if (grass && canvas.isHardwareAccelerated) {
+            prepareGrass(key, shape!!)
+            canvas.drawPath(path, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.rgb(218, 225, 151)
+                this.alpha = (alpha.coerceIn(0f, 1f) * 255).roundToInt()
+            })
+            return
+        } else {
+            val preparing = synchronized(cache) { pending[key] }
+            (preparing?.get() ?: generate(key, shape)).also { synchronized(cache) { cache.put(key, it) } }
+        }
+        val extent = deviceExtent(canvas, bounds)
+        val bitmap = wash.levels.lastOrNull { max(it.width, it.height) >= extent } ?: wash.levels.first()
+        canvas.drawBitmap(bitmap, null, bounds, Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
+            this.alpha = (alpha.coerceIn(0f, 1f) * 255).roundToInt()
+        })
+        // The coping outer polygon is overdrawn by the pool. A deck grid would
+        // imply incorrect cross-pool coping joints, so only the stone wash applies.
+        if (!grass && !id.endsWith(":coping-outer")) drawJoints(canvas, bounds, scale, alpha, id)
+        drawDryBoundary(canvas, path, bounds, grass, alpha, id)
+        if (grass) drawGrassEdgeDetail(canvas, path, bounds, alpha, id)
+    }
+
+    private fun generate(key: Key, shape: Path? = null): Wash {
+        if (key.grass) {
+            // Rasterize the real path on the paint worker (or synchronous export),
+            // including curved segments, multiple contours and holes.
+            val mask = Bitmap.createBitmap(key.width, key.height, Bitmap.Config.ARGB_8888)
+            Canvas(mask).drawPath(requireNotNull(shape), Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE })
+            val argb = IntArray(key.width * key.height)
+            mask.getPixels(argb, 0, key.width, 0, 0, key.width, key.height)
+            mask.recycle()
+            val coverage = FloatArray(argb.size) { Color.alpha(argb[it]) / 255f }
+            val pixels = NorthstarGrassPaint.renderShape(key.width, key.height, seed(key.id), coverage, null)
+            return prefilter(Bitmap.createBitmap(pixels, key.width, key.height, Bitmap.Config.ARGB_8888))
+        }
+        val random = Random(seed(key.id))
+        fun between(a: Float, b: Float) = a + random.nextFloat() * (b - a)
+        // Accumulate faint glazes in floating point. Repeated 3/255 deposits in
+        // 8-bit premultiplied storage biased warm neutral pigment toward pink/green.
+        // Convert once after painting; the retained cache remains ordinary ARGB.
+        val wetPaint = Bitmap.createBitmap(key.width, key.height, Bitmap.Config.RGBA_F16)
+        val canvas = Canvas(wetPaint)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+        val grass = key.grass
+        val palette = if (grass) intArrayOf(Color.rgb(146, 163, 46), Color.rgb(100, 131, 40),
+            Color.rgb(181, 184, 67), Color.rgb(61, 93, 28)) else intArrayOf(
+            Color.rgb(192, 155, 99), Color.rgb(207, 184, 139), Color.rgb(163, 141, 105), Color.rgb(224, 201, 159))
+        fun boundary(x: Float, y: Float, radius: Float): List<NorthstarPolygonWash.Vertex> {
+            val stretch = between(.7f, 1.4f)
+            val phase = between(0f, 6.283185f)
+            return NorthstarPolygonWash.deform(List(9) { i ->
+                val angle = phase + i * 6.283185f / 9
+                val reach = radius * between(.76f, 1.22f)
+                NorthstarPolygonWash.Vertex(x + cos(angle) * reach * stretch,
+                    y + sin(angle) * reach / stretch, between(.08f, .30f))
+            }, random, 2)
+        }
+        fun polygon(vertices: List<NorthstarPolygonWash.Vertex>) = Path().apply {
+            moveTo(vertices[0].x, vertices[0].y)
+            for (i in 1 until vertices.size) lineTo(vertices[i].x, vertices[i].y)
+            close()
+        }
+        fun glaze(x: Float, y: Float, radius: Float, color: Int, opacity: Int, layers: Int, dry: Boolean) {
+            val ring = boundary(x, y, radius)
+            repeat(layers) {
+                paint.style = Paint.Style.FILL
+                paint.color = color; paint.alpha = opacity
+                canvas.drawPath(polygon(NorthstarPolygonWash.deform(ring, random, 2)), paint)
+            }
+            if (dry) {
+                // Only parts of a wash front collect pigment. Retain its shared
+                // contour through the wet layers, then lay a fine, broken dry rim.
+                val front = NorthstarPolygonWash.deform(ring, random, 2)
+                val rim = Path()
+                for (i in 1 until front.size) {
+                    val a = front[i - 1]; val b = front[i]
+                    if (sin(i * .13f + x) > .35f && random.nextFloat() > .12f) {
+                        rim.moveTo(a.x, a.y); rim.lineTo(b.x, b.y)
+                    }
+                }
+                paint.style = Paint.Style.STROKE; paint.strokeWidth = between(.65f, 1.35f)
+                paint.color = color; paint.alpha = if (grass) 45 else 27
+                canvas.drawPath(rim, paint)
+            }
+        }
+        // Broad yellow-green/ochre glazes, followed by distinct smaller blooms.
+        repeat(18) { i -> glaze(between(0f, key.width.toFloat()), between(0f, key.height.toFloat()),
+            between(95f, 210f), palette[i % 4], if (grass) 9 else 3, 9, false) }
+        if (grass) repeat(12) { i ->
+            // Uneven deeper pigment toward one side, with lighter open paper
+            // elsewhere. These are wash concentrations, not invented plant shadows.
+            glaze(between(key.width * .58f, key.width * 1.08f), between(0f, key.height.toFloat()),
+                between(60f, 150f), palette[if (i % 3 == 0) 3 else 1], 8, 8, true)
+        }
+        repeat(70) { i ->
+            val x = between(0f, key.width.toFloat()); val y = between(0f, key.height.toFloat())
+            val radius = between(18f, 58f)
+            glaze(x, y, radius, palette[i % 4], if (grass) 9 else 4, 7, i % 3 != 0)
+            repeat(5) {
+                glaze(x + between(-radius, radius), y + between(-radius, radius),
+                    between(3f, 19f), palette[i % 4], if (grass) 9 else 5, 4, true)
+            }
+            repeat(10) {
+                glaze(x + between(-radius, radius), y + between(-radius, radius),
+                    between(.8f, 4.5f), palette[i % 4], if (grass) 17 else 10, 3, false)
+            }
+        }
+        // Dry paper/lifting is irregular paint coverage, not a uniform white noise layer.
+        repeat(if (grass) 420 else 260) {
+            val x = between(0f, key.width.toFloat()); val y = between(0f, key.height.toFloat())
+            glaze(x, y, between(1.4f, if (grass) 9f else 5f), Color.rgb(255, 253, 232), 16, 2, false)
+        }
+        paint.style = Paint.Style.FILL
+        // Deposits/pits gather in patches. Sparse sharp marks sit over softer washes.
+        repeat(if (grass) 1800 else 1300) {
+            val x = between(0f, key.width.toFloat()); val y = between(0f, key.height.toFloat())
+            val grouping = sin(x * .024f + sin(y * .017f)) * cos(y * .021f)
+            if (random.nextFloat() > .42f + grouping * .32f) return@repeat
+            val radius = between(.6f, if (grass) 3.6f else 2.5f)
+            val dark = if (grass) Color.rgb(57, 83, 28) else Color.rgb(117, 89, 54)
+            if (!grass) {
+                paint.color = Color.rgb(255, 252, 235); paint.alpha = 75
+                canvas.drawOval(x - radius, y - radius, x + radius * 1.3f, y + radius * 1.6f, paint)
+            }
+            paint.color = dark; paint.alpha = between(60f, if (grass) 205f else 160f).toInt()
+            val deposit = polygon(boundary(x, y, radius))
+            canvas.drawPath(deposit, paint)
+            if (grass && random.nextFloat() > .72f) {
+                paint.style = Paint.Style.STROKE; paint.strokeWidth = between(.7f, 1.1f)
+                val blade = Path().apply {
+                    moveTo(x, y); quadTo(x - 1.5f, y - 2f, x - between(1f, 3f), y - between(3f, 6f))
+                    moveTo(x, y); quadTo(x + 1f, y - 1f, x + 2f, y - between(2f, 4f))
+                }
+                canvas.drawPath(blade, paint); paint.style = Paint.Style.FILL
+            }
+        }
+        val bitmap = wetPaint.copy(Bitmap.Config.ARGB_8888, true)
+        wetPaint.recycle()
+        // Fine tooth modulates existing pigment rather than creating dark pixels on bare paper.
+        val pixels = IntArray(key.width * key.height)
+        bitmap.getPixels(pixels, 0, key.width, 0, 0, key.width, key.height)
+        for (i in pixels.indices) {
+            val c = pixels[i]
+            val tooth = .83f + random.nextFloat() * .27f
+            pixels[i] = Color.argb((Color.alpha(c) * tooth).roundToInt().coerceIn(0, 255),
+                Color.red(c), Color.green(c), Color.blue(c))
+        }
+        bitmap.setPixels(pixels, 0, key.width, 0, 0, key.width, key.height)
+        return prefilter(bitmap)
+    }
+
+    private fun prepareGrass(key: Key, shape: Path) = synchronized(cache) {
+        // Rapid shape previews cannot enqueue an unbounded history of obsolete washes.
+        // Completion redraws the scene, allowing the next still-visible key to start.
+        if (cache.get(key) != null || pending.containsKey(key) || pending.size >= 3) return@synchronized
+        val task = FutureTask {
+            try {
+                generate(key, shape).also { synchronized(cache) { cache.put(key, it) } }
+            } finally {
+                synchronized(cache) { pending.remove(key) }
+                Handler(Looper.getMainLooper()).post { paintRevision.intValue++ }
+            }
+        }
+        pending[key] = task
+        worker.execute(task)
+    }
+
+    private fun prefilter(bitmap: Bitmap): Wash {
+        val levels = mutableListOf(bitmap)
+        while (levels.last().width > 1 || levels.last().height > 1) {
+            val previous = levels.last()
+            levels += Bitmap.createScaledBitmap(previous, (previous.width / 2).coerceAtLeast(1),
+                (previous.height / 2).coerceAtLeast(1), true)
+        }
+        return Wash(levels)
+    }
+
+    /** Illustrative 12x24 inch running bond. It is appearance, not a cut/takeoff layout. */
+    private fun drawJoints(canvas: Canvas, bounds: RectF, scale: ScaleCalibration, alpha: Float, id: String) {
+        val metresPerUnit = when (scale.unit.lowercase()) {
+            "ft", "feet", "'" -> .3048f
+            "in", "inch", "inches" -> .0254f
+            "cm" -> .01f
+            "mm" -> .001f
+            else -> 1f
+        }
+        val ppu = if (scale.isCalibrated) scale.pixelsPerUnit / metresPerUnit
+            else max(bounds.width(), bounds.height()) / 3.6576f
+        var width = ppu * .6096f
+        if (!width.isFinite() || width <= 0f) return
+        // A giant uncalibrated/imported extent cannot create unbounded joint work.
+        width = max(width, max(bounds.width(), bounds.height()) / 128f)
+        val height = width * .5f
+        val random = Random(seed(id) xor 9143L)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeCap = Paint.Cap.BUTT }
+        val rows = ceil(bounds.height() / height).toInt()
+        val columns = ceil(bounds.width() / width).toInt() + 1
+        val lineWidth = width * .009f
+        for (row in 0..rows) {
+            val y = bounds.top + row * height
+            val offset = if (row % 2 == 0) 0f else -width * .5f
+            for (col in 0..columns) {
+                val x = bounds.left + offset + col * width
+                paint.color = Color.rgb(146, 121, 85)
+                paint.alpha = (random.nextInt(10) * alpha).toInt()
+                canvas.drawRect(x, y, x + width, y + height, paint)
+                // Continuous quiet joints establish exact orientation; small darker
+                // segments and intersections add dry ink without moving the grid.
+                paint.color = Color.rgb(105, 99, 78); paint.alpha = (115 * alpha).toInt()
+                paint.strokeWidth = lineWidth
+                canvas.drawLine(x, y, x + width, y, paint)
+                canvas.drawLine(x, y, x, y + height, paint)
+                paint.alpha = ((55 + random.nextInt(90)) * alpha).toInt()
+                paint.strokeWidth = lineWidth * .65f
+                val start = random.nextFloat() * .5f
+                canvas.drawLine(x + width * start, y, x + width * (start + .24f), y, paint)
+                paint.alpha = (125 * alpha).toInt()
+                canvas.drawCircle(x, y, lineWidth * .7f, paint)
+            }
+        }
+    }
+
+    private fun drawDryBoundary(canvas: Canvas, path: Path, bounds: RectF, grass: Boolean, alpha: Float, id: String) {
+        val unit = max(bounds.width(), bounds.height()) / SIDE
+        val measure = PathMeasure(path, true)
+        val random = Random(seed(id) xor 5911L)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND
+            color = if (grass) Color.rgb(67, 102, 35) else Color.rgb(152, 117, 71)
+        }
+        var distance = 0f
+        var count = 0
+        while (distance < measure.length && count++ < 500) {
+            val length = (8f + random.nextFloat() * 34f) * unit
+            val edge = Path()
+            measure.getSegment(distance, min(distance + length, measure.length), edge, true)
+            paint.strokeWidth = (5f + random.nextFloat() * 10f) * unit
+            paint.alpha = ((if (grass) 45 else 13) * alpha).toInt()
+            canvas.drawPath(edge, paint)
+            paint.strokeWidth = (1f + random.nextFloat() * 2f) * unit
+            paint.alpha = ((if (grass) 135 else 53) * alpha).toInt()
+            canvas.drawPath(edge, paint)
+            distance += length + (3f + random.nextFloat() * 17f) * unit
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun deviceExtent(canvas: Canvas, bounds: RectF): Float {
+        val matrix = Matrix(); canvas.getMatrix(matrix)
+        val v = FloatArray(9); matrix.getValues(v)
+        return max(hypot(v[Matrix.MSCALE_X], v[Matrix.MSKEW_Y]) * bounds.width(),
+            hypot(v[Matrix.MSKEW_X], v[Matrix.MSCALE_Y]) * bounds.height()).coerceAtLeast(1f)
+    }
+
+    /** Final grass accents belong to the actual silhouette, including concave edges.
+     * They stay in a thin inward band. The baked wash carries the interior; this
+     * is not a second particle field of blades. The caller's exact clip contains
+     * every mark; no rectangle border is baked into paint.
+     */
+    private fun drawGrassEdgeDetail(canvas: Canvas, path: Path, bounds: RectF, alpha: Float, id: String) {
+        val unit = max(bounds.width(), bounds.height()) / SIDE
+        val measure = PathMeasure(path, true)
+        val random = Random(seed(id) xor 82041L)
+        val position = FloatArray(2)
+        val tangent = FloatArray(2)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeCap = Paint.Cap.ROUND }
+        var distance = 0f
+        var count = 0
+        while (distance < measure.length && count++ < 220) {
+            measure.getPosTan(distance, position, tangent)
+            val grouping = .5f + .5f * sin(distance / unit * .023f)
+            if (random.nextFloat() < .18f + .38f * grouping) repeat(1 + random.nextInt(2)) {
+                val sign = if (random.nextFloat() < .7f) 1f else -1f
+                val inward = sign * (2f + random.nextFloat() * 16f) * unit
+                val along = (random.nextFloat() - .5f) * 6f * unit
+                val x = position[0] - tangent[1] * inward + tangent[0] * along
+                val y = position[1] + tangent[0] * inward + tangent[1] * along
+                val r = (.55f + random.nextFloat() * 1.8f) * unit
+                paint.color = if (random.nextInt(3) == 0) Color.rgb(35, 56, 15) else Color.rgb(71, 100, 25)
+                paint.alpha = ((70 + random.nextInt(110)) * alpha).toInt()
+                val mark = Path()
+                if (random.nextInt(3) == 0) {
+                    val length = (3f + random.nextFloat() * 6f) * unit
+                    mark.moveTo(x, y)
+                    mark.quadTo(x + tangent[0] * length * .4f, y + tangent[1] * length * .4f,
+                        x - tangent[1] * length, y + tangent[0] * length)
+                    paint.style = Paint.Style.STROKE
+                    paint.strokeWidth = (.55f + random.nextFloat() * .55f) * unit
+                } else {
+                    mark.moveTo(x - r, y)
+                    mark.quadTo(x - r * 1.2f, y - r, x + r * .3f, y - r * .7f)
+                    mark.quadTo(x + r * 1.3f, y + r * .4f, x, y + r)
+                    mark.close()
+                    paint.style = Paint.Style.FILL
+                }
+                canvas.drawPath(mark, paint)
+            }
+            distance += max((7f + random.nextFloat() * 9f) * unit, measure.length / 280f)
+        }
+    }
+    private fun seed(id: String): Long {
+        var hash = 0xCBF29CE484222325uL.toLong()
+        for (c in id) hash = (hash xor c.code.toLong()) * 0x100000001B3L
+        return hash
+    }
+}

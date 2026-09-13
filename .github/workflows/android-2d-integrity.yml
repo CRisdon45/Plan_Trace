@@ -2,7 +2,7 @@ name: Android 2D integrity
 
 on:
   push:
-    branches: [research/freeform-tangent-kotlin, feat/project-geometry-seam, feat/off-tablet-integrity, feat/2d-foundation-northstar]
+    branches: [research/freeform-tangent-kotlin, feat/project-geometry-seam, feat/expert-workspace-ui, feat/off-tablet-integrity, feat/2d-foundation-northstar]
     paths:
       - 'app/**'
       - 'gradle/**'
@@ -105,6 +105,7 @@ jobs:
             app/build/test-results/testDebugUnitTest/
             app/build/reports/tests/testDebugUnitTest/
             app/build/reports/design-geometry/
+            app/build/reports/northstar-watercolor/
             app/build/reports/runtime-policy/
           if-no-files-found: warn
           retention-days: 7

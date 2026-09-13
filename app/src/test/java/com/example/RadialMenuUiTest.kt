@@ -9,12 +9,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.example.model.design.DesignFixtures
+import com.example.export.DesignAppearance
 import com.example.ui.workspace.*
 import org.junit.Assert.*
 import org.junit.Rule
@@ -94,6 +96,14 @@ class RadialMenuUiTest {
         ui.onNodeWithTag("radial-category-view").performClick()
         ui.onNodeWithTag("radial-action-grid").performClick()
         ui.runOnIdle { assertEquals(listOf(RadialAction.GRID), actions) }
+    }
+    @Test fun `appearance action exposes the current view and executes once`() {
+        menu(availability=enabled.copy(appearance=DesignAppearance.GRAPHIC))
+        tap("radial-category-view")
+        ui.onNodeWithTag("radial-action-appearance")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription,"Graphic"))
+        tap("radial-action-appearance")
+        ui.runOnIdle { assertEquals(listOf(RadialAction.APPEARANCE),actions);assertEquals(1,dismissals) }
     }
     @Test fun `compact center back retains the menu instead of falling through to outside dismiss`() {
         menu(width = 300, height = 350)

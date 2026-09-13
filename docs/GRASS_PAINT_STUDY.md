@@ -1,0 +1,275 @@
+# Grass paint study
+
+## Interior washes and non-grid finishing, 2026-09-13
+
+The Northstar skill's reference-first loop identified two causes in the prior
+shape-aware result: the broad boundary mask left one unpainted central region,
+and thresholded value noise produced recognizable square-grid accents.
+The production painter now adds overlapping recursive polygon washes through
+the interior, scales them by local lawn width, and pools an additional green
+glaze where those washes overlap boundary bands. Lifted channels retain the
+underpainting rather than painting opaque white.
+
+The square-grid granule pass is removed. Small polygon deposits now have varied
+shape, size and loading. Their density depends on the existing wash and distance
+to the actual boundary, with sparser marks in the interior. A first local pass
+had too uniform a speckle distribution. The second strengthened edge weighting;
+the third strengthened overlapping glazes to recover value grouping. Both
+`ground-study` and `neighbor` seeds plus all five shape masks were inspected.
+A fourth revision strengthens the texture glaze after the stage check found
+insufficient repainting in the third. Lift, repaint and dark-tail operation
+checks now pass locally. No existing test threshold was weakened. Android
+verification at `ca87075` passed 306 unit tests and 20 emulator scenarios.
+Downloaded stage images match the local study exactly. The live, exported and
+reopened Android images were opened and inspected. [The gallery](grass-glaze-refinement/README.md)
+retains fixed-seed comparisons, close crops, shape evidence and host timing.
+Exact artifact hashes and remaining limitations are in CURRENT_STATE.
+
+The changes use the existing recursive polygon, Kubelka-Munk and mass-conserving
+drying code. This is an artistic approximation, not a complete fluid solver.
+Some large wash contours still look too rounded compared with the witness, and
+tablet performance remains unmeasured. Water, paving, Godot and project data are
+outside this revision.
+
+## Shape intent, 2026-09-13
+
+The owner rejected the lack of shape intent. Production paint now consumes
+actual Android Path coverage. Irregular inset fronts follow outside and inside
+boundaries. A chamfer distance field and smoothed row/column cross-sections
+control wash width in narrow features. The exact path still owns final clipping.
+Mask coordinates and cache keys are object-local; same-bounds outline changes
+invalidate paint. No frame/time noise is introduced.
+
+Broad translucent layers, narrower boundary glazes, lifting and edge-biased
+granulation share the existing RGB Kubelka-Munk and mass-conserving deposition
+code. The former independent-blob recipe was removed. The desktop rectangle
+adapter and new `GrassShapeStudy` call this same production core; desktop AWT
+only supplies test masks. Android rasterizes its own paths.
+
+A first iteration looked like a frame around an empty center. Wider light
+washes, a faint interior glaze and smoothed cross-section changes removed
+that abrupt treatment. Five shapes were inspected; actual Android evidence
+and its limits are recorded in CURRENT_STATE. App revision `37ef80e` passed
+306 unit tests and 20 emulator scenarios; the [shape gallery](grass-shape-study/README.md)
+retains the controlled comparison, native Path studies, live workspace and export. The stage-test area thresholds
+were revised explicitly for boundary-concentrated finishing, not as an art
+quality score. No new dependencies, Godot changes or project-schema changes.
+
+The geometry-to-paint relationship is an artistic rule. It does not infer sun,
+planting adjacency or unseen landscape semantics. Tablet latency remains to be
+measured.
+
+## Android-only revision, 2026-09-13
+
+The Northstar live rendering skill was applied to the actual Java painter,
+not the separate Godot sheet. The owner explicitly chose Android-only work.
+The baseline at `5971f8b` has broad, heavily outlined washes and isolated
+dark stamps. The revision keeps stages 1–3 pixel-identical, and changes only
+the two finishing passes:
+
+- Step 4 uses smaller overlapping polygon keep masks and reserve tongues.
+  A spatially varying drying strength breaks the continuous ring while
+  retaining sharp, pigment-rich sections.
+- Step 5 deposits green and olive-black pigment into the retained wet mask,
+  modulated by shared paper and several spatial scales. Small sediment
+  coordinates are warped to suppress visible lattice alignment. Broad fronts
+  still come from recursively displaced polygons, not noise thresholds.
+- Sparse polygon flecks and fine strokes supply distinct accents. Large
+  independent near-black stamps were removed.
+
+This remains an artistic approximation using the existing ordered RGB
+Kubelka-Munk layers and mass-conserving drying operator. It is not a full
+fluid simulation. Object seeds, exact Android clipping, worker ownership,
+cache budget and the 1024-pixel longest side are unchanged.
+
+Three local iterations and two seeds were inspected. The first pass exposed
+lattice alignment in small deposits; the last revision perturbed those
+coordinates. The existing operation checks retain their original thresholds.
+A new Android renderer test checks pan/zoom and cache-eviction repeatability.
+All 304 unit tests and 20 emulator scenarios pass at `df8da14`; exact evidence
+and limitations are recorded in CURRENT_STATE. The [comparison gallery](android-grass-study/README.md)
+includes fixed-seed before/after, stages and real Android captures. No physical-tablet
+performance claim or 9/10 visual acceptance follows from these checks.
+Broad pale reserves and dominant drying fronts still differ from the witness.
+
+## Earlier wash-structure revision, 2026-09-12
+
+The owner rejected stamp-count finishing. `f11d5fd` still read as digital
+grass at close-up because steps 4 and 5 laid thousands of marks over the
+washes. This revision keeps the Hobbs/Curtis core and changes the *recipe*:
+few related washes, paper showing through, sediment in the fronts, then
+sparse clustered deposits. It does not self-certify 9/10.
+
+Water, decking and Godot integration are outside this pass. A Godot
+presentation baker remains the likely path to the last quality points;
+this CPU painter is the production path until that exists.
+
+## What changed in the painter
+
+`NorthstarGrassPaint.java` still owns every production pixel. `dry()`,
+Kubelka-Munk tables, object-space seeding and the 1024-pixel cap are
+unchanged. The desktop study adapter still has no alternative implementation.
+
+Construction is now:
+
+1. A thin yellow/olive underpainting on shared paper.
+2. Eight large stratified sheets, then mid glazes, then a smaller set of
+   drying-front washes biased toward one side. These replace the previous
+   15+24+14 randomly placed circles.
+3. Overlapping scalloped *keep* islands plus a few reserve tongues. The
+   tongues lift back to the underpainting. This is not the rejected warped
+   scalar field, and not 145 small holes.
+4. Front sediment from the island-mask gradient, broken spatially so
+   adjacent segments are not equally outlined.
+5. Clustered mid marks, sparse specks and blades on the islands, and a
+   selective olive-black tail. There is no 2,800+12,000 stamp loop.
+
+Android silhouette accents stay in `NorthstarGroundMaterials`, but only in
+a thin inward band. They are not a second particle field.
+
+Major glazes use 24 related layers rather than 32. Paper hollows still
+modulate deposition; a fine digital-grain octave was removed because it
+read as noise rather than tooth.
+
+## Inspection
+
+Local Java 11/17 compilation of the production core and adapter remains the
+desktop gate. Typical complete diagnostic generation is about 7.2 s on this
+host, including five PNG stage captures and three close crops. Two object
+seeds were inspected at full frame and at 360-pixel crops. Stage 4 lifts
+more than 7% of pixels relative to stage 3; stage 4 also deposits; stage 5
+extends an olive-black luminance tail (threshold 110). Those checks prove
+distinct operations, not a quality score.
+
+Android unit/emulator CI, physical S Pen timing and owner 9/10 acceptance
+were not run in this session. Do not treat this document as a visual
+sign-off.
+
+A separate Godot 4.7 GPU baker (`tools/godot-northstar`) now produces a
+2048×1434 field with large related masses and paper gaps. It is the
+presentation experiment, not the live Android painter. CI bakes it under
+Xvfb. `--headless` must not be used for this bake.
+
+The failure table below still applies. In particular: quiet interiors are
+required; equally outlined reserves, confetti, and covering the paper with
+blades are still failures.
+
+## Steps 4 and 5 follow-up
+
+The following records the previous finishing attempt at `f11d5fd`, which this
+revision replaces. That build kept stages 1–3 and added stamp-density finishing.
+
+The owner found `5bf421b` much better, but judged it to have reached only step 3.
+The finishing stages now have substantive, separate jobs. The first three stages
+remain pixel-identical in the local full-resolution study. Step 4 lifts selected
+parts of existing glazes back toward the retained underpainting, then deposits
+smaller, connected scalloped forms with their own drying fronts. Step 5 adds
+middle-sized green marks, a stronger near-black range, fine curved strokes and
+small lighter marks. Density follows the painted islands and varies spatially.
+Final perimeter deposits follow the actual Android path, including concave
+edges, rather than a rectangle baked into the texture.
+
+The first follow-up attempt used a warped scalar field and produced stretched
+ribbons. It was rejected on visual inspection. Related polygon masks create the
+final lifting structure instead. Three local iterations adjusted connectivity
+and final mark strength; two object seeds were inspected. The desktop adapter
+now includes a full-frame 3/4/5 comparison. A renderer test captures those stages
+and checks substantial lifting, new deposition and an increased dark range.
+Those tests establish distinct operations, not a 9/10 quality score. Android CI
+passed all 303 unit tests; the captured stage pixels exactly match the desktop
+production study. Full-surface and concave Android renders were also inspected. All 20 emulator
+scenarios passed; live, exported and reopened grass captures show the finished
+paint. Exact run and artifact identities are recorded in CURRENT_STATE.
+
+## What the reference requires
+
+The supplied study depicts thin yellow-green underpainting; connected, rounded
+and scalloped green wash fronts; local darker sediment just inside those fronts;
+small pale reserves; overlapping glazes with different strengths; and varied,
+clustered final deposits. Some edges are sharply dry while adjacent segments
+soften slightly. Large quiet passages remain between the deposits. These are
+observations of an AI-generated reference, not claims about an actual artist's
+process. No reference pixels are embedded, traced or published.
+
+Review both a whole surface at working size and its close detail:
+
+| Criterion | Failure to look for |
+| --- | --- |
+| Layer construction | Separate stamped blobs, equally outlined everywhere |
+| Drying fronts | Dark outlines unrelated to the wet shape; no interior-to-edge buildup |
+| Translucency | Flat opaque green patches, muddy overlaps, yellow cast |
+| Paper and small reserves | Final uniform noise, regular lattice holes, white paint pasted on top |
+| Fine deposits | Equally sized confetti, aligned marks, uniform density |
+| Working canvas | Detail only in a separate demonstration, blank exports, frozen drawing |
+
+## Independently implemented method
+
+`NorthstarGrassPaint.java` owns the production pixels. `NorthstarGroundMaterials`
+adapts them to Android's exact clipping, opacity and prefiltered image cache.
+`tools/qa/GrassPaintStudy.java` only writes those same pixels and intermediate
+stages to PNG; it contains no alternative painting implementation.
+
+The old grass path used a few displaced polygons and separate rim strokes. This
+revision follows the inherited variance and related translucent polygon layers
+in Tyler Hobbs's 2017
+[A Guide to Simulating Watercolor Paint with Generative Art](https://www.tylerxhobbs.com/words/a-guide-to-simulating-watercolor-paint-with-generative-art).
+Rounded lobes establish the broad front, recursive Gaussian displacement supplies
+irregular detail, and repeated related contours integrate fractional coverage.
+Major glazes use 32 passes; small deposits use fewer. Local variance is inherited
+through subdivision. Paper reserves affect individual glazes, not the finished
+image as a white overlay.
+
+Curtis et al.'s 1997
+[Computer-Generated Watercolor](https://grail.cs.washington.edu/projects/watercolor/paper_small.pdf)
+informs edge accumulation, shared paper interaction and ordered Kubelka-Munk
+compositing. A blurred wet mask identifies each glaze's evaporating front. A
+bounded fraction of pigment moves from the interior into that front, with total
+coverage mass preserved and no pigment placed on dry mask pixels. Spatially
+varying front strength avoids a uniform border. Paper texture then modulates
+deposition. Reflectance/transmittance lookup tables combine each RGB glaze with
+the paint below it. Coefficients are artist-selected, not measured spectral
+pigments. This is a finite drying approximation, **not the paper's full
+shallow-water, adsorption and capillary-flow simulation**. No upstream code,
+external art, new dependency or runtime service was imported.
+
+Seven local revisions addressed excessive yellow, conspicuous broad outlines,
+angular lobes, insufficient sediment, aligned flecks, lattice-shaped reserves,
+overly flat underpainting, and then excessive grain in the initial wash. These
+are iterations, not seven passed quality gates.
+The current model retains visible stylization; owner acceptance is required before
+recording the requested quality as achieved.
+
+## Live behavior and verification boundary
+
+Grass preparation on a hardware canvas uses one worker with at most three pending
+washes. The initial flat underpainting remains visible while a cold wash is
+prepared; completion invalidates the actual Compose drawing through observed
+state. Stable cached paint follows movement and zoom. Software output waits for
+a matching pending wash, or computes it directly, so exports never retain the
+temporary underpainting. Resolution remains capped at a 1024-pixel longest side,
+with prefiltered levels included in the existing 24 MiB ground cache.
+
+The new paint includes its own underpainting, so the old turf base fill is skipped
+in Northstar. Surface opacity is applied once to the finished grass. Paving and
+water keep their previous rendering paths. Geometry, serialized project state,
+appearance selection and signing are not modified.
+
+Local Java compilation and production-pixel inspection run without an Android
+SDK. Typical complete diagnostic generation took about 6.6 seconds on this host,
+including five PNG stage captures; that is not a tablet benchmark. Cold generation
+is appreciable, hence the worker. Actual Android build, clipping/opacity and
+persistence results are recorded in CURRENT_STATE: app `f11d5fd` passed 303 unit
+tests, nine policy checks and all 20 emulator scenarios. Its full grass surface,
+concave clip, live workspace, reopened canvas and PNG export were inspected. Hardware frame
+time, physical S Pen behavior and a 9/10 visual acceptance remain unverified.
+
+To reproduce the isolated production study with a JDK:
+
+```sh
+javac -d build/grass-classes app/src/main/java/com/example/engine/NorthstarGrassPaint.java tools/qa/GrassPaintStudy.java
+java -cp build/grass-classes GrassPaintStudy build/grass-study ground-study
+```
+
+The optional second argument changes the object identity seed. Inspect multiple
+seeds, full frames and the actual Android captures; do not choose one flattering
+crop as proof of the whole renderer.

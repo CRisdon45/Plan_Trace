@@ -1,0 +1,19 @@
+; Engine configuration file.
+; Headless watercolor baker only. Not the Plan CAD, not an Android plugin.
+config_version=5
+
+[application]
+config/name="Plan Trace Northstar Baker"
+config/description="Presentation-only watercolor bake. Geometry authority stays in Android."
+run/main_loop_type="SceneTree"
+config/features=PackedStringArray("4.7")
+
+[display]
+window/size/viewport_width=2048
+window/size/viewport_height=1434
+window/size/resizable=false
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+environment/defaults/default_clear_color=Color(0.976, 0.969, 0.937, 1)
