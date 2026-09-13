@@ -24,7 +24,34 @@ currently has a JRE without javac. No compiler or dependency is added to the app
 The third revision's local stage check found repainting below the existing
 10% area requirement. The fourth increases texture-glaze loading from .09 to
 .14, retaining lifted channels and a distinct repainting pass. All local stage
-checks now pass without threshold changes. Android CI is pending for this revision.
+checks now pass without threshold changes. Application revision
+`ca870756818628c0857f16194e2479d9d1782c2b` passed **306 unit tests** with zero
+failures/errors/skips, nine runtime-policy checks and debug assembly in
+[Android integrity run 34739346080](https://github.com/CRisdon45/Plan_Trace/actions/runs/34739346080).
+Downloaded XML independently confirms the totals. The five native Android Path
+captures were opened and inspected; the three finishing-stage PNGs match the
+local production study pixels exactly. Water and paving detail PNG hashes remain
+unchanged. Existing shape-edit, cache, opacity, pan/zoom and serialization checks pass.
+
+Unit artifact `10311583231` ZIP SHA-256:
+`596eaf58a6b34ab55a1fbed88943443e0ca740825b877a7f4468976ef3d42abd`.
+[Android workspace run 34739346081](https://github.com/CRisdon45/Plan_Trace/actions/runs/34739346081)
+passed **all 20 scenarios** at the same application revision. Downloaded logs
+independently contain 20 `OK (1 test)` results. Live, exported and reopened
+workspace images were opened and inspected. Active-window records identify the
+development app; the crash buffer is empty and no ANR occurred since boot.
+Appearance changes preserve the saved project JSON byte-for-byte (SHA-256
+`5446b6278d542c1128f426417cf2f5180c757d6d8437716ee0b620a18ccb2415`).
+
+Emulator artifact `10311843811` ZIP SHA-256:
+`9efc9b1a9b916a1d562b1568c1d8d49b1141737cdf9182990d6de264c5cd1d0e`.
+Actual PNG export SHA-256:
+`efa6d43773cfccc8aa8682f4190c53d1bc4000286ee742acffff5f315d96d873`.
+The [new gallery](grass-glaze-refinement/README.md)
+contains the fixed-seed before/after, stages, crops, two seeds and five shapes.
+An isolated host timing experiment found median uncached paint generation rose
+from 768.3 to 1036.6 ms (three samples after warmup). This is not tablet frame or
+pen-latency evidence. The timing adapter and exact conditions are in the gallery.
 
 ## Previous verified scope: Android grass responds to shape
 

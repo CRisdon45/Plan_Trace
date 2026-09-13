@@ -19,7 +19,11 @@ the third strengthened overlapping glazes to recover value grouping. Both
 A fourth revision strengthens the texture glaze after the stage check found
 insufficient repainting in the third. Lift, repaint and dark-tail operation
 checks now pass locally. No existing test threshold was weakened. Android
-verification is pending.
+verification at `ca87075` passed 306 unit tests and 20 emulator scenarios.
+Downloaded stage images match the local study exactly. The live, exported and
+reopened Android images were opened and inspected. [The gallery](grass-glaze-refinement/README.md)
+retains fixed-seed comparisons, close crops, shape evidence and host timing.
+Exact artifact hashes and remaining limitations are in CURRENT_STATE.
 
 The changes use the existing recursive polygon, Kubelka-Munk and mass-conserving
 drying code. This is an artistic approximation, not a complete fluid solver.
