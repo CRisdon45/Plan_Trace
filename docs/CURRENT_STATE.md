@@ -12,10 +12,33 @@ large separate near-black stamps. No runtime, geometry, water, paving or Godot
 code changes are included.
 
 Three local revisions and two seeds were inspected at full frame and close
-scale. Java 11 compilation passes. Android CI is pending for this change; the
-303-test results below belong to the historical `f11d5fd` build. A new test
-checks stable paint through pan/zoom, cache eviction and return to the initial
-view. Physical-tablet timing and the 9/10 visual bar remain unverified.
+scale. Java 11 compilation passes. Application commit
+`df8da14e2bc588c3759cd797f169674b02c2fd2c` passed all **304 unit tests**, with zero
+failures/errors/skips, plus nine runtime-policy tests and debug assembly in
+[Android integrity run 34731978982](https://github.com/CRisdon45/Plan_Trace/actions/runs/34731978982).
+Downloaded XML independently confirms the totals. The new test checks stable
+paint through pan/zoom, cache eviction and return to the initial view. Android
+stages 3/4/5 match the local Java study pixels exactly. Full, concave and zoomed
+Android renders were inspected.
+
+Unit artifact `10309472459` ZIP SHA-256:
+`ccd385422e246866a11e7e7b45c064e3cfebf516ba64c5c8d7609e1c9820243d`.
+[Android workspace run 34731979004](https://github.com/CRisdon45/Plan_Trace/actions/runs/34731979004)
+at the same application revision passed **all 20 scenarios**. Downloaded logs
+independently contain 20 `OK (1 test)` results. The live, exported and reopened
+grass captures were opened and inspected. Active-window records identify the
+development app, the crash buffer is empty, and no ANR occurred since boot.
+Appearance switching preserves saved project JSON byte-for-byte.
+
+Emulator artifact `10309732469` ZIP SHA-256:
+`3104a0cdda7b2632c261d69853f1acc3a2dbffc1e57f696b67d1e2462436b624`.
+The actual PNG export SHA-256 is
+`82e3569b0f7f00d998ec4e8a7eb6b895fe04cb16736fa63b954e450bdf9f2df0`.
+Water and paving detail PNGs remain byte-identical to the earlier verified
+build. Source changes are limited to Android grass and its tests/docs.
+[Before/after, stage and Android images](android-grass-study/README.md) are
+retained with the source. No PR was merged or tablet installation changed.
+Physical-tablet timing and the 9/10 visual bar remain unverified.
 
 The remaining visual differences include broad pale reserves and some dominant
 dry fronts. Do not describe this as a completed Northstar match. Keep iterating

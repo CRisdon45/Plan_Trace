@@ -27,7 +27,9 @@ Three local iterations and two seeds were inspected. The first pass exposed
 lattice alignment in small deposits; the last revision perturbed those
 coordinates. The existing operation checks retain their original thresholds.
 A new Android renderer test checks pan/zoom and cache-eviction repeatability.
-CI results are recorded in CURRENT_STATE when complete. No physical-tablet
+All 304 unit tests and 20 emulator scenarios pass at `df8da14`; exact evidence
+and limitations are recorded in CURRENT_STATE. The [comparison gallery](android-grass-study/README.md)
+includes fixed-seed before/after, stages and real Android captures. No physical-tablet
 performance claim or 9/10 visual acceptance follows from these checks.
 Broad pale reserves and dominant drying fronts still differ from the witness.
 
