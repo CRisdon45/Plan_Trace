@@ -23,7 +23,33 @@ arms. Existing stage checks now require 3% lifted pixels and a 1% additional
 dark tail (formerly 7% and 2% for full-sheet stamping), because finishing is
 concentrated in boundary bands. These are operation checks, not visual scores.
 The real workspace fixture now shows rectangular, curved and concave turf.
-CI verification is pending for this shape-aware revision.
+Application commit `37ef80e087b677677d7729cec91d74623ac80e35` passed
+**306 unit tests**, zero failures/errors/skips, nine runtime-policy checks and
+debug assembly in [Android integrity run 34733651532](https://github.com/CRisdon45/Plan_Trace/actions/runs/34733651532).
+Downloaded XML independently confirms these totals. The five native Android
+Path renders were opened and inspected. Water and paving detail PNG hashes
+remain byte-identical to the previously verified build.
+
+Unit artifact `10310109252` ZIP SHA-256:
+`9205e6e7033a19017dc4dd74653a71c1626d189d0ea199abec9535cf91da46cd`.
+[Android workspace run 34733651547](https://github.com/CRisdon45/Plan_Trace/actions/runs/34733651547)
+at the same app revision passed **all 20 scenarios**. Downloaded logs independently
+contain 20 `OK (1 test)` results. The live, exported and reopened captures were
+opened and inspected: rectangular, circular and concave grass all render.
+Both active-window records identify the development app. The crash buffer is
+empty and no ANR occurred since boot. Appearance switching preserves project
+JSON byte-for-byte (SHA-256
+`94bb6cf92ff56af1acc56d281d22b400dc2b16007b306c6de77e68db07e59ddf`).
+The three Android stage images match the local production-core study pixels.
+
+Emulator artifact `10310815338` ZIP SHA-256:
+`e2b43ef663ef93caadfcba872c8c5b87d6a8fcfebb0125207cdeeab2d4c317fb`.
+Actual PNG export SHA-256:
+`b56e831ec7ebb0ff706cf82b39ab4ab213d90dab11071e1e9d19a70a0b0cef8d`.
+[Shape comparison and Android gallery](grass-shape-study/README.md) retains
+full-frame evidence with the source. The fine dark marks still have regularity,
+and broad pale centers remain a visual gap. No 9/10 acceptance is claimed.
+No PR was merged and no physical-tablet installation changed.
 
 Godot, water and paving development stay paused. The visual treatment still
 needs owner review, and tablet frame-time evidence is not established. Do not

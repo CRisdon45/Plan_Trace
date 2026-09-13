@@ -18,7 +18,9 @@ only supplies test masks. Android rasterizes its own paths.
 A first iteration looked like a frame around an empty center. Wider light
 washes, a faint interior glaze and smoothed cross-section changes removed
 that abrupt treatment. Five shapes were inspected; actual Android evidence
-and its limits are recorded in CURRENT_STATE. The stage-test area thresholds
+and its limits are recorded in CURRENT_STATE. App revision `37ef80e` passed
+306 unit tests and 20 emulator scenarios; the [shape gallery](grass-shape-study/README.md)
+retains the controlled comparison, native Path studies, live workspace and export. The stage-test area thresholds
 were revised explicitly for boundary-concentrated finishing, not as an art
 quality score. No new dependencies, Godot changes or project-schema changes.
 
