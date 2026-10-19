@@ -27,6 +27,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.export.DesignOutput
 import com.example.export.DesignOutputSettings
+import com.example.export.DesignAppearance
 import com.example.export.ExportManager
 import com.example.model.design.*
 import com.example.ui.components.ExportDialog
@@ -42,13 +43,19 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
     var showGrid by rememberSaveable { mutableStateOf(preferences.getBoolean("grid", false)) }
     var gridSnap by rememberSaveable { mutableStateOf(preferences.getBoolean("snap", false)) }
     var geometrySnap by rememberSaveable { mutableStateOf(preferences.getBoolean("geometry-snap", false)) }
+    var appearance by rememberSaveable {
+        mutableStateOf(WorkspaceAppearancePreference.decode(preferences.getString(WorkspaceAppearancePreference.KEY, null)))
+    }
+    var choosingAppearance by remember { mutableStateOf(false) }
     var commandRequest by remember { mutableStateOf(0) }
     var inspector by remember { mutableStateOf<String?>(null) }
     val sitePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { model.importSiteImage(it) }
     }
-    LaunchedEffect(touchEdit, showGrid, gridSnap, geometrySnap) {
-        preferences.edit().putBoolean("touch",touchEdit).putBoolean("grid",showGrid).putBoolean("snap",gridSnap).putBoolean("geometry-snap",geometrySnap).apply()
+    LaunchedEffect(touchEdit, showGrid, gridSnap, geometrySnap, appearance) {
+        preferences.edit().putBoolean("touch",touchEdit).putBoolean("grid",showGrid)
+            .putBoolean("snap",gridSnap).putBoolean("geometry-snap",geometrySnap)
+            .putString(WorkspaceAppearancePreference.KEY,appearance.name).apply()
     }
     LaunchedEffect(state.selectedId) { inspector=null }
     fun command(action: RadialAction) {
@@ -68,6 +75,7 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
             RadialAction.DELETE -> selected?.let { model.execute(DesignCommand.Remove(it.id)) }
             RadialAction.FIT -> model.fit()
             RadialAction.GRID -> showGrid=!showGrid
+            RadialAction.APPEARANCE -> choosingAppearance=true
             RadialAction.TOUCH -> { model.cancelPreview();touchEdit=!touchEdit }
             RadialAction.SNAP -> gridSnap=!gridSnap
             RadialAction.GEOMETRY -> geometrySnap=!geometrySnap
@@ -114,16 +122,9 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
             }
             val doc = state.shownDocument
             if (doc != null) {
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("${doc.objects.size} objects", modifier = Modifier.testTag("workspace-object-count"), style = MaterialTheme.typography.labelMedium)
-                    doc.objects.forEachIndexed { index, obj ->
-                        FilterChip(selected = obj.id == state.selectedId, onClick = { model.select(obj.id) },
-                            label = { Text(obj.name + if(obj.locked) " · Locked" else "") }, modifier = Modifier.testTag("workspace-object-$index"))
-                    }
-                }
-                WorkspaceCanvas(state, model, touchEdit, showGrid, gridSnap, geometrySnap, commandRequest, inspector,
-                    !exporting && !leaveUnsaved, { inspector=null; model.stopSiteTool() }, ::command,
+                WorkspaceObjectNavigator(doc.objects, state.selectedId, model::select)
+                WorkspaceCanvas(state, model, touchEdit, showGrid, gridSnap, geometrySnap, appearance, commandRequest, inspector,
+                    !exporting && !leaveUnsaved && !choosingAppearance, { inspector=null; model.stopSiteTool() }, ::command,
                     { sitePicker.launch(arrayOf("image/png","image/jpeg")) }, { inspector="site" },
                     Modifier.weight(1f).fillMaxWidth())
                 state.siteDraft?.let { draft -> SiteOutlineControls(draft,state.draftOrthogonal,model) }
@@ -131,15 +132,7 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
                 state.smoothDraft?.let { draft -> SmoothOutlineControls(draft,model) }
                 val selected = doc.objects.firstOrNull { it.id == state.selectedId }
                 WorkspaceTraceStatus(state)
-
-                Text(selected?.let { String.format(Locale.US, "%s · perimeter %.2f ft", it.name, it.boundary.perimeterMetres / 0.3048) }
-                    ?: "Add an outline, then select its edge to edit.", style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("workspace-selection"))
-                Text(state.message ?: "Commands opens the tool wheel. " + (if(touchEdit) "Touch editing on. " else "Pen edits; fingers navigate. ") + (if(gridSnap) "1 ft snap: vertices and moves." else "Round handles reshape; amber handles change curves."),
-                    style = MaterialTheme.typography.labelMedium, maxLines=1, overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
-                Text("Coping follows the pool. Surface checks are resolution-limited; steps, site clearances and Northstar styling are still in development.",
-                    style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+                WorkspaceContextBar(selected, state.message)
             } else if (state.loading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         }
     }
@@ -153,8 +146,10 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
             exporting = false; exportBusy = true
             scope.launch {
                 try {
-                    val file = if (asPdf) DesignOutput.pdf(context, snapshot, options)
-                        else DesignOutput.png(context, snapshot, settings = DesignOutputSettings(includeMeasurements = options.includeDimensions, includeSourceImage = options.includeBackground))
+                    val file = if (asPdf) DesignOutput.pdf(context, snapshot, options,
+                        DesignOutputSettings(appearance=appearance))
+                        else DesignOutput.png(context, snapshot, settings = DesignOutputSettings(appearance=appearance,
+                            includeMeasurements = options.includeDimensions, includeSourceImage = options.includeBackground))
                     if (file == null || !ExportManager.shareExportedFile(context, file, if (asPdf) "application/pdf" else "image/png", "Design workspace"))
                         model.feedback("Export could not be shared. Your editable draft is unchanged.")
                 } catch (error: kotlinx.coroutines.CancellationException) { throw error }
@@ -163,6 +158,9 @@ fun DesignWorkspaceScreen(onBack: () -> Unit, model: DesignWorkspaceViewModel = 
             }
         }
     })
+    if (choosingAppearance) WorkspaceAppearanceDialog(appearance,
+        onSelect = { appearance=it; choosingAppearance=false },
+        onDismiss = { choosingAppearance=false })
 }
 
 

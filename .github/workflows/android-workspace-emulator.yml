@@ -1,7 +1,7 @@
 name: Android workspace emulator
 on:
   push:
-    branches: [feat/project-geometry-seam, research/freeform-tangent-kotlin]
+    branches: [feat/project-geometry-seam, feat/expert-workspace-ui, research/freeform-tangent-kotlin]
     paths:
       - 'app/**'
       - 'gradle/**'

@@ -4,6 +4,75 @@ Reviewed 2026-09-11 against Plan Trace at 915017a. Reuse general-purpose machine
 
 ## Adopted now
 
+**Wash-structure grass pigment (2026-09-12).** After stamp-count finishing
+still read as digital grass in close-up, the production Java core keeps
+Hobbs related glazes, mass-conserving `dry()` and RGB Kubelka-Munk, but
+stops covering those washes with thousands of marks. Large stratified
+sheets, reserve tongues, broken front sediment and sparse clustered
+deposits replace the 2,800+12,000 stamp loop. Silhouette accents on the
+Android path stay in a thin inward band. No third-party source, art,
+runtime service or dependency was added. Ground cache bounds, the 1024-pixel
+cap and off-thread preparation remain. See [the grass study](GRASS_PAINT_STUDY.md).
+The older grass descriptions below are historical, not the current model.
+
+**Revised grass pigment model (2026-09-12).** After the owner rejected the earlier
+material pass, independently implement deeper related polygon glazes, finite
+pigment redistribution to each wet front, shared paper deposition and ordered
+RGB Kubelka-Munk compositing. The production Java core is shared with a desktop
+PNG inspection adapter. See [the grass study](GRASS_PAINT_STUDY.md) for primary
+sources, the limits of the mathematical approximation and the visual gate.
+No third-party source, art, runtime service or dependency was added. Ground
+cache bounds remain; expensive grass preparation moves off the hardware drawing
+thread. The older grass description below is historical, not the current model.
+
+
+**Grass and travertine paint (2026-09-12).** Reuse the already implemented polygon
+edge displacement from `NorthstarPolygonWash` in `NorthstarGroundMaterials`, with
+separate material palettes, glaze density, selective dry rims, lifted marks and
+clustered grass/mineral detail. Only helper visibility changes in the water wash;
+its generation is unchanged. No additional library or reference pixels are used.
+Ground paint accumulates in a temporary floating-point bitmap before conversion
+to ordinary ARGB. This avoids hue drift from repeatedly quantizing very faint
+premultiplied deposits. Generation uses a 1024-pixel longest side with explicit
+prefiltered levels, all included in a 24 MiB cache. Warm draws select a cached level from the
+actual canvas transform. Exact silhouette clipping and final outline ink remain
+in the shared renderer. Extreme magnification still exposes the texture cap.
+
+The first travertine joint default is an illustrative 12x24-inch running bond.
+Calibrated metres/feet/inches control its spacing; uncalibrated legacy surfaces
+use a proportionate preview. Grid work is bounded for very large extents. It is
+not persisted as an assigned product, counted as a cut layout or applied across
+the coping's enclosing polygon. A future material/layout model must own those
+choices explicitly. Per-object movement retains the paint and joint arrangement.
+Verification uses actual renderer details, concave masks, repeatability after
+cache eviction, physical calibration equivalence and a disposable two-material
+scene in the real Android workspace. No tablet performance claim follows from
+bounded work or emulator screenshots.
+
+**Northstar polygon glazes (2026-09-12).** Adapt the published method, not source
+code or assets, from Tyler Hobbs's 2017
+[A Guide to Simulating Watercolor Paint with Generative Art](https://www.tylerxhobbs.com/words/a-guide-to-simulating-watercolor-paint-with-generative-art)
+(primary essay inspected 2026-09-12). `NorthstarPolygonWash.kt` is an independent
+Kotlin implementation: recursively displaced polygon edges with inherited local
+variance, interleaved translucent blue layers and gaps in individual deposits.
+Four spatial scales provide broad washes through small pigment blooms. Correlated
+paper-tooth variation modulates existing pigment coverage at the final raster
+resolution, retaining fine granulation without painting outside a glaze. The
+existing bounded deposition field and caustics remain separate complementary
+layers. No external code license or art redistribution grant is assumed; no
+third-party code, image, dependency or runtime service is added.
+
+This is an illustrative model, not physically accurate spectral pigment mixing.
+The cache is byte-bounded to 12 MiB, with a 768-pixel longest-side texture and
+fixed layer/polygon counts; exact object clipping stays in the shared renderer.
+It is independent of translation and view scale. Changing aspect ratio changes
+the generated wash; changing the silhouette within the same aspect ratio only
+changes the caller's clip. Subpixel detail eventually softens at extreme zoom.
+Proof gate: actual rectangular/organic app output, broad and fine variation
+without caustics, repeatability after cache eviction, neighbor variation, concave
+containment and unchanged saved geometry. Tablet cold-generation and frame-time
+cost require measurement; bounded work alone is not a performance claim.
+
 **JTS 1.20.0 spatial lookup.** The app already used this pinned local library for coping and site validity, with its EDL notice in assets. GeometrySnapIndex now also uses [STRtree](https://locationtech.github.io/jts/javadoc/org/locationtech/jts/index/strtree/STRtree.html) to shortlist finite corners, midpoints and edges. No new dependency, native bridge or copied third-party source was required.
 
 The tree is a broad-phase lookup only. Exact line/arc projection, reference priority, deterministic tie order, acquisition/release behavior and explicit construction axes remain in the existing resolver. Conservative arc boxes include their sagitta, not just the chord or a sampled path. Queries cover the wider release radius. Distant corner-alignment guides remain global because a nearby guide can originate from a far-away corner. This is not an overall logarithmic-time guarantee or elimination of every full-scene operation. A query too large for finite bounds falls back to the exhaustive candidate set.

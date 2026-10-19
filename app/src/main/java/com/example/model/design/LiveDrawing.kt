@@ -59,9 +59,9 @@ data class LiveMeasure(val target: DesignPoint, val lines: List<String>, val fro
 object LiveMeasurements {
     fun segment(points: List<DesignPoint>, target: DrawingTarget): LiveMeasure? {
         val from = points.lastOrNull() ?: return null
-        return LiveMeasure(target.point, listOf((if (target.closing) "Close · " else "Line · ") +
-            LiveFeetInches.format(from.distanceTo(target.point))) +
-            (if (target.assistance.isNotEmpty() && !target.closing) listOf(target.assistance) else emptyList()), from)
+        val distance = LiveFeetInches.format(from.distanceTo(target.point))
+        return if(target.closing) LiveMeasure(target.point,listOf("Close · $distance"),from)
+            else LiveMeasure(target.point,listOf(distance),from,plain=true)
     }
     /** Read edited edge lengths from the validated preview, never from raw pen travel. */
     fun editing(before: ProjectDesign, after: ProjectDesign, hit: DesignHit, down: DesignPoint): LiveMeasure {

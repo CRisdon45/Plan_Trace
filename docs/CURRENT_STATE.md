@@ -1,80 +1,405 @@
 # Current state and next-session handoff
 
-Updated 2026-09-11 after verified smooth-pool pen integration. This branch is
-**research/freeform-tangent-kotlin**, draft PR #5 into
-**feat/project-geometry-seam**. It is based directly on `8022429`, which already
-contains whole-straight-pool-side manipulation. Do not reset the application
-branch to an older documentation checkpoint.
+## Active scope: Android grass wash and finishing refinement
+
+The owner asked to continue using `northstar-live-rendering-engineer`. The skill
+was read and its reference-first loop applied to the retained grass witness.
+Scope remains Android grass only. The latest shape-aware paint had a broad
+empty center and repeated angular marks from thresholded square-grid noise.
+
+Four local revisions replace that center with related recursive polygon
+washes, sized by local cross-section width. A separate darker glaze accumulates
+where interior wash coverage meets a boundary band. Lifting exposes the earlier
+underpainting. Final detail now uses individually deformed polygon deposits and
+fine strokes, with density weighted toward shape boundaries and retained washes.
+The grid-threshold finishing pass is removed. Two seeds, five shapes and close
+crops were inspected. Some broad wash contours remain too rounded; no 9/10
+acceptance or physical-tablet performance result is claimed.
+
+Only the production Java painter changes. Android path ownership, exact clipping,
+cache identity, worker, bitmap budget, export routing and project data are
+unchanged. Existing test thresholds are unchanged. Local Java 11-targeted
+compilation passes using a scratch-only Eclipse compiler because this runtime
+currently has a JRE without javac. No compiler or dependency is added to the app.
+The third revision's local stage check found repainting below the existing
+10% area requirement. The fourth increases texture-glaze loading from .09 to
+.14, retaining lifted channels and a distinct repainting pass. All local stage
+checks now pass without threshold changes. Application revision
+`ca870756818628c0857f16194e2479d9d1782c2b` passed **306 unit tests** with zero
+failures/errors/skips, nine runtime-policy checks and debug assembly in
+[Android integrity run 34739346080](https://github.com/CRisdon45/Plan_Trace/actions/runs/34739346080).
+Downloaded XML independently confirms the totals. The five native Android Path
+captures were opened and inspected; the three finishing-stage PNGs match the
+local production study pixels exactly. Water and paving detail PNG hashes remain
+unchanged. Existing shape-edit, cache, opacity, pan/zoom and serialization checks pass.
+
+Unit artifact `10311583231` ZIP SHA-256:
+`596eaf58a6b34ab55a1fbed88943443e0ca740825b877a7f4468976ef3d42abd`.
+[Android workspace run 34739346081](https://github.com/CRisdon45/Plan_Trace/actions/runs/34739346081)
+passed **all 20 scenarios** at the same application revision. Downloaded logs
+independently contain 20 `OK (1 test)` results. Live, exported and reopened
+workspace images were opened and inspected. Active-window records identify the
+development app; the crash buffer is empty and no ANR occurred since boot.
+Appearance changes preserve the saved project JSON byte-for-byte (SHA-256
+`5446b6278d542c1128f426417cf2f5180c757d6d8437716ee0b620a18ccb2415`).
+
+Emulator artifact `10311843811` ZIP SHA-256:
+`9efc9b1a9b916a1d562b1568c1d8d49b1141737cdf9182990d6de264c5cd1d0e`.
+Actual PNG export SHA-256:
+`efa6d43773cfccc8aa8682f4190c53d1bc4000286ee742acffff5f315d96d873`.
+The [new gallery](grass-glaze-refinement/README.md)
+contains the fixed-seed before/after, stages, crops, two seeds and five shapes.
+An isolated host timing experiment found median uncached paint generation rose
+from 768.3 to 1036.6 ms (three samples after warmup). This is not tablet frame or
+pen-latency evidence. The timing adapter and exact conditions are in the gallery.
+
+## Previous verified scope: Android grass responds to shape
+
+The latest owner correction is that paint needs intent based on the lawn's
+shape. The native Android adapter now passes actual path coverage to the Java
+painter. Cache identity includes an object-local outline (including contour
+breaks and fill rule) so a same-bounds shape edit repaints while translation
+and view zoom retain paint. Path rasterization, distance fields and deposition
+run on the existing paint worker or the synchronous export path.
+
+The painter derives irregular inset fronts from inside boundary distance and
+smoothed local cross-section width. Broad light washes penetrate the interior;
+stronger deposits gather near outer and inner edges. Thin arms receive narrower
+washes. The first attempt made a heavy frame with a blank center and abrupt
+width seams; the second widened the pale washes and smoothed width changes.
+The old rectangle-only painting recipe was removed. The rectangular study API
+now delegates to the same shape-aware painter with full rectangle coverage.
+
+Straight, curved, concave, courtyard-hole and narrow-turn masks were inspected
+locally. New Android tests cover same-bounds invalidation and curves/holes/thin
+arms. Existing stage checks now require 3% lifted pixels and a 1% additional
+dark tail (formerly 7% and 2% for full-sheet stamping), because finishing is
+concentrated in boundary bands. These are operation checks, not visual scores.
+The real workspace fixture now shows rectangular, curved and concave turf.
+Application commit `37ef80e087b677677d7729cec91d74623ac80e35` passed
+**306 unit tests**, zero failures/errors/skips, nine runtime-policy checks and
+debug assembly in [Android integrity run 34733651532](https://github.com/CRisdon45/Plan_Trace/actions/runs/34733651532).
+Downloaded XML independently confirms these totals. The five native Android
+Path renders were opened and inspected. Water and paving detail PNG hashes
+remain byte-identical to the previously verified build.
+
+Unit artifact `10310109252` ZIP SHA-256:
+`9205e6e7033a19017dc4dd74653a71c1626d189d0ea199abec9535cf91da46cd`.
+[Android workspace run 34733651547](https://github.com/CRisdon45/Plan_Trace/actions/runs/34733651547)
+at the same app revision passed **all 20 scenarios**. Downloaded logs independently
+contain 20 `OK (1 test)` results. The live, exported and reopened captures were
+opened and inspected: rectangular, circular and concave grass all render.
+Both active-window records identify the development app. The crash buffer is
+empty and no ANR occurred since boot. Appearance switching preserves project
+JSON byte-for-byte (SHA-256
+`94bb6cf92ff56af1acc56d281d22b400dc2b16007b306c6de77e68db07e59ddf`).
+The three Android stage images match the local production-core study pixels.
+
+Emulator artifact `10310815338` ZIP SHA-256:
+`e2b43ef663ef93caadfcba872c8c5b87d6a8fcfebb0125207cdeeab2d4c317fb`.
+Actual PNG export SHA-256:
+`b56e831ec7ebb0ff706cf82b39ab4ab213d90dab11071e1e9d19a70a0b0cef8d`.
+[Shape comparison and Android gallery](grass-shape-study/README.md) retains
+full-frame evidence with the source. The fine dark marks still have regularity,
+and broad pale centers remain a visual gap. No 9/10 acceptance is claimed.
+No PR was merged and no physical-tablet installation changed.
+
+Godot, water and paving development stay paused. The visual treatment still
+needs owner review, and tablet frame-time evidence is not established. Do not
+call the shape-aware distance approximation a physical wet-paint simulation.
+
+## Previous verified Android grass checkpoint
+
+## Active scope: Android grass only, 2026-09-13
+
+The owner explicitly selected the Android version using the
+`northstar-live-rendering-engineer` skill. Godot work is paused for this task.
+The current change preserves the first three production paint stages and
+refines texture lifting and final pigment. Smaller connected keep masks and
+reserve tongues replace large pale cutouts. Drying strength varies along each
+front. Small pigment concentrations sit within the retained paint instead of
+large separate near-black stamps. No runtime, geometry, water, paving or Godot
+code changes are included.
+
+Three local revisions and two seeds were inspected at full frame and close
+scale. Java 11 compilation passes. Application commit
+`df8da14e2bc588c3759cd797f169674b02c2fd2c` passed all **304 unit tests**, with zero
+failures/errors/skips, plus nine runtime-policy tests and debug assembly in
+[Android integrity run 34731978982](https://github.com/CRisdon45/Plan_Trace/actions/runs/34731978982).
+Downloaded XML independently confirms the totals. The new test checks stable
+paint through pan/zoom, cache eviction and return to the initial view. Android
+stages 3/4/5 match the local Java study pixels exactly. Full, concave and zoomed
+Android renders were inspected.
+
+Unit artifact `10309472459` ZIP SHA-256:
+`ccd385422e246866a11e7e7b45c064e3cfebf516ba64c5c8d7609e1c9820243d`.
+[Android workspace run 34731979004](https://github.com/CRisdon45/Plan_Trace/actions/runs/34731979004)
+at the same application revision passed **all 20 scenarios**. Downloaded logs
+independently contain 20 `OK (1 test)` results. The live, exported and reopened
+grass captures were opened and inspected. Active-window records identify the
+development app, the crash buffer is empty, and no ANR occurred since boot.
+Appearance switching preserves saved project JSON byte-for-byte.
+
+Emulator artifact `10309732469` ZIP SHA-256:
+`3104a0cdda7b2632c261d69853f1acc3a2dbffc1e57f696b67d1e2462436b624`.
+The actual PNG export SHA-256 is
+`82e3569b0f7f00d998ec4e8a7eb6b895fe04cb16736fa63b954e450bdf9f2df0`.
+Water and paving detail PNGs remain byte-identical to the earlier verified
+build. Source changes are limited to Android grass and its tests/docs.
+[Before/after, stage and Android images](android-grass-study/README.md) are
+retained with the source. No PR was merged or tablet installation changed.
+Physical-tablet timing and the 9/10 visual bar remain unverified.
+
+The remaining visual differences include broad pale reserves and some dominant
+dry fronts. Do not describe this as a completed Northstar match. Keep iterating
+the Android production painter against the grass witness, with actual canvas
+and export evidence.
+
+## Earlier session checkpoint
+
+Updated 2026-09-12 after the grass *wash-structure* revision. The current
+branch is **feat/expert-workspace-ui**. This session rewrote the production
+grass recipe in `NorthstarGrassPaint.java` and thinned silhouette accents in
+`NorthstarGroundMaterials`. It did not run Android CI, merge a PR, or claim
+9/10. Draft PR #6 is unchanged.
+
+## Active owner correction: stop covering the washes
+
+The owner set an honest **9/10** bar and rejected stamp-count finishing.
+Close-ups of `f11d5fd` read as digital grass: stages 1–3 were watercolor,
+then 2,800 + 12,000 marks buried the paper. The current painter uses few
+related washes, reserve tongues, broken front sediment and sparse clustered
+deposits. `dry()`, Kubelka-Munk tables, object-space seeds and the 1024-pixel
+cap are unchanged. See [the grass study](GRASS_PAINT_STUDY.md).
+
+Local Java compilation of the production core and adapter succeeded. Two
+seeds were inspected at full frame and close crop. Stage-operation checks
+pass on those pixels (lift, new deposition, olive-black tail at luminance
+110). That is not owner acceptance, tablet timing, or an emulator gate.
+
+A Godot 4.7.2 baker now lives in `tools/godot-northstar`. Browser-viewable
+stills are in [docs/northstar-study](northstar-study/README.md) (no download).
+The current bake is a plan sheet: ink, pale lawn strip, pool, paving,
+simple planting. That is the board's structure, not 9/10 planting/water
+detail, and not Godot inside the APK. Live canvas is still the Java
+painter. Water in production remains paused.
+
+Water and decking remain paused. Godot as a Northstar presentation plugin
+is still the likely path to the remaining quality points; it is not wired
+into the APK. Pen, project authority and Technical/Graphic stay native.
+
+## Previous checkpoint (stamp finishing at `f11d5fd`)
+
+Updated 2026-09-12 after the grass texture and final-detail revision. The current
+branch is **feat/expert-workspace-ui**; its verified application head is
+`f11d5fd271a515a5f868614176f5356175e02e9d`. Draft PR #6
+targets the merged straight- and smooth-pool interaction seam in
+**feat/project-geometry-seam**. Do not reset the application branch to an older
+documentation checkpoint.
+
+### Grass finishing steps 4 and 5 (historical)
+
+The latest owner feedback accepts the improvement at `5bf421b` but identifies
+it as approximately step 3 of the supplied close-up study. Current work extends
+it through texture lifting and final detail. The first three paint stages are
+preserved. The added passes and exact-path edge accents are described in
+[the grass study](GRASS_PAINT_STUDY.md). The verified evidence below records
+this follow-up separately from the original pigment revision.
+
+
+The owner rejected the grass at `f52ea32` as **5/10** and explicitly set a **9/10**
+visual goal. The earlier checks below establish technical behavior, not accepted
+art quality. Water and decking are paused. The current revision replaces the
+old grass paint construction; see [the grass study](GRASS_PAINT_STUDY.md) for the
+reference analysis, mathematical model and honest acceptance criteria. The new build/unit gate passed 303 tests; the real emulator gate passed all
+20 scenarios. Do not describe the visual
+bar as achieved merely because tests pass.
 
 ## Delivered on this branch
 
-The actual workspace can now create a smooth closed pool from deliberate pen
-points, derive following coping, select a meaningful local shape or radius
-handle through the existing radial commands, preview the constrained result,
-cancel safely, commit once, Undo/Redo, save, reopen and render the same geometry.
-Object snapping is applied to the requested shape anchor before the tangent
-solve. Locks, stable object/edge IDs, format-5 storage and the existing project
-command path remain authoritative.
+The real Android workspace now gives the drawing substantially more visual
+priority without changing project geometry, persistence, commands, Undo/Redo or
+signing. Object switching is a compact icon navigator with accessible object
+names and lock state. Empty selection/status context disappears; when context
+is useful it occupies a single compact bar. Smooth-mode and invalid-edit
+messages are concise, and a rejected edit presents its specific reason once
+while retaining its invalid accessibility category.
 
-`a852497` introduced the bounded Kotlin biarc construction and tangent-preserving
-project commands. `9eb25e5` connected authoring and editing to the real canvas;
-`2f28ac9d2d6ff873b79450fac95dbf5d950fb7d5` corrected radial-direction
-regressions, exact arc picking and emulator display setup. No new runtime
-dependency, saved constraint model, schema migration, runtime AI or 3D work was
-added.
+Routine pen segments now show only the formatted dimension beside the target.
+The prior `Line` label, feedback bubble and grid narration are absent. Closing
+the outline remains intentionally distinct as `Close · <dimension>`, and the
+visible Close/Back/Cancel commands now share one compact strip across straight
+and smooth authoring. Point count and right-angle mode remain visible, while the
+permanent two-line pen instruction is gone. The underlying snap guide, exact
+coordinate handling and stable radial command directions are unchanged. No
+runtime dependency, schema migration, runtime AI or 3D work was added.
+
+The authoritative design projection now has three presentation modes:
+Technical, Graphic and Northstar. Object kinds deterministically select their
+presentation role: pool and spa use water, paving uses paving, turf uses turf,
+gravel uses gravel, walls use masonry, and coping uses paving. Site outlines
+remain unfilled. Ground surfaces render beneath pools and spas, with walls
+above them. Technical removes material fills, Graphic uses flat material fills,
+and Northstar adds deterministic tonal structure clipped to the exact object
+path. Water now uses a calm sheet-directed depth field and selective broken
+edge deposits; paving and coping use a much quieter field. Northstar water also
+has a bounded deterministic pigment field: paper variation, wetness, mobile pigment
+and deposited pigment evolve for a fixed 32 settling steps on a grid capped at
+128 cells per side. Results are seeded from stable object identity, geometry and
+color, cached within 12 MiB, and clipped again by the exact vector path. Moving
+an unchanged object therefore moves its existing wash instead of repainting it.
+Northstar water now uses a dedicated blue/turquoise palette rather than Graphic's
+pale mint fill. Caustics now use filled ribbons with continuously varying width,
+tapered crests, fine edge variation and brighter confluences. Uneven site density
+varies cell size, and successive invertible shears curve the shared network
+without tearing its junctions. Four light passes supply soft shoulders, narrow
+cores and selective crests. Visual iteration reduced excessive swirls and uniform
+glow in the first ribbon pass. Geometry is normalized
+to object bounds, independent of view zoom, and cached for up to 24 aspect/identity
+pairs. The bounded pigment bitmap retains its separate 12 MiB cache. Both layers
+survive cache eviction deterministically. Selective shoreline deposits and final
+ink remain clipped/anchored to exact geometry. This follows the owner's blue-water
+landscape-plan studies, not the pale freeform-pool reference. Graphic and Technical
+palettes are unchanged.
+Hardware canvas caustics now use explicit prefiltered image levels generated
+from those same ribbons, starting at a 1024-pixel longest side and cached within
+24 MiB including all levels. The nearest level at or above display resolution is
+selected from the actual canvas scale and object bounds, integrating thin light
+before drawing at small working sizes without enlarging an undersized level.
+The raster cache includes opacity; cache eviction remains deterministic. Software PNG/PDF
+output keeps the vector caustics. Raster minification and vector export may differ
+slightly in antialiasing; neither representation changes the project boundary.
+The water now also contains independently implemented Hobbs-inspired polygon
+glazes: four blue pigments interleave across broad washes, medium blooms, small
+deposits and fine marks. Recursively displaced edges retain local variation;
+gaps in individual layers and correlated paper-tooth coverage supply fine grain.
+A lighter blue ground and less dominant linear depth cue leave room for the
+stacked pigment. `NorthstarPolygonWash.kt` caches a bounded 768-pixel-longest-side
+raster within an additional 12 MiB. The existing deposition field and caustic
+paths remain complementary layers, with exact clipping in the shared renderer.
+No upstream source/art or new dependency was imported. See the method/reuse
+record in REUSE_AND_DEPENDENCIES.md. The full detail in the owner's blue-water
+studies remains the target; recommendations to omit minutiae are not a constraint.
+This is an independently implemented CPU reference model, not a new dependency
+or a full fluid simulation. Northstar line weight also
+establishes deck below coping below water without changing Technical or Graphic
+weights. Northstar is the current default for both the real workspace canvas and
+PNG/PDF output. These styles are transient projection data: changing appearance
+does not change saved geometry, object ordering, IDs, hit testing or revision.
+
+Technical, Graphic and Northstar are now exposed through an Appearance command
+appended to the existing View radial fan. Fit, Grid and Site retain their learned
+directions. The compact dialog shows all three modes and the current selection;
+choosing a row applies immediately without an Apply/Accept step. The current mode
+is also exposed as command state for accessibility and compact layouts. It is
+stored in the existing workspace-view preferences, survives activity recreation,
+and is passed to both the live canvas and PNG/PDF output. It remains outside the
+authoritative project JSON and does not consume Undo/Redo.
+
+The current grass painter replaces the earlier polygon/stroke construction with
+related, recursively displaced washes, pigment redistribution to each wash's
+actual drying front, shared paper deposition, small reserves and ordered RGB
+Kubelka-Munk glazes. `NorthstarGrassPaint.java` supplies the production pixels;
+the desktop study adapter uses that same core. Seven local visual revisions
+addressed angular/stamped shapes, yellow cast, flat or excessively grainy
+underpainting, uniform fronts, aligned flecks and regular reserve holes. This
+is an independently implemented artistic approximation informed by Hobbs and
+Curtis et al., not a full fluid solver or measured spectral pigment model.
+
+Hardware grass preparation runs on one worker, with at most three pending washes.
+The initial flat underpainting remains visible until paint completion invalidates
+the actual Compose canvas. Software output waits for or computes the finished
+paint. The baked grass includes its underpainting, so surface opacity is applied
+once. Translation and zoom retain stable pigment. The existing 1024-pixel-longest-
+side cap, prefiltered levels and 24 MiB ground cache remain. Cold generation is
+appreciable; many-surface cache pressure and physical tablet frame times are not
+established. No responsiveness claim follows from the worker alone.
+
+Travertine retains the previous floating-point layered stone paint and joint
+renderer. Its comparison images are byte-identical to `f52ea32`; grass changes do
+not imply acceptance of the paused decking. Exact silhouettes and final linework
+remain in the shared renderer. No reference pixels, runtime service or dependency
+were added. The current source's visual bar remains 9/10, with owner acceptance
+unresolved; see [the grass study](GRASS_PAINT_STUDY.md).
+
+Travertine's initial 12x24-inch running bond respects calibrated drawing units
+and follows object movement. It is a presentation default, not a specified
+product, cut layout or quantity model. Uncalibrated legacy objects use a
+proportionate preview; giant extents have bounded grid density. Coping receives
+stone paint without a deck grid crossing its enclosing polygon. Technical and
+Graphic retain their flat fills and geometry. Reference furniture, planting and
+their cast shadows are not baked into a reusable surface texture. Water remains
+paused for later owner review; only polygon-helper visibility changed in its
+implementation. No new dependency, reference pixels or runtime AI was added.
 
 ## Verified evidence
 
-[Android 2D integrity run 34650212981](https://github.com/CRisdon45/Plan_Trace/actions/runs/34650212981)
-at `2f28ac9` passed **275 tests in 36 suites with zero failures, errors or
-skips**, the separate nine Python runtime-policy tests, debug/release resolved
-runtime and merged-manifest checks, and debug assembly. The downloaded report
-archive digest is
-`93e4f7ac18d0248f17ec9a1dcb4aac81f7b36586cdca039ef4d5a8906669f478`.
-The known successful-build KSP/AWT background `NullPointerException` remains;
-compiler and action deprecations also remain.
+[Android 2D integrity run 34708899510](https://github.com/CRisdon45/Plan_Trace/actions/runs/34708899510)
+at `f11d5fd` passed **303 tests with zero failures, errors or skips**, the nine-test
+runtime-policy audit, resolved-runtime/manifest checks and debug assembly.
+Downloaded XML independently confirms the totals. The new finishing test verifies
+substantial lifting, new deposition and an increased dark range across cumulative
+stages 3/4/5. It does not assign an artistic quality score. Existing checks cover
+pigment mass, drying fronts, cold-cache repeatability, seed variation, translation,
+exact concave clipping, unchanged serialization and grass opacity.
 
-[Android workspace run 34650212974](https://github.com/CRisdon45/Plan_Trace/actions/runs/34650212974)
-passed **all 18 scenarios** on the first complete attempt, including the three
-new system-injected-stylus smooth-pool scenarios. The downloaded artifact digest
-is `c8286d8274bccb017ccd6f0cffeba9cf4d47360f647a0477d8343eadbd05d4f4`.
-All 41 active-window records identify the app; the smooth authoring, live shape,
-radius, rejected-radius, completed and reopened frames were opened and were
-unobstructed. All seven completed-save/restart pairs are byte-identical. The
-final smooth document is format 5, revision 63, eight objects and 10,825 bytes;
-its SHA-256 is
-`6311f9c7efb7205dda95a0c92282aee19155c5ae602fd96be2d1791fca1f7a7f`.
-No ANR or crash buffer entry was recorded.
+Unit artifact `10302847012` ZIP SHA-256:
+`68db13812d43c55fc292c5ee2ae32bade6a5f8ff0fe69e137e1024a6f7573b49`.
+Actual 1150x850 turf detail SHA-256:
+`ed12accf2c7fe2760ab080c94816588f89da96b20bb9e29c1fe6fb4ed87f573e`.
+Full turf and concave Android renders were opened and inspected. Android stage
+3/4/5 pixels exactly match the desktop production-core study. The first three
+stages remain unchanged from `5bf421b`. Three finishing iterations and two seeds
+were inspected. Water detail, polygon-water wash, caustic study, Graphic organic
+plan and travertine detail/concave images remain byte-identical to `5bf421b`.
+The Java core and adapter also compile locally with Java 11 targets; no local
+Android/Gradle build ran.
 
-This is synthetic Android-emulator interaction evidence, not physical S Pen,
-palm rejection, hardware latency or owner visual acceptance. The opened frames
-also retain the verbose prototype shell, overlapping synthetic scene and
-non-Northstar renderer; green interaction tests do not approve that appearance.
+[Android workspace run 34708899494](https://github.com/CRisdon45/Plan_Trace/actions/runs/34708899494)
+at the same `f11d5fd` app revision passed **all 20 scenarios**. Downloaded per-case
+logs independently confirm 20 `OK (1 test)` results. The actual 1600x1000 live
+workspace, 1800x1000 PNG export and reopened workspace were opened and inspected;
+all show the completed texture and final detail. Active-window records identify
+the intended development app. The crash buffer is empty and Android reports no
+ANR since boot. These are synthetic API-35 emulator results, not tablet timing.
+
+Emulator artifact `10302124945` ZIP SHA-256:
+`8f04f8305c87b1a9836615b6340f93d70a689047792b06d4c43b3f599ddba165`.
+Actual two-material export SHA-256:
+`0c86e024f81dbf9bd32c5bd30b473ec6d200bbedae9aa89a8a7e78e02f49475a`.
+Appearance switching preserves saved JSON byte-for-byte at
+`3698c9489fb04f80ca011420954b1c2174a11dca0a08e8a5482653fb9ba6063c`.
+Technical and Graphic exports remain byte-identical to `5bf421b`. The grass
+fixture follows normal save/reopen/export paths and restores the preceding
+synthetic project through monotonically increasing store revisions.
+
+Physical S Pen, palm rejection, hardware frame time and owner visual acceptance
+remain unverified. No original app/data, tablet installation, signing change or
+application PR merge was performed.
 
 ## Next outcome
 
-Reconcile and integrate PR #5 into `feat/project-geometry-seam`, preserving its
-straight-side and existing-site history. Then begin a separate, reviewable
-**expert workspace UI/visual hierarchy** slice over the now-usable straight and
-smooth editing paths. Ordinary live feedback should be the dimension near the
-work, without a bubble, redundant tool label or grid narration. Reduce persistent
-chips, instructional prose and status noise so the design owns the screen, while
-retaining visible command access, stable radial directions, concise consequential
-errors and compact fallbacks. Do not treat a shell cleanup as Northstar renderer
-parity; introduce actual object-driven styling in bounded Technical/Graphic/
-Northstar slices with authentic canvas and export evidence.
+Stay on grass until the owner accepts the focused reference match. Judge the
+full surface and its cumulative layer sheet together with real workspace and
+export captures. The target remains 9/10; do not self-certify it from tests,
+color statistics, increased detail, or the existence of a watercolor algorithm.
+Keep scrutinizing connected wash structure, selectively sharp fronts with
+interior pigment buildup, paper reserves, slightly bled segments and varied
+minute deposits. Do not revert to the rejected `f52ea32` grass or treat its
+technical checks as visual approval. Water and decking remain paused.
 
-After dependable manual authoring and the coherent interaction pass, continue
-rectangle/convex-polygon pool generation using the same editable objects, target
-water area and explicit outside-coping containment. Do not replace this with a
-numeric-form milestone or restart solver/library research.
+Measure cold preparation, cache pressure and warm redraw on the latest-Android
+target tablet before claiming pen responsiveness. Preserve exact geometry,
+whole-action Undo, persistence and all three appearances. The queued geometry,
+planting and 3D work is not reopened by this material study. Draft PR #6 remains
+unmerged, targeting **feat/project-geometry-seam**.
 
 ## Boundaries still in force
 
 No persistent per-edge tangent/radius locks, general linked solver, footprint
 generator, shared curved surfaces, attached shelves/steps/spas, alternatives,
 full landscape scope, portable backup or Northstar acceptance is delivered.
-Physical S Pen/button/hover/palm behavior and full-layout drafting remain pending.
-Private references and client geometry remain outside this public repository.
-The physical tablet, installed app, signing key and user data were not changed.
-No application PR was merged at this checkpoint.
+Physical S Pen/button/hover/palm behavior and full-layout drafting remain
+pending. Private references and client geometry remain outside this public
+repository. The physical tablet, installed app, signing key and user data were
+not changed. No application PR was merged at this checkpoint.

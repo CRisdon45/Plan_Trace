@@ -45,26 +45,47 @@ object WatercolorRenderer {
     ) {
         val material = element.material
         if (material != null && element.supportsSurface()) {
+            val grassPaint = element.style == StrokeStyle.WATERCOLOR_WASH &&
+                material == com.example.model.SurfaceMaterial.TURF
             val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = material.fill.toInt()
+                color = if (element.style == StrokeStyle.WATERCOLOR_WASH) when (material) {
+                    com.example.model.SurfaceMaterial.WATER -> Color.rgb(120, 199, 221)
+                    com.example.model.SurfaceMaterial.TURF -> Color.rgb(218, 225, 151)
+                    com.example.model.SurfaceMaterial.PAVING -> Color.rgb(247, 241, 225)
+                    else -> material.fill.toInt()
+                } else material.fill.toInt()
                 alpha = (element.alpha * layerAlpha * 255).toInt().coerceIn(0, 255)
                 style = Paint.Style.FILL
             }
             val outline = when (element) {
                 is RectangleElement -> {
-                    canvas.drawRect(element.boundingBox(), fillPaint)
+                    if (!grassPaint) canvas.drawRect(element.boundingBox(), fillPaint)
+                    if (element.style == StrokeStyle.WATERCOLOR_WASH) {
+                        drawNorthstarSurfaceCue(canvas, element.id, surfaceGeometryFingerprint(element), rectPath(element.boundingBox()), element.boundingBox(), material, element.alpha * layerAlpha, scale)
+                    }
                     element.copy(isFilled = false, material = null, strokeColor = material.outline, style = StrokeStyle.INK)
                 }
                 is EllipseElement -> {
-                    canvas.drawOval(element.boundingBox(), fillPaint)
+                    if (!grassPaint) canvas.drawOval(element.boundingBox(), fillPaint)
+                    if (element.style == StrokeStyle.WATERCOLOR_WASH) {
+                        drawNorthstarSurfaceCue(canvas, element.id, surfaceGeometryFingerprint(element), ovalPath(element.boundingBox()), element.boundingBox(), material, element.alpha * layerAlpha, scale)
+                    }
                     element.copy(isFilled = false, material = null, strokeColor = material.outline, style = StrokeStyle.INK)
                 }
                 is FreehandPath -> {
-                    drawSurfacePolygon(canvas, element.points, fillPaint)
+                    val path = surfacePath(element.points)
+                    if (!grassPaint) canvas.drawPath(path, fillPaint)
+                    if (element.style == StrokeStyle.WATERCOLOR_WASH) {
+                        drawNorthstarSurfaceCue(canvas, element.id, surfaceGeometryFingerprint(element), path, element.boundingBox(), material, element.alpha * layerAlpha, scale)
+                    }
                     PolylineElement(id = element.id, layerId = element.layerId, points = element.points, isClosed = true, strokeColor = material.outline, strokeWidth = element.strokeWidth, alpha = element.alpha)
                 }
                 is PolylineElement -> {
-                    drawSurfacePolygon(canvas, element.points, fillPaint)
+                    val path = surfacePath(element.points)
+                    if (!grassPaint) canvas.drawPath(path, fillPaint)
+                    if (element.style == StrokeStyle.WATERCOLOR_WASH) {
+                        drawNorthstarSurfaceCue(canvas, element.id, surfaceGeometryFingerprint(element), path, element.boundingBox(), material, element.alpha * layerAlpha, scale)
+                    }
                     element.copy(fillColor = null, material = null, strokeColor = material.outline, style = StrokeStyle.INK)
                 }
                 else -> element.withMaterial(null)
@@ -242,14 +263,143 @@ object WatercolorRenderer {
     /**
      * Simulates dynamic watercolor wash for arbitrary paths with organic edge pooling
      */
-    private fun drawSurfacePolygon(canvas: Canvas, points: List<Point2D>, paint: Paint) {
-        val path = Path().apply {
+    private fun surfacePath(points: List<Point2D>) = Path().apply {
             moveTo(points.first().x, points.first().y)
             points.drop(1).forEach { lineTo(it.x, it.y) }
             close()
-        }
-        canvas.drawPath(path, paint)
     }
+
+    private fun rectPath(bounds: RectF) = Path().apply { addRect(bounds, Path.Direction.CW) }
+    private fun ovalPath(bounds: RectF) = Path().apply { addOval(bounds, Path.Direction.CW) }
+
+    /**
+     * Broad, deterministic tonal structure clipped to exact surface geometry.
+     * The cues are anchored to sheet-space bounds rather than frame time, zoom,
+     * or render order. Water receives the strongest depth hierarchy; paving is
+     * intentionally quiet so the pool and its coping remain easy to read.
+     */
+    private fun drawNorthstarSurfaceCue(
+        canvas: Canvas,
+        stableId: String,
+        geometryFingerprint: Long,
+        path: Path,
+        bounds: RectF,
+        material: com.example.model.SurfaceMaterial,
+        alpha: Float,
+        scale: ScaleCalibration,
+    ) {
+        if (bounds.width() <= 0f || bounds.height() <= 0f) return
+        canvas.save()
+        try {
+            canvas.clipPath(path)
+            when (material) {
+                com.example.model.SurfaceMaterial.WATER -> drawWaterDepthCue(canvas, stableId, geometryFingerprint, path, bounds, material.outline.toInt(), alpha)
+                com.example.model.SurfaceMaterial.PAVING, com.example.model.SurfaceMaterial.TURF ->
+                    NorthstarGroundMaterials.draw(canvas, stableId, path, bounds, material, alpha, scale)
+                else -> drawBroadMaterialCue(canvas, bounds, material.outline.toInt(), alpha)
+            }
+        } finally {
+            canvas.restore()
+        }
+    }
+
+    private fun drawWaterDepthCue(
+        canvas: Canvas,
+        stableId: String,
+        geometryFingerprint: Long,
+        path: Path,
+        bounds: RectF,
+        outline: Int,
+        alpha: Float,
+    ) {
+        // Northstar's blue pool reference is a presentation palette, not a change
+        // to saved materials or Graphic mode's established flat fill.
+        val waterPigment = Color.rgb(24, 91, 130)
+        val deep = colorWithScaledAlpha(waterPigment, 80, alpha)
+        val clear = colorWithScaledAlpha(waterPigment, 0, alpha)
+        val depthPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            shader = LinearGradient(
+                bounds.left,
+                bounds.top,
+                bounds.right,
+                bounds.bottom,
+                deep,
+                clear,
+                Shader.TileMode.CLAMP,
+            )
+            style = Paint.Style.FILL
+        }
+        canvas.drawPath(path, depthPaint)
+
+        NorthstarPolygonWash.draw(canvas, stableId, bounds, alpha)
+
+        NorthstarWatercolorField.draw(
+            canvas = canvas,
+            stableId = stableId,
+            geometryFingerprint = geometryFingerprint,
+            path = path,
+            bounds = bounds,
+            pigmentColor = waterPigment,
+            alpha = alpha,
+        )
+
+        NorthstarWaterDetails.draw(
+            canvas = canvas,
+            stableId = stableId,
+            path = path,
+            bounds = bounds,
+            outline = outline,
+            alpha = alpha,
+        )
+    }
+
+    /** Translation is intentionally excluded so moving an object does not repaint its wash. */
+    private fun surfaceGeometryFingerprint(element: VectorElement): Long {
+        val bounds = element.boundingBox()
+        var hash = 0xCBF29CE484222325uL.toLong()
+        fun mix(value: Float) {
+            hash = (hash xor value.toRawBits().toLong()) * 0x100000001B3uL.toLong()
+        }
+        mix(bounds.width())
+        mix(bounds.height())
+        when (element) {
+            is FreehandPath -> element.points.forEach { point -> mix(point.x - bounds.left); mix(point.y - bounds.top) }
+            is PolylineElement -> element.points.forEach { point -> mix(point.x - bounds.left); mix(point.y - bounds.top) }
+            is RectangleElement, is EllipseElement -> Unit
+            else -> mix(element.strokeWidth)
+        }
+        return hash
+    }
+
+    private fun drawBroadMaterialCue(canvas: Canvas, bounds: RectF, outline: Int, alpha: Float) {
+        val cue = colorWithScaledAlpha(outline, 24, alpha)
+        val washBounds = RectF(
+            bounds.left - bounds.width() * 0.10f,
+            bounds.top - bounds.height() * 0.16f,
+            bounds.left + bounds.width() * 0.72f,
+            bounds.top + bounds.height() * 0.72f,
+        )
+        val shader = RadialGradient(
+            washBounds.centerX(),
+            washBounds.centerY(),
+            max(washBounds.width(), washBounds.height()) * 0.52f,
+            cue,
+            Color.TRANSPARENT,
+            Shader.TileMode.CLAMP,
+        )
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            this.shader = shader
+            style = Paint.Style.FILL
+        }
+        canvas.drawOval(washBounds, paint)
+    }
+
+    private fun colorWithScaledAlpha(color: Int, strength: Int, alpha: Float) = Color.argb(
+        (strength * alpha).toInt().coerceIn(0, 255),
+        Color.red(color),
+        Color.green(color),
+        Color.blue(color),
+    )
 
     private fun drawWatercolorPathFill(
         canvas: Canvas,

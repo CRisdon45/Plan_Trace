@@ -30,11 +30,43 @@ Starting physical weights may use the earlier proposal: primary boundaries about
 
 ## Materials and plants
 
-Water is clipped to valid geometry, with restrained blue-green tone and broad depth cues. Shelves, steps and benches remain legible. Avoid animated caustics and photoreal noise in the initial 2D treatment.
+Water is clipped to valid geometry. Owner clarification on 2026-09-12 selects the richer blue/turquoise water and bright interconnected caustics in the uploaded landscape-plan studies, not the pale mint water in the freeform-pool reference. Use varied flowing cells, selective white crests, layered pigment and broad blue depth cues. Preserve readable open water, shelves, steps and benches. Caustics remain deterministic and static, not animated or a photoreal noise overlay. Graphic mode retains its existing flat material palette.
 
-Turf uses broad irregular tonal variation, retained paper highlights and soft pigment edges. A diagonal gradient alone does not achieve the reference. Do not add high-frequency speckles or visible repeated tile seams.
+The owner explicitly wants the reference's fine detail as well as its overall
+appearance. Do not lower that target to a simplified approximation: larger
+overlapping blue washes, smaller darker blooms, granular pigment, irregular
+translucent edges and delicate bright caustics all matter. Their density and
+contrast need composition, not omission. Work may be staged, but tests passing
+or a smooth blue gradient do not establish Northstar visual acceptance.
+
+Caustics should read as folded light: flowing boundaries, tapered crests, soft
+shoulders, small luminous confluences and uneven cell size. Uniformly stroked
+polygon grids, hard-ended white dashes, identical junctions and heavy all-over
+glow do not meet that target. Keep painterly blue visible between the highlights.
+The owner's latest sequence is grass alone. Water and decking are paused while
+the grass paint is brought toward the focused reference's quality.
+
+Turf uses broad irregular tonal variation, retained paper highlights, and a mixture of sharply dried and slightly bled pigment edges. A diagonal gradient alone does not achieve the reference. The owner's focused grass/travertine study on 2026-09-12 explicitly requires minute sharp detail: selective dry pigment rims, small lifted marks, clustered grass flecks and delicate blades over translucent yellow-green/olive glazes. Avoid uniformly distributed noise or visible repeated texture seams; do not omit the reference's small marks in the name of restraint. The owner rejected the earlier grass as 5/10 and requires an honest 9/10 target. Study the full layering and sediment at each paint front; do not equate successful tests with that visual acceptance. Water and decking are paused. See [the current grass study](GRASS_PAINT_STUDY.md).
+
+The follow-up grass gate explicitly covers steps 4 and 5 of the close-up study.
+Step 4 must materially lift and subdivide the established washes into smaller
+connected forms with retained pale passages. Step 5 must visibly extend the tonal
+range with varied green deposits, near-black ink accents, fine curved strokes,
+small light marks and clustered edge detail. The owner found `5bf421b` improved
+but approximately step 3; its previous stage labels are not evidence that the
+finishing work was complete. Preserve the improved first three stages while
+judging the new finish at both working size and close detail.
 
 Paving/coping maintain exact boundaries and coherent pattern orientation/scale. Joints are subordinate to outer geometry and simplify at sheet zoom without changing design dimensions. Gravel stays a quiet field. Planting eligibility does not require a decorative bed boundary.
+
+Travertine targets warm ivory paper, overlapping pale ochre/taupe washes, softly
+bled patches with selective sharp drying fronts, tiny mineral pores and fine
+joint ink. The initial 12x24-inch running bond is an illustrative appearance
+default anchored to calibrated drawing units, not an assigned product or a cut
+layout. Coping receives stone paint without an incorrect cross-pool deck grid.
+Decorative bleed and deposits stay inside the exact material silhouette. Full
+contextual planting shadows and furniture in the study are separate objects,
+not painted into a reusable grass or stone texture.
 
 Use distinct tree, palm, shrub, succulent/accent, flowering and groundcover silhouettes. Bounded lobes/fronds, intentional negative space and selective near-dark masses create form. Avoid branch spaghetti, generic translucent blobs and evenly distributed leaf noise. Repeatable variation should not make every instance identical or every movement redraw the canopy. The symbol must remain recognizable during edits.
 
@@ -50,6 +82,6 @@ Labels, legends, north direction and graphic scale remain readable at actual out
 
 ## Acceptance
 
-Review actual Technical, Graphic and Northstar output for both ORTHO-01 and ORGANIC-01 at full sheet, normal working zoom and detail zoom, during editing and after reopen. Inspect actual PNG/PDF outputs as well as the canvas. Check unchanged boundaries and quantities, stable patterns, readable plants, coherent shadows, restrained detail, clear water/circulation and collision-free annotations.
+Review actual Technical, Graphic and Northstar output for both ORTHO-01 and ORGANIC-01 at full sheet, normal working zoom and detail zoom, during editing and after reopen. Inspect actual PNG/PDF outputs as well as the canvas. Check unchanged boundaries and quantities, stable patterns, readable plants, coherent shadows, reference-level fine detail with clear hierarchy, clear water/circulation and collision-free annotations.
 
 Style acceptance requires authentic captures tied to a source revision and the actual visual references or an explicit owner-approved replacement. Geometry tests can proceed while image access is missing; do not claim the Northstar is matched in that condition. Visual quality develops alongside the first complete editing workflows, while trustworthy geometry and output remain prerequisites rather than defects hidden by styling.

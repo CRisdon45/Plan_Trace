@@ -23,7 +23,10 @@ fun LiveMeasureOverlay(measure: LiveMeasure, target: Offset, modifier: Modifier 
     Layout(modifier = modifier.fillMaxSize(), content = {
         Box((if(measure.plain && !measure.invalid) Modifier else Modifier.shadow(3.dp,MaterialTheme.shapes.medium)
             .background(if(measure.invalid) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surface,MaterialTheme.shapes.medium))
-            .testTag("drawing-live-measure").semantics { contentDescription=measure.lines.joinToString(". ") }) {
+            .testTag("drawing-live-measure").semantics {
+                contentDescription = (if (measure.invalid) listOf("Invalid edit") + measure.lines else measure.lines)
+                    .joinToString(". ")
+            }) {
             Column(Modifier.padding(horizontal=12.dp,vertical=8.dp)) {
                 measure.lines.forEachIndexed { i,line -> Text(line,
                     style=if(i==0) MaterialTheme.typography.titleSmall else MaterialTheme.typography.labelMedium,

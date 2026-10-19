@@ -15,6 +15,7 @@ data class DesignOutputSettings(
     val origin: DesignPoint = DesignPoint(0.0, 0.0),
     val drawingUnitsPerMetre: Double = 100.0,
     val maxChordErrorMetres: Double = 0.001,
+    val appearance: DesignAppearance = DesignAppearance.NORTHSTAR,
     val imperialLabels: Boolean = true,
     val includeMeasurements: Boolean = true,
     val includeSourceImage: Boolean = true,
@@ -40,7 +41,7 @@ object DesignOutput {
             }
             Point2D(x, y)
         }
-        val elements = document.objects.sortedBy { if(it.siteTrace!=null) 0 else 1 }.flatMap { obj ->
+        val elements = document.objects.sortedBy { ProjectVisualStyle.renderOrder(it.kind) }.flatMap { obj ->
             val footprint = obj.copingFootprint
             require(footprint == null || settings.maxChordErrorMetres >= 2 * PoolCoping.CHORD_ERROR_METRES) {
                 "Requested output tolerance is finer than the coping generator supports"
@@ -48,16 +49,17 @@ object DesignOutput {
             val points = projected(obj.boundary.sample(settings.maxChordErrorMetres / 2.0))
             val result = mutableListOf<VectorElement>()
             if (footprint != null) {
-                // Opaque water covers the interior of the opaque outer field in this object's group.
-                // SurfaceMaterial's existing renderer draws exact sampled boundaries without wash bleed.
+                val style = ProjectVisualStyle.forCoping(settings.appearance)
                 result.add(PolylineElement(id = "${obj.id}:coping-outer", layerId = layer.id,
                     points = projected(footprint.outerBoundary), isClosed = true,
-                    strokeWidth = 1.3f, material = SurfaceMaterial.PAVING))
+                    strokeWidth = style.strokeWidth, strokeColor = style.strokeColor,
+                    style = style.strokeStyle, material = style.material))
             }
+            val style = ProjectVisualStyle.forObject(obj, settings.appearance)
             result.add(PolylineElement(id = "${obj.id}:outline", layerId = layer.id,
-                points = points, isClosed = true, strokeWidth = if(obj.siteTrace!=null) 2.8f else 2f,
-                strokeColor = if(obj.siteTrace!=null) 0xFF596257 else 0xFF1E293B,
-                material = if (footprint != null) SurfaceMaterial.WATER else null))
+                points = points, isClosed = true, strokeWidth = style.strokeWidth,
+                strokeColor = style.strokeColor, style = style.strokeStyle,
+                material = style.material))
             if(obj.siteTrace!=null && settings.includeSourceNotice) {
                 result.add(TextElement(id="${obj.id}:site-notice",layerId=layer.id,
                     text=obj.name+"\n"+obj.siteTrace.notice(document.siteImage),

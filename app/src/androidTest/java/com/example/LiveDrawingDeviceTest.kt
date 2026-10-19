@@ -68,10 +68,10 @@ class LiveDrawingDeviceTest {
         val first=model.state.value.drawingPoints!!.single()
         val ten=screen(first.translated(10.1*f,0.1*f))
         ui.onNodeWithTag("workspace-canvas").performTouchInput { down(ten) }
-        ui.onNodeWithTag("drawing-live-measure").assertContentDescriptionContains("Line · 10′ 0″",substring=true)
+        ui.onNodeWithTag("drawing-live-measure").assertContentDescriptionEquals("10′ 0″")
         val twelve=screen(first.translated(12.1*f,0.1*f))
         ui.onNodeWithTag("workspace-canvas").performTouchInput { moveTo(twelve) }
-        ui.onNodeWithTag("drawing-live-measure").assertContentDescriptionContains("Line · 12′ 0″",substring=true)
+        ui.onNodeWithTag("drawing-live-measure").assertContentDescriptionEquals("12′ 0″")
         val indicated=model.state.value.draftTarget!!.point
         assertEquals(original,store.load()) // Live feedback did not write a partially drawn pool.
         capture("live-pool-line")
